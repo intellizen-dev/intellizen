@@ -6,7 +6,7 @@
   "version": "0.0.0",
   "private": true,
   "packageManager": "pnpm@9.7.1",
-  "description": "A extension with ZenScript(Based CraftTweaker) for Vscode",
+  "description": "A extension with ZenScript(Based CraftTweaker) for VSCode",
   "author": "intellizen-dev",
   "license": "MIT",
   "homepage": "https://github.com/intellizen-dev/intellizen#readme",
