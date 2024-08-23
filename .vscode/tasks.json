@@ -1,0 +1,20 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build intellizen",
+      "command": "npm run build",
+      "type": "shell",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "detail": "Langium: Generate grammar and build the zenscript language",
+      "icon": {
+        "color": "terminal.ansiGreen",
+        "id": "server-process"
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+.cache
+.DS_Store
+.idea
+.turbo
+*.log
+*.tgz
+*.vsix
+coverage
+out
+lib-cov
+logs
+node_modules
+temp
+**/**/generated

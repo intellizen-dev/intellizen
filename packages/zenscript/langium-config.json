@@ -1,0 +1,14 @@
+{
+  "projectName": "IntelliZen",
+  "languages": [
+    {
+      "id": "zenscript",
+      "grammar": "src/zenscript.langium",
+      "fileExtensions": [".zs"],
+      "textMate": {
+        "out": "../../syntaxes/zenscript.tmLanguage.json"
+      }
+    }
+  ],
+  "out": "src/generated"
+}

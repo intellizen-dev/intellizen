@@ -1,0 +1,16 @@
+{
+  "name": "@intellizen/vscode-extension",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm build --watch",
+    "build": "tsup"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.4.1",
+    "@types/vscode": "^1.92.0",
+    "@vscode/vsce": "^3.0.0"
+  }
+}

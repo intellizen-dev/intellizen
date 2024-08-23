@@ -1,0 +1,72 @@
+{
+  "publisher": "intellizen-dev",
+  "name": "intellizen",
+  "displayName": "IntelliZen",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.7.1",
+  "description": "A extension with ZenScript(Based CraftTweaker) for Vscode",
+  "author": "intellizen-dev",
+  "license": "MIT",
+  "homepage": "https://github.com/intellizen-dev/intellizen#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/intellizen-dev/intellizen"
+  },
+  "bugs": {
+    "url": "https://github.com/intellizen-dev/intellizen/issues"
+  },
+  "main": "./out/extension/main.cjs",
+  "files": [
+    "LICENSE",
+    "out/*"
+  ],
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "activationEvents": [
+    "onLanguage:zenscript"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "zenscript",
+        "aliases": [
+          "ZenScript",
+          "zenscript"
+        ],
+        "extensions": [
+          ".zs"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "zenscript",
+        "scopeName": "source.zenscript",
+        "path": "syntaxes/zenscript.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "eslint . --cache",
+    "lint:fix": "eslint . --cache --fix"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^2.26.0",
+    "@types/node": "^22.4.1",
+    "eslint": "^9.9.0",
+    "pnpm": "^9.7.1",
+    "reactive-vscode": "^0.2.0",
+    "tsup": "^8.2.4",
+    "turbo": "^2.0.14",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.1",
+    "vitest": "^2.0.5"
+
+  }
+}
