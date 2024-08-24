@@ -10,7 +10,7 @@
       ],
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceFolder}/dist/**/*.js"
+        "${workspaceFolder}/out/**/*.js"
       ]
     },
     {
@@ -23,7 +23,7 @@
       ],
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceFolder}/dist/**/*.js",
+        "${workspaceFolder}/out/**/*.js",
         "${workspaceFolder}/node_modules/langium"
       ]
     }

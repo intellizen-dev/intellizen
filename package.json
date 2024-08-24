@@ -20,7 +20,8 @@
   "main": "./out/extension/main.cjs",
   "files": [
     "LICENSE",
-    "out/*"
+    "out/*",
+    "syntaxes"
   ],
   "engines": {
     "vscode": "^1.92.0"
