@@ -56,13 +56,10 @@
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --cache --fix"
   },
-  "dependencies": {
-    "concurrently": "^8.2.2",
-    "wait-on": "^8.0.0"
-  },
   "devDependencies": {
     "@antfu/eslint-config": "^2.26.0",
     "@types/node": "^22.4.1",
+    "concurrently": "^8.2.2",
     "eslint": "^9.9.0",
     "pnpm": "^9.7.1",
     "reactive-vscode": "^0.2.0",
@@ -70,6 +67,7 @@
     "turbo": "^2.0.14",
     "typescript": "^5.5.4",
     "vite": "^5.4.1",
-    "vitest": "^2.0.5"
+    "vitest": "^2.0.5",
+    "wait-on": "^8.0.0"
   }
 }
