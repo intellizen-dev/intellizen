@@ -7,7 +7,7 @@
       "cache": false
     },
     "dev": {
-      "dependsOn": ["langium:generate:watch", "^dev"],
+      "dependsOn": ["^dev"],
       "cache": false,
       "persistent": true
     },
@@ -15,7 +15,8 @@
       "cache": false
     },
     "langium:generate:watch": {
-      "cache": false
+      "cache": false,
+      "persistent": true
     }
   }
 }
