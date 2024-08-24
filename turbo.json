@@ -2,15 +2,19 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "build": {
-      "dependsOn": ["^langium:generate", "^build"],
+      "dependsOn": ["langium:generate", "^build"],
       "outputs": ["out/**"],
       "cache": false
     },
     "dev": {
-      "dependsOn": ["^langium:generate"],
-      "cache": false
+      "dependsOn": ["langium:generate:watch", "^dev"],
+      "cache": false,
+      "persistent": true
     },
     "langium:generate": {
+      "cache": false
+    },
+    "langium:generate:watch": {
       "cache": false
     }
   }

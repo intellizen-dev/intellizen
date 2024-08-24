@@ -1,10 +1,11 @@
 {
-  "name": "@intellizen/language",
+  "name": "@intellizen/zenscript",
   "type": "module",
   "scripts": {
     "dev": "pnpm build --watch",
     "build": "tsup",
-    "langium:generate": "langium generate"
+    "langium:generate": "langium generate",
+    "langium:generate:watch": "pnpm langium:generate --watch"
   },
   "dependencies": {
     "langium": "^3.1.3",
