@@ -14,7 +14,7 @@ Greeting:
     'Hello' person=[Person:ID] '!';
 
 ImportDeclaration:
-    'import' package=QualifiedName ('as' alias=ID)? ';'
+    'import' package=QualifiedName ('as' alias=ID)? ';'?
 ;
 
 QualifiedName returns string:
@@ -47,6 +47,76 @@ ValueParameter:
 TypeReference:
     primitive=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
 ;
+
+Statement:
+    WhileStatement
+;
+
+WhileStatement:
+    'while' Expression Statement
+;
+
+// region Expression
+Expression:
+    Assignment;
+
+Assignment infers Expression:
+    Condition ({infer BinaryExpression.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Condition)*
+;
+
+Condition infers Expression:
+    condition=OrOrExpression ({infer BinaryExpression.left=current} '?' ifPart=OrOrExpression ':' elsePart=OrOrExpression)*
+;
+
+OrOrExpression:
+    AndAndExpression ({infer BinaryExpression.left=current} op='||' right=AndAndExpression)*
+;
+
+AndAndExpression:
+    OrExpression ({infer BinaryExpression.left=current} op='&&' right=OrExpression)*
+;
+
+OrExpression:
+    XorExpression ({infer BinaryExpression.left=current} op='|' right=XorExpression)*
+;
+
+XorExpression:
+    AndExpression ({infer BinaryExpression.left=current} op='^' right=AndExpression)*
+;
+
+AndExpression:
+    CompareExpression ({infer BinaryExpression.left=current} op='&' right=CompareExpression)*
+;
+
+CompareExpression:
+    AddExpression ({infer BinaryExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AddExpression)*
+;
+
+AddExpression:
+    MulExpression ({infer BinaryExpression.left=current} op='+' right=MulExpression)*
+;
+
+MulExpression:
+    UnaryExpression ({infer BinaryExpression.left=current} op='*' right=UnaryExpression)*
+;
+
+UnaryExpression:
+    op=('!'|'-') expr=PostfixExpression
+;
+
+PostfixExpression:
+    StringLiteral 'as' TypeReference
+;
+
+interface StringLiteral {
+    value: string
+}
+
+StringLiteral returns StringLiteral:
+    value = STRING
+;
+
+// #endregion Expression
 
 hidden terminal WS: /\s+/;
 terminal ID: /[_a-zA-Z][\w_]*/;
