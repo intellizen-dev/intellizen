@@ -48,13 +48,51 @@ TypeReference:
     primitive=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
 ;
 
-Statement:
-    WhileStatement
+// region Statement
+Statement
+    : IfStatement 
+    | WhileStatement 
+    | ForStatement 
+    | BlockStatement 
+    | ReturnStatement 
+    | ExpressionStatement 
+    | BreakStatement 
+    | ContinueStatement
+;
+
+IfStatement:
+    'if' condition=Expression ifPart=Statement ('else' elsePart=Statement)
 ;
 
 WhileStatement:
     'while' Expression Statement
 ;
+
+ForStatement:
+    'for' variables+=ID (',' variables+=ID)* 'in' Expression '{' statements+=Statement '}'
+;
+
+BlockStatement: 
+    '{' statements+=Statement* '}'
+;
+
+ReturnStatement: 
+    'return' Expression? ';'
+;
+
+ExpressionStatement: 
+    Expression ';'
+;
+
+BreakStatement: 
+    {infer Statement} 'break' ';'
+;
+
+ContinueStatement: 
+    {infer Statement} 'continue' ';'
+;
+// endregion Statement
+
 
 // region Expression
 Expression:
