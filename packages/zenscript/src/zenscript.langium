@@ -4,6 +4,7 @@ entry Script:
     ( imports+=ImportDeclaration
     | functions+=FunctionDeclaration
     | classes+=ClassDeclaration
+    | expressions+=Expression
     )*
 ;
 
@@ -48,7 +49,7 @@ TypeReference:
     primitive=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
 ;
 
-// region Statement
+//region Statement
 Statement
     : IfStatement 
     | WhileStatement 
@@ -91,18 +92,19 @@ BreakStatement:
 ContinueStatement: 
     {infer ContinueStatement} 'continue' ';'
 ;
-// endregion Statement
+//endregion Statement
 
 
-// region Expression
+//region Expression
 Expression:
-    value=StringLiteral;
+    value=(Assignment| StringLiteral)
+;
 
-Assignment infers Expression:
+Assignment:
     Condition ({infer BinaryExpression.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Condition)*
 ;
 
-Condition infers Expression:
+Condition:
     condition=OrOrExpression ({infer BinaryExpression.left=current} '?' ifPart=OrOrExpression ':' elsePart=OrOrExpression)*
 ;
 
@@ -149,11 +151,20 @@ PostfixExpression:
 StringLiteral:
     value=STRING
 ;
+//endregion Expression
 
-// #endregion Expression
+// Soft keywords
+ID returns string
+    : IDENTIFIER
+    | 'in'
+    | 'extends'  // dzs
+    | 'operator' // dzs
+    | 'for_in'   // dzs
+    | 'orderly'  // zenutils
+;
 
 hidden terminal WS: /\s+/;
-terminal ID: /[_a-zA-Z][\w_]*/;
+terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
 terminal INT returns number: /[0-9]+/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
 
