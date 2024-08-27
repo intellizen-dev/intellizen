@@ -121,11 +121,11 @@ Expression:
 ;
 
 Assignment:
-    Condition ({infer BinaryExpression.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Condition)*
+    ConditionExpression ({infer BinaryExpression.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=ConditionExpression)*
 ;
 
-Condition:
-    condition=OrOrExpression '?' ifPart=OrOrExpression ':' elsePart=OrOrExpression*
+ConditionExpression:
+    OrOrExpression ({infer TernaryExpression.first=current} '?' second=OrOrExpression ':' third=OrOrExpression)*
 ;
 
 OrOrExpression:
@@ -165,11 +165,56 @@ UnaryExpression:
 ;
 
 PostfixExpression:
-    expr=Expression 'as' typeRef=TypeReference
+    TypeCastExpression | InstanceofExpression
+;
+
+TypeCastExpression:
+    expr=Expression op='as' typeRef=TypeReference
+;
+
+InstanceofExpression:
+    expr=Expression op='instanceof' typeRef=TypeReference
+;
+
+PrimaryExpression
+    : '(' Expression ')'
+    | UnaryExpression
+;
+
+FunctionExpression:
+    'function' '('
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
+    ')' ('as' returnTypeRef=TypeReference)? '{'
+        (statements+=Statement)*
+    '}'
+;
+
+IntRangeExpression:
+    Expression ({infer BinaryExpression.left=current} op=('in'|'..') right=Expression)*
+;
+
+ArrayLiteral:
+    '[' (values+=Expression (',' values+=Expression)* ','?)? ']'
+;
+
+MapLiteral:
+    '{' (entries+=MapEntry (',' entries+=MapEntry)* ','?)? '}'
+;
+
+MapEntry:
+    key=Expression ':' value=Expression
 ;
 
 StringLiteral:
     value=STRING
+;
+
+NumberLiteral:
+    value=INT
+;
+
+BooleanLiteral:
+  value?='true' | 'false'
 ;
 //endregion Expression
 
