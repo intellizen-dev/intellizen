@@ -125,7 +125,7 @@ Assignment:
 ;
 
 Condition:
-    condition=OrOrExpression ({infer BinaryExpression.left=current} '?' ifPart=OrOrExpression ':' elsePart=OrOrExpression)*
+    condition=OrOrExpression '?' ifPart=OrOrExpression ':' elsePart=OrOrExpression*
 ;
 
 OrOrExpression:
