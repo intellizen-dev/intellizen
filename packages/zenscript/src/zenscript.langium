@@ -38,11 +38,29 @@ FieldDeclaration:
 FunctionDeclaration:
     prefix=('static' | 'global')? 'function' name=ID '(' 
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? 
-    ')' ('as' returnTypeRef=TypeReference)?
+    ')' ('as' returnTypeRef=TypeReference)? '{'
+        (statements+=Statement)*
+    '}'
+;
+
+ExpandFunctionDeclaration:
+    '$expand' typeRef=TypeReference '$' name=ID '(' 
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
+    ')' ('as' returnTypeRef=TypeReference)? '{'
+        (statements+=Statement)*
+    '}'
+;
+
+ConstructorDeclaration:
+    'zenConstructor' '(' 
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
+    ')' ('{'
+        (statements+=Statement)*
+    '}')?
 ;
 
 ValueParameter:
-    name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=Expression)?
+    varargs?='...' name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=Expression)?
 ;
 
 TypeReference:
@@ -66,11 +84,13 @@ IfStatement:
 ;
 
 WhileStatement:
-    'while' expr=Expression stmt=Statement
+    'while' condition=Expression loop=Statement
 ;
 
 ForStatement:
-    'for' variables+=ID (',' variables+=ID)* 'in' expr=Expression '{' (statements+=Statement)* '}'
+    'for' variables+=ID (',' variables+=ID)* 'in' iter=Expression '{' 
+        (statements+=Statement)* 
+    '}'
 ;
 
 BlockStatement: 
