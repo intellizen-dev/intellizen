@@ -23,7 +23,7 @@ QualifiedName returns string:
 
 ClassDeclaration: 
     'zenClass' name=ID 
-    ('extends' (superClasses+=[ClassDeclaration:ID] (',' superClasses+=[ClassDeclaration:ID])*))? 
+    ('extends' (superTypes+=[ClassDeclaration:ID] (',' superTypes+=[ClassDeclaration:ID])*))? 
     ('{'
         members+=ClassMemberDeclaration*
     '}')?
@@ -41,7 +41,7 @@ FunctionDeclaration:
 ;
 
 ValueParameter:
-    name=ID ('as' typeRef=TypeReference)? ('=')?
+    name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=Expression)?
 ;
 
 TypeReference:
@@ -65,38 +65,38 @@ IfStatement:
 ;
 
 WhileStatement:
-    'while' Expression Statement
+    'while' expr=Expression stmt=Statement
 ;
 
 ForStatement:
-    'for' variables+=ID (',' variables+=ID)* 'in' Expression '{' statements+=Statement '}'
+    'for' variables+=ID (',' variables+=ID)* 'in' expr=Expression '{' (statements+=Statement)* '}'
 ;
 
 BlockStatement: 
-    '{' statements+=Statement* '}'
+    '{' (statements+=Statement)* '}'
 ;
 
 ReturnStatement: 
-    'return' Expression? ';'
+    'return' expr=Expression? ';'
 ;
 
 ExpressionStatement: 
-    Expression ';'
+    expr=Expression ';'
 ;
 
 BreakStatement: 
-    {infer Statement} 'break' ';'
+    {infer BreakStatement} 'break' ';'
 ;
 
 ContinueStatement: 
-    {infer Statement} 'continue' ';'
+    {infer ContinueStatement} 'continue' ';'
 ;
 // endregion Statement
 
 
 // region Expression
 Expression:
-    Assignment;
+    value=StringLiteral;
 
 Assignment infers Expression:
     Condition ({infer BinaryExpression.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Condition)*
@@ -143,15 +143,11 @@ UnaryExpression:
 ;
 
 PostfixExpression:
-    StringLiteral 'as' TypeReference
+    expr=Expression 'as' typeRef=TypeReference
 ;
 
-interface StringLiteral {
-    value: string
-}
-
-StringLiteral returns StringLiteral:
-    value = STRING
+StringLiteral:
+    value=STRING
 ;
 
 // #endregion Expression
