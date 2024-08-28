@@ -39,7 +39,7 @@ FunctionDeclaration:
     prefix=('static' | 'global')? 'function' name=ID '(' 
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? 
     ')' ('as' returnTypeRef=TypeReference)? '{'
-        (statements+=Statement)*
+        (body+=Statement)*
     '}'
 ;
 
@@ -47,7 +47,7 @@ ExpandFunctionDeclaration:
     '$expand' typeRef=TypeReference '$' name=ID '(' 
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
     ')' ('as' returnTypeRef=TypeReference)? '{'
-        (statements+=Statement)*
+        (body+=Statement)*
     '}'
 ;
 
@@ -55,7 +55,7 @@ ConstructorDeclaration:
     'zenConstructor' '(' 
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
     ')' ('{'
-        (statements+=Statement)*
+        (body+=Statement)*
     '}')?
 ;
 
@@ -80,21 +80,21 @@ Statement
 ;
 
 IfStatement:
-    'if' condition=Expression ifPart=Statement ('else' elsePart=Statement)
+    'if' condition=Expression ifBody=Statement ('else' elseBody=Statement)
 ;
 
 WhileStatement:
-    'while' condition=Expression loop=Statement
+    'while' condition=Expression body=Statement
 ;
 
 ForStatement:
     'for' variables+=ID (',' variables+=ID)* 'in' iter=Expression '{' 
-        (statements+=Statement)* 
+        (body+=Statement)* 
     '}'
 ;
 
 BlockStatement: 
-    '{' (statements+=Statement)* '}'
+    '{' (body+=Statement)* '}'
 ;
 
 ReturnStatement: 
@@ -117,7 +117,7 @@ ContinueStatement:
 
 //region Expression
 Expression:
-    value=(Assignment| StringLiteral)
+    {infer Expression} Assignment
 ;
 
 Assignment:
@@ -176,16 +176,28 @@ InstanceofExpression:
     expr=Expression op='instanceof' typeRef=TypeReference
 ;
 
+MemberAccess:
+    receiver=Expression '.' name=ID
+;
+
+ArrayAccess:
+    array=Expression '[' index=Expression ']'
+;
+
 PrimaryExpression
-    : '(' Expression ')'
+    : ParenthesizedExpression
     | UnaryExpression
+;
+
+ParenthesizedExpression:
+    '(' expr=Expression ')'
 ;
 
 FunctionExpression:
     'function' '('
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
     ')' ('as' returnTypeRef=TypeReference)? '{'
-        (statements+=Statement)*
+        (body+=Statement)*
     '}'
 ;
 
