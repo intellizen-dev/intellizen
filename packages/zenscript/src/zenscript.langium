@@ -3,6 +3,7 @@ grammar IntelliZen
 entry Script:
     ( imports+=ImportDeclaration
     | functions+=FunctionDeclaration
+    | expands+=ExpandFunctionDeclaration
     | classes+=ClassDeclaration
     | expressions+=Expression
     )*
@@ -26,7 +27,7 @@ ClassDeclaration:
     '}')?
 ;
 
-ClassMemberDeclaration: FunctionDeclaration | FieldDeclaration;
+ClassMemberDeclaration: FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
 
 FieldDeclaration:
     prefix=('val'|'var') name=ID ('as' typeRef=TypeReference);
