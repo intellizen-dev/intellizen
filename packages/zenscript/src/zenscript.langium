@@ -63,9 +63,47 @@ ValueParameter:
     varargs?='...' name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=Expression)?
 ;
 
+
+//region TypeReference
 TypeReference:
+    PrimitiveType | ListType | ArrayType | MapType | FunctionType | IntersectionType | UnionType | ParenthesizedType
+;
+
+PrimitiveType:
     primitive=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
 ;
+
+ListType:
+    '[' baseTypeRef=TypeReference ']'
+;
+
+ArrayType:
+    baseTypeRef=TypeReference '[' ']'
+;
+
+MapType:
+    valueTypeRef=TypeReference '[' keyTypeRef=TypeReference ']' ('$' orderly?='orderly')?
+;
+
+FunctionType:
+    'function' '(' 
+        (paramTypeRef+=TypeReference (',' paramTypeRef+=TypeReference)*)? 
+    ')' returnTypeRef=TypeReference
+;
+
+IntersectionType:
+    typeRefs+=TypeReference ('&' typeRefs+=TypeReference)+
+;
+
+UnionType:
+    typeRefs+=TypeReference ('|' typeRefs+=TypeReference)+
+;
+
+ParenthesizedType:
+    '(' typeRef=TypeReference ')'
+;
+//endregion TypeReference
+
 
 //region Statement
 Statement
