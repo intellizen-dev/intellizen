@@ -15,11 +15,7 @@ Greeting:
     'Hello' person=[Person:ID] '!';
 
 ImportDeclaration:
-    'import' package=QualifiedName ('as' alias=ID)? ';'?
-;
-
-QualifiedName returns string:
-    ID ('.' ID)*
+    'import' parts+=ID ('.' parts+=ID)* ('as' alias=ID)? ';'?
 ;
 
 ClassDeclaration: 
@@ -101,6 +97,10 @@ UnionType:
 
 ParenthesizedType:
     '(' typeRef=TypeReference ')'
+;
+
+ReferenceType:
+    parts+=ID ('.' parts+=ID)*
 ;
 //endregion TypeReference
 
