@@ -2,10 +2,10 @@ grammar IntelliZen
 
 entry Script:
     ( imports+=ImportDeclaration
-    | functions+=FunctionDeclaration
+    | functions+=FunctionDeclaration<true>
     | expands+=ExpandFunctionDeclaration
     | classes+=ClassDeclaration
-    | expressions+=Expression
+    | statements+=RootStatement
     )*
 ;
 
@@ -27,43 +27,68 @@ ClassDeclaration:
     '}')?
 ;
 
-ClassMemberDeclaration: FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
+ClassMemberDeclaration: FunctionDeclaration<false> | VariableDeclaration<false, true> | ConstructorDeclaration;
 
-FieldDeclaration:
-    prefix=('val'|'var') name=ID ('as' typeRef=TypeReference);
+VariableDeclarator<isRoot, isField>: 
+    {infer Declarator}
+    (<isRoot> 'global') |
+    (<isRoot | isField> 'static') |
+    'var' | 'val'
+;
 
-FunctionDeclaration:
-    prefix=('static' | 'global')? 'function' name=ID '(' 
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? 
-    ')' ('as' returnTypeRef=TypeReference)? '{'
+
+VariableDeclaration<isRoot, isField>:
+    prefix=VariableDeclarator<isRoot, isField>
+    name=ID ('as' typeRef=TypeReference)?
+    ('=' initializer=Expression)? ';'
+;
+
+
+ValueParameter:
+    (varargs?='...')? name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=Expression)?
+;
+
+fragment Parameters:
+ '(' (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? ')'
+;
+
+fragment FuncReturnType:
+('as' returnTypeRef=TypeReference)? 
+;
+
+FunctionDeclaration<isRoot>:
+    (<isRoot> prefix?=('static' | 'global')?) 'function' name=ID Parameters
+    FuncReturnType '{'
         (body+=Statement)*
     '}'
 ;
 
 ExpandFunctionDeclaration:
-    '$expand' typeRef=TypeReference '$' name=ID '(' 
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' ('as' returnTypeRef=TypeReference)? '{'
+    '$expand' typeRef=TypeReference '$' name=ID Parameters
+    FuncReturnType '{'
         (body+=Statement)*
     '}'
 ;
 
 ConstructorDeclaration:
-    'zenConstructor' '(' 
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' ('{'
+    'zenConstructor' Parameters
+    ('{'
         (body+=Statement)*
     '}')?
-;
-
-ValueParameter:
-    varargs?='...' name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=Expression)?
 ;
 
 
 //region TypeReference
 TypeReference:
-    PrimitiveType | ListType | ArrayType | MapType | FunctionType | IntersectionType | UnionType | ParenthesizedType
+    UnionType
+;
+
+UnionType:
+    IntersectionType ({infer UnionType.typeRefs+=current} ('|' typeRefs+=IntersectionType)+)?
+;
+
+IntersectionType:
+    MapArrayType ({infer IntersectionType.typeRefs+=current} ('&' typeRefs+=MapArrayType)+)?
 ;
 
 PrimitiveType:
@@ -74,12 +99,15 @@ ListType:
     '[' baseTypeRef=TypeReference ']'
 ;
 
-ArrayType:
-    baseTypeRef=TypeReference '[' ']'
-;
-
-MapType:
-    valueTypeRef=TypeReference '[' keyTypeRef=TypeReference ']' ('$' orderly?='orderly')?
+MapArrayType:
+    PrimaryTypeReference (
+        '['
+        (
+            ({infer MapType.valueType=current} keyType=TypeReference) |
+            ({infer ArrayType.valueType=current})
+        )
+        ']'
+    )?
 ;
 
 FunctionType:
@@ -88,31 +116,39 @@ FunctionType:
     ')' returnTypeRef=TypeReference
 ;
 
-IntersectionType:
-    typeRefs+=TypeReference ('&' typeRefs+=TypeReference)+
-;
-
-UnionType:
-    typeRefs+=TypeReference ('|' typeRefs+=TypeReference)+
-;
-
 ParenthesizedType:
     '(' typeRef=TypeReference ')'
 ;
 
-ReferenceType:
-    parts+=ID ('.' parts+=ID)*
+PrimaryTypeReference:
+    PrimitiveType | ListType | FunctionType | ParenthesizedType | ReferenceType
 ;
+
+ReferenceType:
+    refName=ID ( {infer ReferenceType.parent=current} '.' refName=ID)*
+;
+
 //endregion TypeReference
 
 
 //region Statement
-Statement
+
+RootStatement:
+    StatementImpl<true>
+;
+
+Statement:
+    StatementImpl<false>
+;
+
+
+StatementImpl<isRoot>
     : IfStatement 
     | WhileStatement 
     | ForStatement 
     | BlockStatement 
     | ReturnStatement 
+    | VariableDeclaration<isRoot, false>
     | ExpressionStatement 
     | BreakStatement 
     | ContinueStatement
@@ -160,7 +196,7 @@ Expression:
 ;
 
 Assignment:
-    ConditionExpression ({infer BinaryExpression.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=ConditionExpression)*
+    ConditionExpression ({infer Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)*
 ;
 
 ConditionExpression:
@@ -200,48 +236,47 @@ MulExpression:
 ;
 
 UnaryExpression:
-    op=('!'|'-') expr=PostfixExpression
+    ({infer UnaryExpression} op=('!'|'-') expr=PostfixExpression) |
+    PostfixExpression
+;
+
+
+fragment Arguments: 
+ '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')'
 ;
 
 PostfixExpression:
-    TypeCastExpression | InstanceofExpression
+    PrimaryExpression (
+        ({infer MemberAccess.receiver=current} op='.' name=(ID | STRING)) |
+        ({infer IntRangeExpression.left=current} op=('in'|'..') right=Expression) | // IntRange
+        ({infer TypeCastExpression.expr=current} op='as' typeRef=TypeReference) |
+        ({infer ArrayAccess.array=current} '[' index=Expression ']') |
+        ({infer CallExpression.method=current} Arguments) |
+
+        ({infer InstanceofExpression.expr=current} op='instanceof' typeRef=TypeReference)
+    )?
 ;
 
-TypeCastExpression:
-    expr=Expression op='as' typeRef=TypeReference
-;
-
-InstanceofExpression:
-    expr=Expression op='instanceof' typeRef=TypeReference
-;
-
-MemberAccess:
-    receiver=Expression '.' name=ID
-;
-
-ArrayAccess:
-    array=Expression '[' index=Expression ']'
+BracketExpression:
+   '<' value=(ID | ':')+ '>'
 ;
 
 PrimaryExpression
-    : ParenthesizedExpression
-    | UnaryExpression
+    : ParenthesizedExpression | FunctionExpression | LocalVarialbe | PrimitiveLiterals | BracketExpression
 ;
 
 ParenthesizedExpression:
     '(' expr=Expression ')'
 ;
 
-FunctionExpression:
-    'function' '('
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' ('as' returnTypeRef=TypeReference)? '{'
-        (body+=Statement)*
-    '}'
+PrimitiveLiterals:
+    StringLiteral | NumberLiteral | BooleanLiteral | ArrayLiteral | MapLiteral
 ;
 
-IntRangeExpression:
-    Expression ({infer BinaryExpression.left=current} op=('in'|'..') right=Expression)*
+FunctionExpression:
+    'function' Parameters ('as' returnTypeRef=TypeReference)? '{'
+        (body+=Statement)*
+    '}'
 ;
 
 ArrayLiteral:
@@ -254,6 +289,10 @@ MapLiteral:
 
 MapEntry:
     key=Expression ':' value=Expression
+;
+
+LocalVarialbe:
+    name=ID
 ;
 
 StringLiteral:
