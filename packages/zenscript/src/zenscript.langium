@@ -5,7 +5,7 @@ entry Script:
     | functions+=FunctionDeclaration<true>
     | expands+=ExpandFunctionDeclaration
     | classes+=ClassDeclaration
-    | statements+=RootStatement
+    | statements+=TopLevelStatement
     )*
 ;
 
@@ -29,16 +29,16 @@ ClassDeclaration:
 
 ClassMemberDeclaration: FunctionDeclaration<false> | VariableDeclaration<false, true> | ConstructorDeclaration;
 
-VariableDeclarator<isRoot, isField>: 
+VariableDeclarator<isTopLevel, isField>:
     {infer Declarator}
-    (<isRoot> 'global') |
-    (<isRoot | isField> 'static') |
+    (<isTopLevel> 'global') |
+    (<isTopLevel | isField> 'static') |
     'var' | 'val'
 ;
 
 
-VariableDeclaration<isRoot, isField>:
-    prefix=VariableDeclarator<isRoot, isField>
+VariableDeclaration<isTopLevel, isField>:
+    prefix=VariableDeclarator<isTopLevel, isField>
     name=ID ('as' typeRef=TypeReference)?
     ('=' initializer=Expression)? ';'
 ;
@@ -48,33 +48,28 @@ ValueParameter:
     (varargs?='...')? name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=Expression)?
 ;
 
-fragment Parameters:
- '(' (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? ')'
-;
-
-fragment FuncReturnType:
-('as' returnTypeRef=TypeReference)? 
-;
-
-FunctionDeclaration<isRoot>:
-    (<isRoot> prefix?=('static' | 'global')?) 'function' name=ID Parameters
-    FuncReturnType '{'
+FunctionDeclaration<isTopLevel>:
+    (<isTopLevel> prefix=('static' | 'global')?) 'function' name=ID '(' 
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? 
+    ')' ('as' returnTypeRef=TypeReference)? '{'
         (body+=Statement)*
     '}'
 ;
 
 ExpandFunctionDeclaration:
-    '$expand' typeRef=TypeReference '$' name=ID Parameters
-    FuncReturnType '{'
+    '$expand' typeRef=TypeReference '$' name=ID  '(' 
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? 
+    ')' ('as' returnTypeRef=TypeReference)? '{'
         (body+=Statement)*
     '}'
 ;
 
 ConstructorDeclaration:
-    'zenConstructor' Parameters
-    ('{'
+    'zenConstructor' '(' 
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? 
+    ')' '{'
         (body+=Statement)*
-    '}')?
+    '}'
 ;
 
 
@@ -133,7 +128,7 @@ ReferenceType:
 
 //region Statement
 
-RootStatement:
+TopLevelStatement:
     StatementImpl<true>
 ;
 
@@ -142,13 +137,13 @@ Statement:
 ;
 
 
-StatementImpl<isRoot>
+StatementImpl<isTopLevel>
     : IfStatement 
     | WhileStatement 
     | ForStatement 
     | BlockStatement 
     | ReturnStatement 
-    | VariableDeclaration<isRoot, false>
+    | VariableDeclaration<isTopLevel, false>
     | ExpressionStatement 
     | BreakStatement 
     | ContinueStatement
@@ -240,18 +235,13 @@ UnaryExpression:
     PostfixExpression
 ;
 
-
-fragment Arguments: 
- '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')'
-;
-
 PostfixExpression:
     PrimaryExpression (
         ({infer MemberAccess.receiver=current} op='.' name=(ID | STRING)) |
-        ({infer IntRangeExpression.left=current} op=('in'|'..') right=Expression) | // IntRange
+        ({infer IntRangeExpression.left=current} op=('in'|'..') right=Expression) |
         ({infer TypeCastExpression.expr=current} op='as' typeRef=TypeReference) |
         ({infer ArrayAccess.array=current} '[' index=Expression ']') |
-        ({infer CallExpression.method=current} Arguments) |
+        ({infer CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
 
         ({infer InstanceofExpression.expr=current} op='instanceof' typeRef=TypeReference)
     )?
@@ -262,7 +252,7 @@ BracketExpression:
 ;
 
 PrimaryExpression
-    : ParenthesizedExpression | FunctionExpression | LocalVarialbe | PrimitiveLiterals | BracketExpression
+    : ParenthesizedExpression | FunctionExpression | LocalVariable | PrimitiveLiterals | BracketExpression
 ;
 
 ParenthesizedExpression:
@@ -274,7 +264,9 @@ PrimitiveLiterals:
 ;
 
 FunctionExpression:
-    'function' Parameters ('as' returnTypeRef=TypeReference)? '{'
+    'function' '(' 
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? 
+    ')' ('as' returnTypeRef=TypeReference)? '{'
         (body+=Statement)*
     '}'
 ;
@@ -291,7 +283,7 @@ MapEntry:
     key=Expression ':' value=Expression
 ;
 
-LocalVarialbe:
+LocalVariable:
     name=ID
 ;
 
