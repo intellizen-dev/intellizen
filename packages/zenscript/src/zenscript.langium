@@ -214,7 +214,7 @@ MulExpression:
 ;
 
 PrefixExpression:
-    ({infer UnaryExpression} op=('!'|'-') expr=PostfixExpression) |
+    ({infer PrefixExpression} op=('!'|'-') expr=PostfixExpression) |
     PostfixExpression
 ;
 
