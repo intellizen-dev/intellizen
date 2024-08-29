@@ -281,6 +281,20 @@ NumberLiteral:
 BooleanLiteral:
   value?='true' | 'false'
 ;
+
+StringTemplate:
+    '"' content+=(ContentText | ContentExpression)* '"' |
+    '\'' content+=(ContentText | ContentExpression)* '\'' 
+;
+
+terminal ContentText:
+    /\\.*/
+;
+
+ContentExpression:
+    '${' expr=Expression '}'
+;
+
 //endregion Expression
 
 // Soft keywords
