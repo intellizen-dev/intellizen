@@ -199,38 +199,38 @@ ConditionExpression:
 ;
 
 OrOrExpression:
-    AndAndExpression ({infer BinaryExpression.left=current} op='||' right=AndAndExpression)*
+    AndAndExpression ({infer InfixExpression.left=current} op='||' right=AndAndExpression)*
 ;
 
 AndAndExpression:
-    OrExpression ({infer BinaryExpression.left=current} op='&&' right=OrExpression)*
+    OrExpression ({infer InfixExpression.left=current} op='&&' right=OrExpression)*
 ;
 
 OrExpression:
-    XorExpression ({infer BinaryExpression.left=current} op='|' right=XorExpression)*
+    XorExpression ({infer InfixExpression.left=current} op='|' right=XorExpression)*
 ;
 
 XorExpression:
-    AndExpression ({infer BinaryExpression.left=current} op='^' right=AndExpression)*
+    AndExpression ({infer InfixExpression.left=current} op='^' right=AndExpression)*
 ;
 
 AndExpression:
-    CompareExpression ({infer BinaryExpression.left=current} op='&' right=CompareExpression)*
+    CompareExpression ({infer InfixExpression.left=current} op='&' right=CompareExpression)*
 ;
 
 CompareExpression:
-    AddExpression ({infer BinaryExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AddExpression)*
+    AddExpression ({infer InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AddExpression)*
 ;
 
 AddExpression:
-    MulExpression ({infer BinaryExpression.left=current} op='+' right=MulExpression)*
+    MulExpression ({infer InfixExpression.left=current} op='+' right=MulExpression)*
 ;
 
 MulExpression:
-    UnaryExpression ({infer BinaryExpression.left=current} op='*' right=UnaryExpression)*
+    PrefixExpression ({infer InfixExpression.left=current} op='*' right=PrefixExpression)*
 ;
 
-UnaryExpression:
+PrefixExpression:
     ({infer UnaryExpression} op=('!'|'-') expr=PostfixExpression) |
     PostfixExpression
 ;
