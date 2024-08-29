@@ -243,7 +243,7 @@ ParenthesizedExpression:
 ;
 
 PrimitiveLiterals:
-    StringLiteral | NumberLiteral | BooleanLiteral | ArrayLiteral | MapLiteral
+    StringExpression | NumberLiteral | BooleanLiteral | ArrayLiteral | MapLiteral
 ;
 
 FunctionExpression:
@@ -270,16 +270,18 @@ LocalVariable:
     name=ID
 ;
 
-StringLiteral:
-    value=STRING
-;
-
 NumberLiteral:
     value=INT
 ;
 
 BooleanLiteral:
   value?='true' | 'false'
+;
+
+StringExpression: StringLiteral | StringTemplate;
+
+StringLiteral:
+    value=STRING
 ;
 
 StringTemplate:
