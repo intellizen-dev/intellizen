@@ -2,10 +2,10 @@ grammar IntelliZen
 
 entry Script:
     ( imports+=ImportDeclaration
-    | functions+=FunctionDeclaration<true>
+    | functions+=FunctionDeclaration
     | expands+=ExpandFunctionDeclaration
     | classes+=ClassDeclaration
-    | statements+=TopLevelStatement
+    | statements+=Statement
     )*
 ;
 
@@ -27,29 +27,22 @@ ClassDeclaration:
     '}')?
 ;
 
-ClassMemberDeclaration: FunctionDeclaration<false> | VariableDeclaration<false, true> | ConstructorDeclaration;
+ClassMemberDeclaration: FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
 
-VariableDeclarator<isTopLevel, isField>:
-    {infer Declarator}
-    (<isTopLevel> 'global') |
-    (<isTopLevel | isField> 'static') |
-    'var' | 'val'
+FieldDeclaration:
+    prefix=('static'|'var'|'val') name=ID ('as' typeRef=TypeReference)? ('=' initializer=Expression)? ';'
 ;
 
-
-VariableDeclaration<isTopLevel, isField>:
-    prefix=VariableDeclarator<isTopLevel, isField>
-    name=ID ('as' typeRef=TypeReference)?
-    ('=' initializer=Expression)? ';'
+VariableDeclaration:
+    prefix=('global'|'static'|'var'|'val') name=ID ('as' typeRef=TypeReference)? ('=' initializer=Expression)? ';'
 ;
-
 
 ValueParameter:
     (varargs?='...')? name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=Expression)?
 ;
 
-FunctionDeclaration<isTopLevel>:
-    (<isTopLevel> prefix=('static' | 'global')?) 'function' name=ID '(' 
+FunctionDeclaration:
+    prefix=('static' | 'global')? 'function' name=ID '(' 
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? 
     ')' ('as' returnTypeRef=TypeReference)? '{'
         (body+=Statement)*
@@ -127,23 +120,13 @@ ReferenceType:
 
 
 //region Statement
-
-TopLevelStatement:
-    StatementImpl<true>
-;
-
-Statement:
-    StatementImpl<false>
-;
-
-
-StatementImpl<isTopLevel>
+Statement
     : IfStatement 
     | WhileStatement 
     | ForStatement 
     | BlockStatement 
     | ReturnStatement 
-    | VariableDeclaration<isTopLevel, false>
+    | VariableDeclaration
     | ExpressionStatement 
     | BreakStatement 
     | ContinueStatement
