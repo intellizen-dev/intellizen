@@ -133,7 +133,7 @@ Statement
 ;
 
 IfStatement:
-    'if' condition=Expression ifBody=Statement ('else' elseBody=Statement)
+    'if' condition=Expression ifBody=Statement ('else' elseBody=Statement)?
 ;
 
 WhileStatement:
