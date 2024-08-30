@@ -74,11 +74,11 @@ TypeReference returns TypeReference:
 ;
 
 UnionType returns TypeReference:
-    IntersectionType ({infer UnionType.typeRefs+=current} ('|' typeRefs+=IntersectionType)+)*
+    IntersectionType ({infer UnionType.typeRefs+=current} ('|' typeRefs+=IntersectionType)+)?
 ;
 
 IntersectionType returns TypeReference:
-    ComplexType ({infer IntersectionType.typeRefs+=current} ('&' typeRefs+=ComplexType)+)*
+    ComplexType ({infer IntersectionType.typeRefs+=current} ('&' typeRefs+=ComplexType)+)?
 ;
 
 ComplexType returns TypeReference:
@@ -228,12 +228,12 @@ PostfixExpression:
     )?
 ;
 
-BracketExpression:
-   '<' value=(ID | ':')+ '>'
-;
-
 PrimaryExpression
     : ParenthesizedExpression | FunctionExpression | LocalVariable | PrimitiveLiterals | BracketExpression
+;
+
+BracketExpression:
+   '<' value=(ID | ':')+ '>'
 ;
 
 ParenthesizedExpression:
