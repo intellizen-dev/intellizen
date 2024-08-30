@@ -19,9 +19,9 @@ ImportDeclaration:
     'import' parts+=ID ('.' parts+=ID)* ('as' alias=ID)? ';'?
 ;
 
-ClassDeclaration: 
-    'zenClass' name=ID 
-    ('extends' (superTypes+=[ClassDeclaration:ID] (',' superTypes+=[ClassDeclaration:ID])*))? 
+ClassDeclaration:
+    'zenClass' name=ID
+    ('extends' (superTypes+=[ClassDeclaration:ID] (',' superTypes+=[ClassDeclaration:ID])*))?
     ('{'
         members+=ClassMemberDeclaration*
     '}')?
@@ -42,24 +42,24 @@ ValueParameter:
 ;
 
 FunctionDeclaration:
-    prefix=('static' | 'global')? 'function' name=ID '(' 
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? 
+    prefix=('static' | 'global')? 'function' name=ID '('
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
     ')' ('as' returnTypeRef=TypeReference)? '{'
         (body+=Statement)*
     '}'
 ;
 
 ExpandFunctionDeclaration:
-    '$expand' typeRef=TypeReference '$' name=ID  '(' 
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? 
+    '$expand' typeRef=TypeReference '$' name=ID  '('
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
     ')' ('as' returnTypeRef=TypeReference)? '{'
         (body+=Statement)*
     '}'
 ;
 
 ConstructorDeclaration:
-    'zenConstructor' '(' 
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? 
+    'zenConstructor' '('
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
     ')' '{'
         (body+=Statement)*
     '}'
@@ -67,14 +67,14 @@ ConstructorDeclaration:
 
 //region Statement
 Statement
-    : IfStatement 
-    | WhileStatement 
-    | ForStatement 
-    | BlockStatement 
-    | ReturnStatement 
+    : IfStatement
+    | WhileStatement
+    | ForStatement
+    | BlockStatement
+    | ReturnStatement
     | VariableDeclaration
-    | ExpressionStatement 
-    | BreakStatement 
+    | ExpressionStatement
+    | BreakStatement
     | ContinueStatement
 ;
 
@@ -87,28 +87,28 @@ WhileStatement:
 ;
 
 ForStatement:
-    'for' variables+=ID (',' variables+=ID)* 'in' iter=Expression '{' 
-        (body+=Statement)* 
+    'for' variables+=ID (',' variables+=ID)* 'in' iter=Expression '{'
+        (body+=Statement)*
     '}'
 ;
 
-BlockStatement: 
+BlockStatement:
     '{' (body+=Statement)* '}'
 ;
 
-ReturnStatement: 
+ReturnStatement:
     'return' expr=Expression? ';'
 ;
 
-ExpressionStatement: 
+ExpressionStatement:
     expr=Expression ';'
 ;
 
-BreakStatement: 
+BreakStatement:
     {infer BreakStatement} 'break' ';'
 ;
 
-ContinueStatement: 
+ContinueStatement:
     {infer ContinueStatement} 'continue' ';'
 ;
 //endregion Statement
@@ -194,8 +194,8 @@ PrimitiveLiterals:
 ;
 
 FunctionExpression:
-    'function' '(' 
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)? 
+    'function' '('
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
     ')' ('as' returnTypeRef=TypeReference)? '{'
         (body+=Statement)*
     '}'
@@ -260,7 +260,7 @@ IntersectionType returns TypeReference:
 
 ComplexType returns TypeReference:
     PrimaryType ('['(
-        ({infer MapType.valueTypeRef=current} keyTypeRef=TypeReference) | 
+        ({infer MapType.valueTypeRef=current} keyTypeRef=TypeReference) |
         ({infer ArrayType.valueTypeRef=current})
     )']')*
 ;
@@ -282,8 +282,8 @@ ListType:
 ;
 
 FunctionType:
-    'function' '(' 
-        (paramTypeRefs+=TypeReference (',' paramTypeRefs+=TypeReference)*)? 
+    'function' '('
+        (paramTypeRefs+=TypeReference (',' paramTypeRefs+=TypeReference)*)?
     ')' returnTypeRef=TypeReference
 ;
 
