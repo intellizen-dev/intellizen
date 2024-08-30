@@ -242,7 +242,7 @@ ParenthesizedExpression:
 ;
 
 PrimitiveLiterals:
-    StringExpression | NumberLiteral | BooleanLiteral | ArrayLiteral | MapLiteral
+    StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | ArrayLiteral | MapLiteral
 ;
 
 FunctionExpression:
@@ -277,15 +277,12 @@ BooleanLiteral:
   value?='true' | 'false'
 ;
 
-StringExpression: StringLiteral | StringTemplate;
-
 StringLiteral:
     value=STRING
 ;
 
 StringTemplate:
-    '"' content+=(ContentText | ContentExpression)* '"' |
-    '\'' content+=(ContentText | ContentExpression)* '\'' 
+    '`' content+=(ContentText | ContentExpression)* '`'
 ;
 
 terminal ContentText:
