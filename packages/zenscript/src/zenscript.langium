@@ -67,16 +67,33 @@ ConstructorDeclaration:
 
 
 //region TypeReference
-TypeReference:
+interface TypeReference {}
+
+TypeReference returns TypeReference:
     UnionType
 ;
 
-UnionType:
-    IntersectionType ({infer UnionType.typeRefs+=current} ('|' typeRefs+=IntersectionType)+)?
+UnionType returns TypeReference:
+    IntersectionType ({infer UnionType.typeRefs+=current} ('|' typeRefs+=IntersectionType)+)*
 ;
 
-IntersectionType:
-    MapArrayType ({infer IntersectionType.typeRefs+=current} ('&' typeRefs+=MapArrayType)+)?
+IntersectionType returns TypeReference:
+    ComplexType ({infer IntersectionType.typeRefs+=current} ('&' typeRefs+=ComplexType)+)*
+;
+
+ComplexType returns TypeReference:
+    PrimaryType ('['(
+        ({infer MapType.valueTypeRef=current} keyTypeRef=TypeReference) | 
+        ({infer ArrayType.valueTypeRef=current})
+    )']')*
+;
+
+PrimaryType:
+    PrimitiveType | ListType | FunctionType | ParenthesizedType | ReferenceType
+;
+
+ParenthesizedType:
+    '(' typeRef=TypeReference ')'
 ;
 
 PrimitiveType:
@@ -87,33 +104,14 @@ ListType:
     '[' baseTypeRef=TypeReference ']'
 ;
 
-MapArrayType:
-    PrimaryTypeReference (
-        '['
-        (
-            ({infer MapType.valueType=current} keyType=TypeReference) |
-            ({infer ArrayType.valueType=current})
-        )
-        ']'
-    )?
-;
-
 FunctionType:
     'function' '(' 
-        (paramTypeRef+=TypeReference (',' paramTypeRef+=TypeReference)*)? 
+        (paramTypeRefs+=TypeReference (',' paramTypeRefs+=TypeReference)*)? 
     ')' returnTypeRef=TypeReference
 ;
 
-ParenthesizedType:
-    '(' typeRef=TypeReference ')'
-;
-
-PrimaryTypeReference:
-    PrimitiveType | ListType | FunctionType | ParenthesizedType | ReferenceType
-;
-
 ReferenceType:
-    refName=ID ( {infer ReferenceType.parent=current} '.' refName=ID)*
+    names=ID ('.' names=ID)*
 ;
 
 //endregion TypeReference
