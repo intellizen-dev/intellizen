@@ -167,63 +167,64 @@ ContinueStatement:
 
 
 //region Expression
-Expression:
-    {infer Expression} Assignment
+interface Expression {}
+
+Expression returns Expression:
+    Assignment
 ;
 
-Assignment:
+Assignment returns Expression:
     ConditionExpression ({infer Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)*
 ;
 
-ConditionExpression:
+ConditionExpression returns Expression:
     OrOrExpression ({infer TernaryExpression.first=current} '?' second=OrOrExpression ':' third=OrOrExpression)*
 ;
 
-OrOrExpression:
+OrOrExpression returns Expression:
     AndAndExpression ({infer InfixExpression.left=current} op='||' right=AndAndExpression)*
 ;
 
-AndAndExpression:
+AndAndExpression returns Expression:
     OrExpression ({infer InfixExpression.left=current} op='&&' right=OrExpression)*
 ;
 
-OrExpression:
+OrExpression returns Expression:
     XorExpression ({infer InfixExpression.left=current} op='|' right=XorExpression)*
 ;
 
-XorExpression:
+XorExpression returns Expression:
     AndExpression ({infer InfixExpression.left=current} op='^' right=AndExpression)*
 ;
 
-AndExpression:
+AndExpression returns Expression:
     CompareExpression ({infer InfixExpression.left=current} op='&' right=CompareExpression)*
 ;
 
-CompareExpression:
+CompareExpression returns Expression:
     AddExpression ({infer InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AddExpression)*
 ;
 
-AddExpression:
+AddExpression returns Expression:
     MulExpression ({infer InfixExpression.left=current} op='+' right=MulExpression)*
 ;
 
-MulExpression:
+MulExpression returns Expression:
     PrefixExpression ({infer InfixExpression.left=current} op='*' right=PrefixExpression)*
 ;
 
-PrefixExpression:
+PrefixExpression returns Expression:
     ({infer PrefixExpression} op=('!'|'-') expr=PostfixExpression) |
     PostfixExpression
 ;
 
-PostfixExpression:
+PostfixExpression returns Expression:
     PrimaryExpression (
         ({infer MemberAccess.receiver=current} op='.' name=(ID | STRING)) |
         ({infer IntRangeExpression.left=current} op=('in'|'..') right=Expression) |
         ({infer TypeCastExpression.expr=current} op='as' typeRef=TypeReference) |
         ({infer ArrayAccess.array=current} '[' index=Expression ']') |
         ({infer CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
-
         ({infer InstanceofExpression.expr=current} op='instanceof' typeRef=TypeReference)
     )?
 ;
