@@ -65,58 +65,6 @@ ConstructorDeclaration:
     '}'
 ;
 
-
-//region TypeReference
-interface TypeReference {}
-
-TypeReference returns TypeReference:
-    UnionType
-;
-
-UnionType returns TypeReference:
-    IntersectionType ({infer UnionType.typeRefs+=current} ('|' typeRefs+=IntersectionType)+)?
-;
-
-IntersectionType returns TypeReference:
-    ComplexType ({infer IntersectionType.typeRefs+=current} ('&' typeRefs+=ComplexType)+)?
-;
-
-ComplexType returns TypeReference:
-    PrimaryType ('['(
-        ({infer MapType.valueTypeRef=current} keyTypeRef=TypeReference) | 
-        ({infer ArrayType.valueTypeRef=current})
-    )']')*
-;
-
-PrimaryType:
-    PrimitiveType | ListType | FunctionType | ParenthesizedType | ReferenceType
-;
-
-ParenthesizedType:
-    '(' typeRef=TypeReference ')'
-;
-
-PrimitiveType:
-    primitive=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
-;
-
-ListType:
-    '[' baseTypeRef=TypeReference ']'
-;
-
-FunctionType:
-    'function' '(' 
-        (paramTypeRefs+=TypeReference (',' paramTypeRefs+=TypeReference)*)? 
-    ')' returnTypeRef=TypeReference
-;
-
-ReferenceType:
-    names=ID ('.' names=ID)*
-;
-
-//endregion TypeReference
-
-
 //region Statement
 Statement
     : IfStatement 
@@ -206,11 +154,11 @@ CompareExpression returns Expression:
 ;
 
 AddExpression returns Expression:
-    MulExpression ({infer InfixExpression.left=current} op='+' right=MulExpression)*
+    MulExpression ({infer InfixExpression.left=current} op=('+'|'-'|'~') right=MulExpression)*
 ;
 
 MulExpression returns Expression:
-    PrefixExpression ({infer InfixExpression.left=current} op='*' right=PrefixExpression)*
+    PrefixExpression ({infer InfixExpression.left=current} op=('*'|'/'|'%') right=PrefixExpression)*
 ;
 
 PrefixExpression returns Expression:
@@ -295,6 +243,57 @@ ContentExpression:
 
 //endregion Expression
 
+//region TypeReference
+interface TypeReference {}
+
+TypeReference returns TypeReference:
+    UnionType
+;
+
+UnionType returns TypeReference:
+    IntersectionType ({infer UnionType.typeRefs+=current} ('|' typeRefs+=IntersectionType)+)?
+;
+
+IntersectionType returns TypeReference:
+    ComplexType ({infer IntersectionType.typeRefs+=current} ('&' typeRefs+=ComplexType)+)?
+;
+
+ComplexType returns TypeReference:
+    PrimaryType ('['(
+        ({infer MapType.valueTypeRef=current} keyTypeRef=TypeReference) | 
+        ({infer ArrayType.valueTypeRef=current})
+    )']')*
+;
+
+PrimaryType:
+    PrimitiveType | ListType | FunctionType | ParenthesizedType | ReferenceType
+;
+
+ParenthesizedType:
+    '(' typeRef=TypeReference ')'
+;
+
+PrimitiveType:
+    primitive=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
+;
+
+ListType:
+    '[' baseTypeRef=TypeReference ']'
+;
+
+FunctionType:
+    'function' '(' 
+        (paramTypeRefs+=TypeReference (',' paramTypeRefs+=TypeReference)*)? 
+    ')' returnTypeRef=TypeReference
+;
+
+ReferenceType:
+    names=ID ('.' names=ID)*
+;
+
+//endregion TypeReference
+
+
 // Soft keywords
 ID returns string
     : IDENTIFIER
@@ -310,5 +309,6 @@ terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
 terminal INT returns number: /[0-9]+/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
 
-hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
-hidden terminal SL_COMMENT: /\/\/[^\n\r]*/;
+hidden terminal BLOCK_COMMENT: /\/\*.*?\*\//;
+hidden terminal LINE_COMMENT: /\/\/[^\n\r]*/;
+hidden terminal PREPROCESSOR: /#[^\n\r]*/;
