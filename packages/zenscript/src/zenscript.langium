@@ -233,10 +233,7 @@ interface Assignment extends Expression {
     right: Expression;
 }
 
-
-type LiteralsExpression = PrimitiveLiterals | ArrayLiteral | MapLiteral;
-type PrimitiveLiterals = NumberLiteral | BooleanLiteral | StringLiteral | StringTemplate;
-
+type LiteralExpression = StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | NullLiteral | ArrayLiteral | MapLiteral;
 
 interface TernaryExpression extends Expression {
     first: Expression;
@@ -383,7 +380,7 @@ PostfixExpression returns Expression:
 ;
 
 PrimaryExpression returns Expression
-    : ParenthesizedExpression | FunctionExpression | LocalVariable | LiteralsExpression | BracketExpression
+    : ParenthesizedExpression | FunctionExpression | LocalVariable | LiteralExpression | BracketExpression
 ;
 
 BracketExpression returns BracketExpression:
@@ -394,8 +391,8 @@ ParenthesizedExpression returns ParenthesizedExpression:
     '(' expr=Expression ')'
 ;
 
-LiteralsExpression returns LiteralsExpression:
-    StringLiteral | StringTemplate | NumericLiteral | BooleanLiteral | ArrayLiteral | MapLiteral
+LiteralExpression returns LiteralExpression:
+    StringLiteral | StringTemplate | NumericLiteral | BooleanLiteral | ArrayLiteral | MapLiteral | NullLiteral
 ;
 
 FunctionExpression returns FunctionExpression:
@@ -446,6 +443,10 @@ terminal ContentText:
 
 ContentExpression:
     '${' expr=Expression '}'
+;
+
+NullLiteral:
+    value='null'
 ;
 
 //endregion Expression
