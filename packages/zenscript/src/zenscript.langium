@@ -126,7 +126,7 @@ interface WhileStatement extends Statement {
 }
 
 interface ForStatement extends Statement {
-    variables: string[];
+    variables: ForVariableDeclaration[];
     iter: Expression;
     body: Statement[];
 }
@@ -182,9 +182,13 @@ WhileStatement returns WhileStatement:
 ;
 
 ForStatement returns ForStatement:
-    'for' variables+=ID (',' variables+=ID)* 'in' iter=Expression '{'
+    'for' variables+=ForVariableDeclaration (',' variables+=ForVariableDeclaration)* 'in' iter=Expression '{'
         (body+=Statement)*
     '}'
+;
+
+ForVariableDeclaration:
+    name=ID
 ;
 
 BlockStatement returns BlockStatement:
