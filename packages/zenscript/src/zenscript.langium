@@ -235,7 +235,7 @@ interface Assignment extends Expression {
 
 type LiteralExpression = StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | NullLiteral | ArrayLiteral | MapLiteral;
 
-interface TernaryExpression extends Expression {
+interface ConditionalExpression extends Expression {
     first: Expression;
     second: Expression;
     third: Expression;
@@ -322,11 +322,11 @@ Expression returns Expression:
 ;
 
 Assignment returns Expression:
-    ConditionExpression ({Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)*
+    ConditionalExpression ({Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)?
 ;
 
-ConditionExpression returns Expression:
-    OrOrExpression ({TernaryExpression.first=current} '?' second=OrOrExpression ':' third=OrOrExpression)*
+ConditionalExpression returns Expression:
+    OrOrExpression ({ConditionalExpression.first=current} '?' second=ConditionalExpression ':' third=ConditionalExpression)?
 ;
 
 OrOrExpression returns Expression:
@@ -362,8 +362,7 @@ MultiplicativeExpression returns Expression:
 ;
 
 PrefixExpression returns Expression:
-    ({PrefixExpression} op=('!'|'-') expr=PostfixExpression) |
-    PostfixExpression
+    ({PrefixExpression} op=('!'|'-') expr=PrefixExpression) | PostfixExpression
 ;
 
 PostfixExpression returns Expression:
