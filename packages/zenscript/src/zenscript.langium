@@ -15,7 +15,6 @@ Person:
 Greeting:
     'Hello' person=[Person:ID] '!';
 
-
 interface ImportDeclaration {
     parts: string[];
     alias?: string;
@@ -26,7 +25,6 @@ interface ClassDeclaration {
     superTypes: @ClassDeclaration[];
     members: ClassMemberDeclaration[];
 }
-
 
 type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
 
@@ -65,7 +63,6 @@ interface ConstructorDeclaration {
     body: Statement[];
 }
 
-
 ImportDeclaration returns ImportDeclaration:
     'import' parts+=ID ('.' parts+=ID)* ('as' alias=ID)? ';'?
 ;
@@ -78,13 +75,12 @@ ClassDeclaration returns ClassDeclaration:
     '}')?
 ;
 
-ClassMemberDeclaration returns ClassMemberDeclaration: 
+ClassMemberDeclaration returns ClassMemberDeclaration:
     FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
 
 FieldDeclaration returns FieldDeclaration:
     prefix=('static'|'var'|'val') name=ID ('as' typeRef=TypeReference)? ('=' initializer=Expression)? ';'
 ;
-
 
 ValueParameter returns ValueParameter:
     (varargs?='...')? name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=Expression)?
@@ -247,7 +243,6 @@ interface FunctionExpression extends Expression {
     returnTypeRef?: TypeReference;
 }
 
-
 interface BracketExpression extends Expression {
     value: string;
 }
@@ -280,7 +275,6 @@ interface InstanceofExpression extends Expression {
     expr: Expression;
     typeRef: TypeReference;
 }
-
 
 interface LocalVariable extends Expression {
     name: string;
@@ -379,12 +373,12 @@ PostfixExpression returns Expression:
     )?
 ;
 
-PrimaryExpression returns Expression
-    : ParenthesizedExpression | FunctionExpression | LocalVariable | LiteralExpression | BracketExpression
+PrimaryExpression returns Expression:
+    ParenthesizedExpression | FunctionExpression | LocalVariable | LiteralExpression | BracketExpression
 ;
 
 BracketExpression returns BracketExpression:
-   '<' value=(ID | ':')+ '>'
+    '<' value=(ID | ':')+ '>'
 ;
 
 ParenthesizedExpression returns ParenthesizedExpression:
@@ -403,11 +397,9 @@ FunctionExpression returns FunctionExpression:
     '}'
 ;
 
-
 ArrayLiteral returns ArrayLiteral:
     '[' (values+=Expression (',' values+=Expression)* ','?)? ']'
 ;
-
 
 MapLiteral returns MapLiteral:
     '{' (entries+=MapEntry (',' entries+=MapEntry)* ','?)? '}'
@@ -426,7 +418,7 @@ NumericLiteral returns NumberLiteral:
 ;
 
 BooleanLiteral returns BooleanLiteral:
-  value?='true' | 'false'
+    value?='true' | 'false'
 ;
 
 StringLiteral returns StringLiteral:
@@ -463,7 +455,6 @@ interface UnionType extends TypeReference {
 interface IntersectionType extends TypeReference {
     typeRefs: TypeReference[];
 }
-
 
 interface PrimitiveType extends TypeReference {
     primitive: 'any' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'bool' | 'void' | 'string';
