@@ -217,8 +217,8 @@ ContinueStatement returns ContinueStatement:
 interface Expression {}
 
 interface PrefixExpression extends Expression {
-    expr: Expression;
     op: '!' | '-';
+    expr: Expression;
 }
 
 interface InfixExpression extends Expression {
@@ -335,7 +335,7 @@ ConditionExpression returns Expression:
 ;
 
 OrOrExpression returns Expression:
-    AndAndExpression ({InfixExpression.left=current} op='|' right=AndAndExpression)*
+    AndAndExpression ({InfixExpression.left=current} op='||' right=AndAndExpression)*
 ;
 
 AndAndExpression returns Expression:
@@ -351,18 +351,18 @@ XorExpression returns Expression:
 ;
 
 AndExpression returns Expression:
-    CompareExpression ({InfixExpression.left=current} op='&' right=CompareExpression)*
+    RelationalExpression ({InfixExpression.left=current} op='&' right=RelationalExpression)*
 ;
 
-CompareExpression returns Expression:
-    AddExpression ({InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AddExpression)*
+RelationalExpression returns Expression:
+    AdditiveExpression ({InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpression)*
 ;
 
-AddExpression returns Expression:
-    MulExpression ({InfixExpression.left=current} op=('+'|'-'|'~') right=MulExpression)*
+AdditiveExpression returns Expression:
+    MultiplicativeExpression ({InfixExpression.left=current} op=('+'|'-'|'~') right=MultiplicativeExpression)*
 ;
 
-MulExpression returns Expression:
+MultiplicativeExpression returns Expression:
     PrefixExpression ({InfixExpression.left=current} op=('*'|'/'|'%') right=PrefixExpression)*
 ;
 
@@ -425,7 +425,7 @@ LocalVariable returns LocalVariable:
 ;
 
 NumberLiteral returns NumberLiteral:
-    value=INT
+    value=INTEGER
 ;
 
 BooleanLiteral returns BooleanLiteral:
@@ -556,9 +556,9 @@ ID returns string
     | 'orderly'  // zenutils
 ;
 
-hidden terminal WS: /\s+/;
+hidden terminal WHITE_SPACE: /\s+/;
 terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
-terminal INT returns number: /[0-9]+/;
+terminal INTEGER returns number: /[0-9]+/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
 
 hidden terminal BLOCK_COMMENT: /\/\*.*?\*\//;
