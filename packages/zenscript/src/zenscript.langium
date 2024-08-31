@@ -290,7 +290,7 @@ interface LocalVariable extends Expression {
 }
 
 interface NumberLiteral extends Expression {
-    value: number;
+    value: string;
 }
 
 interface BooleanLiteral extends Expression {
@@ -395,7 +395,7 @@ ParenthesizedExpression returns ParenthesizedExpression:
 ;
 
 LiteralsExpression returns LiteralsExpression:
-    StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | ArrayLiteral | MapLiteral
+    StringLiteral | StringTemplate | NumericLiteral | BooleanLiteral | ArrayLiteral | MapLiteral
 ;
 
 FunctionExpression returns FunctionExpression:
@@ -424,8 +424,8 @@ LocalVariable returns LocalVariable:
     name=ID
 ;
 
-NumberLiteral returns NumberLiteral:
-    value=INTEGER
+NumericLiteral returns NumberLiteral:
+    value=(INTEGER | FLOATING)
 ;
 
 BooleanLiteral returns BooleanLiteral:
@@ -558,7 +558,8 @@ ID returns string
 
 hidden terminal WHITE_SPACE: /\s+/;
 terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
-terminal INTEGER returns number: /[0-9]+/;
+terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
+terminal FLOATING: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdD]?/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
 
 hidden terminal BLOCK_COMMENT: /\/\*.*?\*\//;
