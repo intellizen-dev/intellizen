@@ -1,6 +1,6 @@
 import { type Module, inject } from 'langium'
 import { type DefaultSharedModuleContext, type LangiumServices, type LangiumSharedServices, type PartialLangiumServices, createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
-import { IntelliZenGeneratedModule, IntelliZenGeneratedSharedModule } from './generated/module'
+import { IntelliZenGeneratedModule as iIntelliZenGeneratedModule, IntelliZenGeneratedSharedModule as iIntelliZenGeneratedSharedModule } from './generated/module'
 import { IntelliZenValidator, registerValidationChecks } from './validator'
 
 /**
@@ -23,7 +23,7 @@ export type IntelliZenServices = LangiumServices & IntelliZenAddedServices
  * declared custom services. The Langium defaults can be partially specified to override only
  * selected services, while the custom services must be fully specified.
  */
-export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices & IntelliZenAddedServices> = {
+export const intelliZenModule: Module<IntelliZenServices, PartialLangiumServices & IntelliZenAddedServices> = {
   validation: {
     IntelliZenValidator: () => new IntelliZenValidator(),
   },
@@ -46,16 +46,16 @@ export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices
  */
 export function createIntelliZenServices(context: DefaultSharedModuleContext): {
   shared: LangiumSharedServices
-  IntelliZen: IntelliZenServices
+  intelliZen: IntelliZenServices
 } {
   const shared = inject(
     createDefaultSharedModule(context),
-    IntelliZenGeneratedSharedModule,
+    iIntelliZenGeneratedSharedModule,
   )
   const IntelliZen = inject(
     createDefaultModule({ shared }),
-    IntelliZenGeneratedModule,
-    IntelliZenModule,
+    iIntelliZenGeneratedModule,
+    intelliZenModule,
   )
   shared.ServiceRegistry.register(IntelliZen)
   registerValidationChecks(IntelliZen)
@@ -64,5 +64,5 @@ export function createIntelliZenServices(context: DefaultSharedModuleContext): {
     // Therefore, initialize the configuration provider instantly
     shared.workspace.ConfigurationProvider.initialized({})
   }
-  return { shared, IntelliZen }
+  return { shared, intelliZen: IntelliZen }
 }
