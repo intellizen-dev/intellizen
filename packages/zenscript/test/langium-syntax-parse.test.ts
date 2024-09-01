@@ -19,7 +19,7 @@ async function assertNoErrors(model: LangiumDocument<Script>) {
   expect(model.diagnostics ?? []).toHaveLength(0)
 }
 
-describe('langium parse', async () => {
+describe('langium syntax parse', async () => {
   it('missing semicolon', async () => {
     const model = await parseModel('val a as int')
     expect(model.parseResult.lexerErrors).toHaveLength(0)

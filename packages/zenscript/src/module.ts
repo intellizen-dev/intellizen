@@ -1,6 +1,6 @@
 import { type Module, inject } from 'langium'
 import { type DefaultSharedModuleContext, type LangiumServices, type LangiumSharedServices, type PartialLangiumServices, createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
-import { IntelliZenGeneratedModule as iIntelliZenGeneratedModule, IntelliZenGeneratedSharedModule as iIntelliZenGeneratedSharedModule } from './generated/module'
+import { IntelliZenGeneratedModule as iIntelliZenGeneratedModule, intelliZenGeneratedSharedModule } from './generated/module'
 import { IntelliZenValidator, registerValidationChecks } from './validator'
 
 /**
@@ -50,7 +50,7 @@ export function createIntelliZenServices(context: DefaultSharedModuleContext): {
 } {
   const shared = inject(
     createDefaultSharedModule(context),
-    iIntelliZenGeneratedSharedModule,
+    intelliZenGeneratedSharedModule,
   )
   const IntelliZen = inject(
     createDefaultModule({ shared }),
