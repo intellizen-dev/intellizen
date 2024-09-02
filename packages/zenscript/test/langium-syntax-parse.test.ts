@@ -38,7 +38,7 @@ describe('langium syntax parse', async () => {
       function foo(a as int) as int {}
       static function bar() as void {}
       global function baz(c as OtherType) as any {}
-    `.trim())
+    `)
     await assertNoErrors(model)
 
     const [foo, bar, baz] = model.parseResult.value.functions
@@ -65,5 +65,31 @@ describe('langium syntax parse', async () => {
     expect((baz.parameters[0].typeRef as ReferenceType).names).toStrictEqual(['OtherType'])
     expect(baz.returnTypeRef?.$type).toBe('PrimitiveType')
     expect((baz.returnTypeRef as PrimitiveType).primitive).toBe('any')
+  })
+
+  it('expand function declaration', async () => {
+    const model = await parseModel(`
+      $expand string$reverse() as string {}
+      $expand OtherType$foo(foo as OtherType.ChildType) as void {}
+    `)
+    await assertNoErrors(model)
+
+    const [string$Reverse, otherType$Foo] = model.parseResult.value.expands
+    expect(string$Reverse.name).toBe('reverse')
+    expect(string$Reverse.typeRef?.$type).toBe('PrimitiveType')
+    expect((string$Reverse.typeRef as PrimitiveType).primitive).toBe('string')
+    expect(string$Reverse.parameters.length).toBe(0)
+    expect(string$Reverse.returnTypeRef?.$type).toBe('PrimitiveType')
+    expect((string$Reverse.returnTypeRef as PrimitiveType).primitive).toBe('string')
+
+    expect(otherType$Foo.name).toBe('foo')
+    expect(otherType$Foo.typeRef?.$type).toBe('ReferenceType')
+    expect((otherType$Foo.typeRef as ReferenceType).names).toStrictEqual(['OtherType'])
+    expect(otherType$Foo.parameters.length).toBe(1)
+    expect(otherType$Foo.parameters[0].name).toBe('foo')
+    expect(otherType$Foo.parameters[0].typeRef?.$type).toBe('ReferenceType')
+    expect((otherType$Foo.parameters[0].typeRef as ReferenceType).names).toStrictEqual(['OtherType', 'ChildType'])
+    expect(otherType$Foo.returnTypeRef?.$type).toBe('PrimitiveType')
+    expect((otherType$Foo.returnTypeRef as PrimitiveType).primitive).toBe('void')
   })
 })
