@@ -30,8 +30,8 @@ export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices
   },
 
   references: {
-    ScopeComputation: (services) => new ZenScriptScopeComputation(services),
-  }
+    ScopeComputation: services => new ZenScriptScopeComputation(services),
+  },
 }
 
 /**
