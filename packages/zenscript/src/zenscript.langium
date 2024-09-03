@@ -16,17 +16,23 @@ Greeting:
     'Hello' person=[Person:ID] '!';
 
 interface ImportDeclaration {
-    parts: string[];
+    ref: @NamedElement;
     alias?: string;
 }
 
 interface ClassDeclaration {
     name: string;
-    superTypes: @ClassDeclaration[];
+    superTypes: @TypeElement[];
     members: ClassMemberDeclaration[];
 }
 
+type NamedElement = ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | ForVariableDeclaration | MapEntry | ImportDeclaration;
+
+type TypeElement = ClassDeclaration | ImportDeclaration;
+
 type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
+
+type CallableDeclaration = FunctionDeclaration | ExpandFunctionDeclaration | ConstructorDeclaration;
 
 interface FieldDeclaration {
     prefix: 'static' | 'var' | 'val';
@@ -43,7 +49,7 @@ interface ValueParameter {
 }
 
 interface FunctionDeclaration {
-    prefix: 'static' | 'global';
+    prefix?: 'static' | 'global';
     name: string;
     parameters: ValueParameter[];
     returnTypeRef?: TypeReference;
@@ -63,13 +69,17 @@ interface ConstructorDeclaration {
     body: Statement[];
 }
 
+QualifiedName returns string:
+    ID ('.' ID)*
+;
+
 ImportDeclaration returns ImportDeclaration:
-    'import' parts+=ID ('.' parts+=ID)* ('as' alias=ID)? ';'?
+    'import' ref=[NamedElement:QualifiedName] ('as' alias=ID)? ';'?
 ;
 
 ClassDeclaration returns ClassDeclaration:
     'zenClass' name=ID
-    ('extends' (superTypes+=[ClassDeclaration:ID] (',' superTypes+=[ClassDeclaration:ID])*))?
+    ('extends' (superTypes+=[TypeElement:QualifiedName] (',' superTypes+=[TypeElement:QualifiedName])*))?
     ('{'
         members+=ClassMemberDeclaration*
     '}')?
@@ -257,7 +267,7 @@ interface ParenthesizedExpression extends Expression {
 
 interface MemberAccess extends Expression {
     receiver: Expression;
-    name: string;
+    ref: @NamedElement;
 }
 
 interface TypeCastExpression extends Expression {
@@ -281,7 +291,7 @@ interface InstanceofExpression extends Expression {
 }
 
 interface LocalVariable extends Expression {
-    name: string;
+    ref: @NamedElement;
 }
 
 interface NumberLiteral extends Expression {
@@ -365,9 +375,13 @@ PrefixExpression returns Expression:
     ({PrefixExpression} op=('!'|'-') expr=PrefixExpression) | PostfixExpression
 ;
 
+MemberAccessName returns string:
+    ID | STRING
+;
+
 PostfixExpression returns Expression:
     PrimaryExpression (
-        ({MemberAccess.receiver=current} '.' name=(ID | STRING)) |
+        ({MemberAccess.receiver=current} '.' ref=[NamedElement:MemberAccessName] ) |
         ({InfixExpression.left=current} op=('in'|'..') right=Expression) |
         ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
         ({ArrayAccess.array=current} '[' index=Expression ']') |
@@ -413,7 +427,7 @@ MapEntry returns MapEntry:
 ;
 
 LocalVariable returns LocalVariable:
-    name=ID
+    ref=[VariableDeclaration:ID]
 ;
 
 NumericLiteral returns NumberLiteral:
@@ -452,41 +466,41 @@ NullLiteral:
 interface TypeReference {}
 
 interface UnionType extends TypeReference {
-    typeRefs: TypeReference[];
+    values: TypeReference[];
 }
 
 interface IntersectionType extends TypeReference {
-    typeRefs: TypeReference[];
+    values: TypeReference[];
 }
 
 interface PrimitiveType extends TypeReference {
-    primitive: 'any' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'bool' | 'void' | 'string';
+    value: 'any' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'bool' | 'void' | 'string';
 }
 
 interface ListType extends TypeReference {
-    baseTypeRef: TypeReference;
+    value: TypeReference;
 }
 
 interface FunctionType extends TypeReference {
-    paramTypeRefs: TypeReference[];
-    returnTypeRef: TypeReference;
+    params: TypeReference[];
+    returnType: TypeReference;
 }
 
 interface ReferenceType extends TypeReference {
-    names: string[];
+    ref: @TypeElement;
 }
 
 interface ParenthesizedType extends TypeReference {
-    typeRef: TypeReference;
+    value: TypeReference;
 }
 
 interface ArrayType extends TypeReference {
-    valueTypeRef: TypeReference;
+    value: TypeReference;
 }
 
 interface MapType extends TypeReference {
-    valueTypeRef: TypeReference;
-    keyTypeRef: TypeReference;
+    key: TypeReference;
+    value: TypeReference;
 }
 
 //endregion
@@ -498,17 +512,17 @@ TypeReference returns TypeReference:
 ;
 
 UnionType returns TypeReference:
-    IntersectionType ({UnionType.typeRefs+=current} ('|' typeRefs+=IntersectionType)+)?
+    IntersectionType ({UnionType.values+=current} ('|' values+=IntersectionType)+)?
 ;
 
 IntersectionType returns TypeReference:
-    ComplexType ({IntersectionType.typeRefs+=current} ('&' typeRefs+=ComplexType)+)?
+    ComplexType ({IntersectionType.values+=current} ('&' values+=ComplexType)+)?
 ;
 
 ComplexType returns TypeReference:
     PrimaryType ('['(
-        ({MapType.valueTypeRef=current} keyTypeRef=TypeReference) |
-        ({ArrayType.valueTypeRef=current})
+        ({MapType.value=current} key=TypeReference) |
+        ({ArrayType.value=current})
     )']')*
 ;
 
@@ -517,25 +531,25 @@ PrimaryType returns TypeReference:
 ;
 
 ParenthesizedType returns ParenthesizedType:
-    '(' typeRef=TypeReference ')'
+    '(' value=TypeReference ')'
 ;
 
 PrimitiveType returns PrimitiveType:
-    primitive=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
+    value=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
 ;
 
 ListType returns ListType:
-    '[' baseTypeRef=TypeReference ']'
+    '[' value=TypeReference ']'
 ;
 
 FunctionType returns FunctionType:
     'function' '('
-        (paramTypeRefs+=TypeReference (',' paramTypeRefs+=TypeReference)*)?
-    ')' returnTypeRef=TypeReference
+        (params+=TypeReference (',' params+=TypeReference)*)?
+    ')' returnType=TypeReference
 ;
 
 ReferenceType returns ReferenceType:
-    names+=ID ('.' names+=ID)*
+    ref=[TypeElement:QualifiedName]
 ;
 
 //endregion TypeReference
