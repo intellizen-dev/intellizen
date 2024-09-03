@@ -2,6 +2,7 @@ import { type Module, inject } from 'langium'
 import { type DefaultSharedModuleContext, type LangiumServices, type LangiumSharedServices, type PartialLangiumServices, createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
 import { IntelliZenGeneratedModule, IntelliZenGeneratedSharedModule } from './generated/module'
 import { IntelliZenValidator, registerValidationChecks } from './validator'
+import { ZenScriptScopeComputation } from './scope'
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -26,6 +27,10 @@ export type IntelliZenServices = LangiumServices & IntelliZenAddedServices
 export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices & IntelliZenAddedServices> = {
   validation: {
     IntelliZenValidator: () => new IntelliZenValidator(),
+  },
+
+  references: {
+    ScopeComputation: services => new ZenScriptScopeComputation(services),
   },
 }
 
