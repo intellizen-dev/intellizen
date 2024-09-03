@@ -27,6 +27,7 @@ interface ClassDeclaration {
 }
 
 type NamedElement = ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | ForVariableDeclaration | MapEntry | ImportDeclaration;
+
 type TypeElement = ClassDeclaration | ImportDeclaration;
 
 type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
@@ -465,24 +466,24 @@ NullLiteral:
 interface TypeReference {}
 
 interface UnionType extends TypeReference {
-    typeRefs: TypeReference[];
+    values: TypeReference[];
 }
 
 interface IntersectionType extends TypeReference {
-    typeRefs: TypeReference[];
+    values: TypeReference[];
 }
 
 interface PrimitiveType extends TypeReference {
-    primitive: 'any' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'bool' | 'void' | 'string';
+    value: 'any' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'bool' | 'void' | 'string';
 }
 
 interface ListType extends TypeReference {
-    baseTypeRef: TypeReference;
+    value: TypeReference;
 }
 
 interface FunctionType extends TypeReference {
-    paramTypeRefs: TypeReference[];
-    returnTypeRef: TypeReference;
+    params: TypeReference[];
+    returnType: TypeReference;
 }
 
 interface ReferenceType extends TypeReference {
@@ -490,16 +491,16 @@ interface ReferenceType extends TypeReference {
 }
 
 interface ParenthesizedType extends TypeReference {
-    typeRef: TypeReference;
+    value: TypeReference;
 }
 
 interface ArrayType extends TypeReference {
-    valueTypeRef: TypeReference;
+    value: TypeReference;
 }
 
 interface MapType extends TypeReference {
-    valueTypeRef: TypeReference;
-    keyTypeRef: TypeReference;
+    key: TypeReference;
+    value: TypeReference;
 }
 
 //endregion
@@ -511,17 +512,17 @@ TypeReference returns TypeReference:
 ;
 
 UnionType returns TypeReference:
-    IntersectionType ({UnionType.typeRefs+=current} ('|' typeRefs+=IntersectionType)+)?
+    IntersectionType ({UnionType.values+=current} ('|' values+=IntersectionType)+)?
 ;
 
 IntersectionType returns TypeReference:
-    ComplexType ({IntersectionType.typeRefs+=current} ('&' typeRefs+=ComplexType)+)?
+    ComplexType ({IntersectionType.values+=current} ('&' values+=ComplexType)+)?
 ;
 
 ComplexType returns TypeReference:
     PrimaryType ('['(
-        ({MapType.valueTypeRef=current} keyTypeRef=TypeReference) |
-        ({ArrayType.valueTypeRef=current})
+        ({MapType.value=current} key=TypeReference) |
+        ({ArrayType.value=current})
     )']')*
 ;
 
@@ -530,21 +531,21 @@ PrimaryType returns TypeReference:
 ;
 
 ParenthesizedType returns ParenthesizedType:
-    '(' typeRef=TypeReference ')'
+    '(' value=TypeReference ')'
 ;
 
 PrimitiveType returns PrimitiveType:
-    primitive=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
+    value=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
 ;
 
 ListType returns ListType:
-    '[' baseTypeRef=TypeReference ']'
+    '[' value=TypeReference ']'
 ;
 
 FunctionType returns FunctionType:
     'function' '('
-        (paramTypeRefs+=TypeReference (',' paramTypeRefs+=TypeReference)*)?
-    ')' returnTypeRef=TypeReference
+        (params+=TypeReference (',' params+=TypeReference)*)?
+    ')' returnType=TypeReference
 ;
 
 ReferenceType returns ReferenceType:
