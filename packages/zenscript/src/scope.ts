@@ -1,13 +1,61 @@
-import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes } from 'langium'
-import { Cancellation, DefaultScopeComputation, MultiMap, interruptAndCheck } from 'langium'
+import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, LangiumCoreServices, LangiumDocument, PrecomputedScopes, ScopeComputation } from 'langium'
+import { Cancellation, MultiMap, interruptAndCheck } from 'langium'
 import type { CancellationToken } from 'vscode-languageserver'
-import type { CallableDeclaration, ClassDeclaration, ImportDeclaration, Statement } from './generated/ast'
+import type { CallableDeclaration, ClassDeclaration, FunctionDeclaration, ImportDeclaration, Statement } from './generated/ast'
 import { isBlockStatement, isCallableDeclaration, isConstructorDeclaration, isForStatement, isScript, isVariableDeclaration } from './generated/ast'
 
-export class ZenScriptScopeComputation extends DefaultScopeComputation {
+export class ZenScriptScopeComputation implements ScopeComputation {
+  private readonly descriptions: AstNodeDescriptionProvider
+
+  constructor(services: LangiumCoreServices) {
+    this.descriptions = services.workspace.AstNodeDescriptionProvider
+  }
+
   // #region global declarations
 
-  override async computeExports(document: LangiumDocument, cancelToken: CancellationToken = Cancellation.CancellationToken.None): Promise<AstNodeDescription[]> {
+  private async exportClass(clazz: ClassDeclaration, document: LangiumDocument, exports: AstNodeDescription[], packageName: string): Promise<void> {
+    if (!clazz.name) {
+      return
+    }
+
+    const qualifiedName = `${packageName}.${clazz.name}`
+    const desc = this.descriptions.createDescription(clazz, qualifiedName, document)
+    exports.push(desc)
+  }
+
+  private async exportFunction(functionDeclaration: FunctionDeclaration, document: LangiumDocument, exports: AstNodeDescription[], packageName: string): Promise<void> {
+    if (!functionDeclaration.name) {
+      return
+    }
+
+    if (functionDeclaration.prefix === 'global') {
+      const desc = this.descriptions.createDescription(functionDeclaration, functionDeclaration.name, document)
+      exports.push(desc)
+    }
+    else if (functionDeclaration.prefix === 'static') {
+      const qualifiedName = `${packageName}.${functionDeclaration.name}`
+      const desc = this.descriptions.createDescription(functionDeclaration, qualifiedName, document)
+      exports.push(desc)
+    }
+  }
+
+  private async exportVariable(stmt: Statement, document: LangiumDocument, exports: AstNodeDescription[], packageName: string): Promise<void> {
+    if (!isVariableDeclaration(stmt) || !stmt.name) {
+      return
+    }
+
+    if (stmt.prefix === 'global') {
+      const desc = this.descriptions.createDescription(stmt, stmt.name, document)
+      exports.push(desc)
+    }
+    else if (stmt.prefix === 'static') {
+      const qualifiedName = `${packageName}.${stmt.name}`
+      const desc = this.descriptions.createDescription(stmt, qualifiedName, document)
+      exports.push(desc)
+    }
+  }
+
+  async computeExports(document: LangiumDocument, cancelToken: CancellationToken = Cancellation.CancellationToken.None): Promise<AstNodeDescription[]> {
     const exports: AstNodeDescription[] = []
 
     const root = document.parseResult?.value
@@ -19,49 +67,23 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
 
     for (const clazz of root.classes) {
       await interruptAndCheck(cancelToken)
-      if (!clazz.name)
-        continue
-
-      const qualifiedName = `${packageName}.${clazz.name}`
-      const desc = this.descriptions.createDescription(clazz, qualifiedName, document)
-      exports.push(desc)
+      await this.exportClass(clazz, document, exports, packageName)
     };
 
     for (const functionDeclaration of root.functions) {
       await interruptAndCheck(cancelToken)
-      if (!functionDeclaration.name)
-        continue
-      if (functionDeclaration.prefix === 'global') {
-        const desc = this.descriptions.createDescription(functionDeclaration, functionDeclaration.name, document)
-        exports.push(desc)
-      }
-      else if (functionDeclaration.prefix === 'static') {
-        const qualifiedName = `${packageName}.${functionDeclaration.name}`
-        const desc = this.descriptions.createDescription(functionDeclaration, qualifiedName, document)
-        exports.push(desc)
-      }
+      await this.exportFunction(functionDeclaration, document, exports, packageName)
     }
 
     for (const stmt of root.statements) {
       await interruptAndCheck(cancelToken)
-      if (!isVariableDeclaration(stmt) || !stmt.name) {
-        continue
-      }
-      if (stmt.prefix === 'global') {
-        const desc = this.descriptions.createDescription(stmt, stmt.name, document)
-        exports.push(desc)
-      }
-      else if (stmt.prefix === 'static') {
-        const qualifiedName = `${packageName}.${stmt.name}`
-        const desc = this.descriptions.createDescription(stmt, qualifiedName, document)
-        exports.push(desc)
-      }
+      await this.exportVariable(stmt, document, exports, packageName)
     }
 
     return exports
   }
 
-  getPackageName(document: LangiumDocument): string {
+  private getPackageName(document: LangiumDocument): string {
     const pathStr = document.uri.path
 
     // iterate over parent dir to find 'scripts' dir and return the relative path
@@ -87,7 +109,7 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
   // #endregion
 
   // #region local declarations
-  override async computeLocalScopes(document: LangiumDocument): Promise<PrecomputedScopes> {
+  async computeLocalScopes(document: LangiumDocument, cancelToken: CancellationToken = Cancellation.CancellationToken.None): Promise<PrecomputedScopes> {
     const root = document.parseResult?.value
     // This map stores a list of descriptions for each node in our document
     const scopes = new MultiMap<AstNode, AstNodeDescription>()
@@ -96,57 +118,47 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
     }
 
     for (const importDecl of root.imports) {
-      await this.processImport(importDecl, document, scopes)
+      await this.processImport(importDecl, document, scopes, cancelToken)
     }
 
     for (const clazz of root.classes) {
-      await this.processClassMembers(clazz, document, scopes)
+      await this.processClassMembers(clazz, document, scopes, cancelToken)
     }
 
     for (const functionDeclaration of root.functions) {
-      await this.processCallable(functionDeclaration, document, scopes)
+      await this.processCallable(functionDeclaration, document, scopes, cancelToken)
     }
 
-    this.processStatements(root, root.statements, document, scopes)
+    this.processStatements(root, root.statements, document, scopes, cancelToken)
 
     return scopes
   }
 
-  async processImport(importDecl: ImportDeclaration, document: LangiumDocument, scopes: PrecomputedScopes): Promise<void> {
-    let name
+  async processImport(importDecl: ImportDeclaration, document: LangiumDocument, scopes: PrecomputedScopes, cancelToken: CancellationToken): Promise<void> {
+    await interruptAndCheck(cancelToken)
+    const name = importDecl.alias || importDecl.ref.$refText.substring(importDecl.ref.$refText.lastIndexOf('.') + 1)
 
-    if (importDecl.alias) {
-      name = importDecl.alias
-    }
-    else {
-      const text = importDecl.ref.$refText
-      name = text.substring(text.lastIndexOf('.') + 1)
-    }
-
-    if (importDecl.ref.ref) {
-      const desc = this.descriptions.createDescription(importDecl.ref.ref, name, document)
-      scopes.add(importDecl.$container, desc)
-    }
-    else {
-      const desc = this.descriptions.createDescription(importDecl, name, document)
-      scopes.add(importDecl.$container, desc)
-    }
+    const desc = this.descriptions.createDescription(importDecl, name, document)
+    scopes.add(importDecl.$container, desc)
   }
 
-  async processClassMembers(clazz: ClassDeclaration, document: LangiumDocument, scopes: PrecomputedScopes): Promise<void> {
+  async processClassMembers(clazz: ClassDeclaration, document: LangiumDocument, scopes: PrecomputedScopes, cancelToken: CancellationToken): Promise<void> {
+    await interruptAndCheck(cancelToken)
     if (clazz.name) {
       const desc = this.descriptions.createDescription(clazz, clazz.name, document)
       scopes.add(clazz.$container, desc)
     }
 
     for (const member of clazz.members) {
+      await interruptAndCheck(cancelToken)
       if (isCallableDeclaration(member)) {
-        this.processCallable(member, document, scopes)
+        this.processCallable(member, document, scopes, cancelToken)
       }
     }
   }
 
-  async processCallable(callable: CallableDeclaration, document: LangiumDocument, scopes: PrecomputedScopes): Promise<void> {
+  async processCallable(callable: CallableDeclaration, document: LangiumDocument, scopes: PrecomputedScopes, cancelToken: CancellationToken): Promise<void> {
+    await interruptAndCheck(cancelToken)
     if (!isConstructorDeclaration(callable) && callable.name) {
       const desc = this.descriptions.createDescription(callable, callable.name, document)
       scopes.add(callable.$container, desc)
@@ -160,13 +172,15 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
       }
     }
 
-    this.processStatements(callable, callable.body, document, scopes)
+    this.processStatements(callable, callable.body, document, scopes, cancelToken)
   }
 
-  async processStatements(container: AstNode, stmts: Array<Statement>, document: LangiumDocument, scopes: PrecomputedScopes): Promise<void> {
+  async processStatements(container: AstNode, stmts: Array<Statement>, document: LangiumDocument, scopes: PrecomputedScopes, cancelToken: CancellationToken): Promise<void> {
+    await interruptAndCheck(cancelToken)
     for (const stmt of stmts) {
+      await interruptAndCheck(cancelToken)
       if (isBlockStatement(stmt)) {
-        this.processStatements(stmt, stmt.body, document, scopes)
+        this.processStatements(stmt, stmt.body, document, scopes, cancelToken)
       }
       else if (isForStatement(stmt)) {
         for (const variables of stmt.variables) {
@@ -176,7 +190,7 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
           }
         }
 
-        this.processStatements(stmt, stmt.body, document, scopes)
+        this.processStatements(stmt, stmt.body, document, scopes, cancelToken)
       }
       else if (isVariableDeclaration(stmt) && stmt.name) {
         const desc = this.descriptions.createDescription(stmt, stmt.name, document)
