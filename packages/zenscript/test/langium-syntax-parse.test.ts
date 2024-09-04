@@ -81,18 +81,18 @@ describe('test with langium syntax parse', async () => {
     `)
     await assertNoErrors(model)
 
-    const [string$Reverse, otherType$Foo] = model.parseResult.value.expands
-    expect(string$Reverse.name).toBe('reverse')
-    expectTypeToBe('string', string$Reverse.typeRef)
-    expect(string$Reverse.parameters.length).toBe(0)
-    expectTypeToBe('string', string$Reverse.returnTypeRef)
+    const [string$reverse, otherType$foo] = model.parseResult.value.expands
+    expect(string$reverse.name).toBe('reverse')
+    expectTypeToBe('string', string$reverse.typeRef)
+    expect(string$reverse.parameters.length).toBe(0)
+    expectTypeToBe('string', string$reverse.returnTypeRef)
 
-    expect(otherType$Foo.name).toBe('foo')
-    expectTypeToBe('string', string$Reverse.typeRef)
-    expect(otherType$Foo.parameters.length).toBe(1)
-    expect(otherType$Foo.parameters[0].name).toBe('foo')
-    expectTypeToBe('OtherType.ChildType', otherType$Foo.parameters[0].typeRef)
-    expectTypeToBe('void', otherType$Foo.returnTypeRef)
+    expect(otherType$foo.name).toBe('foo')
+    expectTypeToBe('string', string$reverse.typeRef)
+    expect(otherType$foo.parameters.length).toBe(1)
+    expect(otherType$foo.parameters[0].name).toBe('foo')
+    expectTypeToBe('OtherType.ChildType', otherType$foo.parameters[0].typeRef)
+    expectTypeToBe('void', otherType$foo.returnTypeRef)
   })
 
   it('class declaration', async () => {
@@ -100,8 +100,8 @@ describe('test with langium syntax parse', async () => {
       zenClass Foo {}
       zenClass Bar extends Foo, Baz {} // zenutils
     `)
-
     await assertNoErrors(model)
+
     const [foo, bar] = model.parseResult.value.classes
     expect(foo.name).toBe('Foo')
     expect(foo.superTypes).toStrictEqual([])
