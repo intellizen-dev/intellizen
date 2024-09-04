@@ -57,17 +57,17 @@ export function createIntelliZenServices(context: DefaultSharedModuleContext): {
     createDefaultSharedModule(context),
     IntelliZenGeneratedSharedModule,
   )
-  const IntelliZen = inject(
+  const intelliZen = inject(
     createDefaultModule({ shared }),
     IntelliZenGeneratedModule,
     intelliZenModule,
   )
-  shared.ServiceRegistry.register(IntelliZen)
-  registerValidationChecks(IntelliZen)
+  shared.ServiceRegistry.register(intelliZen)
+  registerValidationChecks(intelliZen)
   if (!context.connection) {
     // We don't run inside a language server
     // Therefore, initialize the configuration provider instantly
     shared.workspace.ConfigurationProvider.initialized({})
   }
-  return { shared, intelliZen: IntelliZen }
+  return { shared, intelliZen }
 }
