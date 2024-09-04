@@ -1,9 +1,9 @@
 import { parseHelper } from 'langium/test'
 import { NodeFileSystem } from 'langium/node'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, suite } from 'vitest'
 
 import type { LangiumDocument } from 'langium'
-import type { PrimitiveType, ReferenceType, Script } from '../src/generated/ast'
+import type { PrimitiveType, ReferenceType, Script, TypeReference } from '../src/generated/ast'
 import { createIntelliZenServices } from '../src/module'
 
 const service = createIntelliZenServices(NodeFileSystem)
@@ -22,7 +22,16 @@ async function assertNoErrors(model: LangiumDocument<Script>) {
   }
 }
 
-describe('langium syntax parse', async () => {
+function expectTypeToBe(matches: string, type?: TypeReference) {
+  if (type?.$type === 'PrimitiveType') {
+    expect((type as PrimitiveType).value).toBe(matches)
+  }
+  else if (type?.$type === 'ReferenceType') {
+    expect((type as ReferenceType).ref.$refText).toBe(matches)
+  }
+}
+
+describe('test with langium syntax parse', async () => {
   it('missing semicolon', async () => {
     const model = await parseModel('val a as int')
     expect(model.parseResult.lexerErrors).toHaveLength(0)
@@ -33,7 +42,7 @@ describe('langium syntax parse', async () => {
     const model = await parseModel('import foo.bar.baz;')
     const refImport = model.parseResult.value.imports[0]
     await assertNoErrors(model)
-    expect(refImport.ref.$refText).toStrictEqual('foo.bar.baz')
+    expect(refImport.ref.$refText).toBe('foo.bar.baz')
   })
 
   it('function declaration', async () => {
@@ -49,25 +58,20 @@ describe('langium syntax parse', async () => {
     expect(foo.name).toBe('foo')
     expect(foo.parameters.length).toBe(1)
     expect(foo.parameters[0].name).toBe('a')
-    expect(foo.parameters[0].typeRef?.$type).toBe('PrimitiveType')
-    expect((foo.parameters[0].typeRef as PrimitiveType).value).toBe('int')
-    expect(foo.returnTypeRef?.$type).toBe('PrimitiveType')
-    expect((foo.returnTypeRef as PrimitiveType).value).toBe('int')
+    expectTypeToBe('int', foo.parameters[0].typeRef)
+    expectTypeToBe('int', foo.returnTypeRef)
 
     expect(bar.prefix).toBe('static')
     expect(bar.name).toBe('bar')
     expect(bar.parameters.length).toBe(0)
-    expect(bar.returnTypeRef?.$type).toBe('PrimitiveType')
-    expect((bar.returnTypeRef as PrimitiveType).value).toBe('void')
+    expectTypeToBe('void', bar.returnTypeRef)
 
     expect(baz.prefix).toBe('global')
     expect(baz.name).toBe('baz')
     expect(baz.parameters.length).toBe(1)
     expect(baz.parameters[0].name).toBe('c')
-    expect(baz.parameters[0].typeRef?.$type).toBe('ReferenceType')
-    expect((baz.parameters[0].typeRef as ReferenceType).ref.$refText).toBe('OtherType')
-    expect(baz.returnTypeRef?.$type).toBe('PrimitiveType')
-    expect((baz.returnTypeRef as PrimitiveType).value).toBe('any')
+    expectTypeToBe('OtherType', baz.parameters[0].typeRef)
+    expectTypeToBe('any', baz.returnTypeRef)
   })
 
   it('expand function declaration', async () => {
@@ -79,20 +83,24 @@ describe('langium syntax parse', async () => {
 
     const [string$Reverse, otherType$Foo] = model.parseResult.value.expands
     expect(string$Reverse.name).toBe('reverse')
-    expect(string$Reverse.typeRef?.$type).toBe('PrimitiveType')
-    expect((string$Reverse.typeRef as PrimitiveType).value).toBe('string')
+    expectTypeToBe('string', string$Reverse.typeRef)
     expect(string$Reverse.parameters.length).toBe(0)
-    expect(string$Reverse.returnTypeRef?.$type).toBe('PrimitiveType')
-    expect((string$Reverse.returnTypeRef as PrimitiveType).value).toBe('string')
+    expectTypeToBe('string', string$Reverse.returnTypeRef)
 
     expect(otherType$Foo.name).toBe('foo')
-    expect(otherType$Foo.typeRef?.$type).toBe('ReferenceType')
-    expect((otherType$Foo.typeRef as ReferenceType).ref.$refText).toStrictEqual('OtherType')
+    expectTypeToBe('string', string$Reverse.typeRef)
     expect(otherType$Foo.parameters.length).toBe(1)
     expect(otherType$Foo.parameters[0].name).toBe('foo')
-    expect(otherType$Foo.parameters[0].typeRef?.$type).toBe('ReferenceType')
-    expect((otherType$Foo.parameters[0].typeRef as ReferenceType).ref.$refText).toStrictEqual('OtherType.ChildType')
-    expect(otherType$Foo.returnTypeRef?.$type).toBe('PrimitiveType')
-    expect((otherType$Foo.returnTypeRef as PrimitiveType).value).toBe('void')
+    expectTypeToBe('OtherType.ChildType', otherType$Foo.parameters[0].typeRef)
+    expectTypeToBe('void', otherType$Foo.returnTypeRef)
+  })
+
+  it('class declaration', async () => {
+    const model = await parseModel(`
+      zenClass Foo {}
+      zenClass Bar extends Foo {}
+    `)
+
+    await assertNoErrors(model)
   })
 })
