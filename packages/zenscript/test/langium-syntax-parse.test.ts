@@ -98,9 +98,15 @@ describe('test with langium syntax parse', async () => {
   it('class declaration', async () => {
     const model = await parseModel(`
       zenClass Foo {}
-      zenClass Bar extends Foo {}
+      zenClass Bar extends Foo, Baz {} // zenutils
     `)
 
     await assertNoErrors(model)
+    const [foo, bar] = model.parseResult.value.classes
+    expect(foo.name).toBe('Foo')
+    expect(foo.superTypes).toStrictEqual([])
+
+    expect(bar.name).toBe('Bar')
+    expect(bar.superTypes.map(subType => subType.$refText)).toStrictEqual(['Foo', 'Baz'])
   })
 })
