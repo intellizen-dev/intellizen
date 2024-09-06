@@ -62,11 +62,14 @@ describe.only('parse expression of script with ZenScript ', () => {
     const stringLiterals = await parseExprs<StringLiteral>(`
       'hello';
       "world";
+      "\\b\\f\\n\\r\\t\\'\\\"\\u6c49\\u5b57";
     `)
-    expect(stringLiterals).toHaveLength(2)
-    const [hello, world] = stringLiterals
+    expect(stringLiterals).toHaveLength(3)
+    const [hello, world, escape] = stringLiterals
     expect(hello.value).toBe('hello')
     expect(world.value).toBe('world')
+    expect(escape.value).toBe('\b\f\n\r\t\'\"汉字')
+
   })
 
   it('boolean literal', async () => {
@@ -115,13 +118,27 @@ describe.only('parse expression of script with ZenScript ', () => {
   })
 
   it('string template', async () => {
-    // eslint-disable-next-line no-template-curly-in-string
-    const expr = await parseExpr<StringTemplate>('`hello, ${world}!`;')
+    // eslint-disable-next-line no-template-curly-in-string, unused-imports/no-unused-vars
+    const expr = await parseExprs<StringTemplate>(`
+      \`hello, \${world}!\`;
+      \`\\b\\f\\n\\r\\t\\$\\'\\\"\\\`\\u6c49\\u5b57\`;
+    `)
 
-    const [left, localVariable, right] = expr.content
-    expect(left).toBe('hello, ')
-    assertLocalVariableText(localVariable as Expression, 'world')
-    expect(right).toBe('!')
+    const [helloWorld, escape] = expr;
+
+    expect(helloWorld.$type).toBe('StringTemplate')
+    expect(helloWorld.content).toHaveLength(3)
+    const [hello, world, tail] = helloWorld.content
+    expect((world as Expression).$type).toBe('LocalVariable')
+    expect(hello).toBe('hello, ')
+    assertLocalVariableText(world as Expression, 'world')
+    expect(tail).toBe('!')
+
+    expect(escape.$type).toBe('StringTemplate')
+    expect(escape.content).toHaveLength(1)
+    const [escaped] = escape.content
+    expect(escaped).toBe('\b\f\n\r\t$\'"`汉字')
+    
   })
 
   it('parenthesized expression', async () => {
