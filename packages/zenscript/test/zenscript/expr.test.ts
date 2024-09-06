@@ -79,7 +79,7 @@ describe.only('parse expression of script with ZenScript ', () => {
     expect(empty.values).toHaveLength(0)
     expect(withElements.values).toHaveLength(3)
     for (const element in withElements.values) {
-      expect(element).toMatch(/\w/)
+      expect(element).toMatch(/\d/)
     }
   })
 
