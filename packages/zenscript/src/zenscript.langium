@@ -306,6 +306,10 @@ interface StringLiteral extends Expression {
     value: string;
 }
 
+interface NullLiteral extends Expression {
+    value: 'null';
+}
+
 interface StringTemplate extends Expression {
     content: (string | Expression)[];
 }
@@ -382,7 +386,7 @@ MemberAccessName returns string:
 PostfixExpression returns Expression:
     PrimaryExpression (
         ({MemberAccess.receiver=current} '.' ref=[NamedElement:MemberAccessName] ) |
-        ({InfixExpression.left=current} op=('in'|'..') right=Expression) |
+        ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
         ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
         ({ArrayAccess.array=current} '[' index=Expression ']') |
         ({CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
@@ -442,6 +446,10 @@ StringLiteral returns StringLiteral:
     value=STRING
 ;
 
+NullLiteral returns NullLiteral:
+    value='null'
+;
+
 StringTemplate returns StringTemplate:
     // Either just the full content
     content+=TEMPLATE_LITERAL_FULL |
@@ -469,14 +477,8 @@ terminal TEMPLATE_LITERAL_MIDDLE:
 terminal TEMPLATE_LITERAL_END:
     '}' IN_TEMPLATE_LITERAL* '`';
 
-// '{{' is handled in a special way so we can escape normal '{' characters
-// '``' is doing the same for the '`' character
 terminal fragment IN_TEMPLATE_LITERAL:
-    /[^${`]|{{|``/;
-
-NullLiteral:
-    value='null'
-;
+    /[^$`\\]|\\./;
 
 //endregion Expression
 
@@ -587,8 +589,8 @@ ID returns string
 
 hidden terminal WHITE_SPACE: /\s+/;
 terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
-terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
 terminal FLOATING: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdD]?/;
+terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
 
 hidden terminal BLOCK_COMMENT: /\/\*.*?\*\//;

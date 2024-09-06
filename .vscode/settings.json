@@ -45,6 +45,7 @@
     "tsup",
     "Tweaker",
     "typecheck",
-    "zenscript"
+    "zenscript",
+    "zenutils"
   ]
 }

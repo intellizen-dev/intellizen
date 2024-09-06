@@ -55,7 +55,9 @@
     "dev": "conc \"turbo langium:generate:watch\" \"wait-on packages/zenscript/src/generated && turbo dev\"",
     "build": "turbo build",
     "lint": "eslint . --cache",
-    "lint:fix": "eslint . --cache --fix"
+    "lint:fix": "eslint . --cache --fix",
+    "test": "pnpm build && vitest",
+    "test:update": "vitest -u"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^2.26.0",
