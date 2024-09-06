@@ -382,7 +382,7 @@ MemberAccessName returns string:
 PostfixExpression returns Expression:
     PrimaryExpression (
         ({MemberAccess.receiver=current} '.' ref=[NamedElement:MemberAccessName] ) |
-        ({InfixExpression.left=current} op=('in'|'..') right=Expression) |
+        ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
         ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
         ({ArrayAccess.array=current} '[' index=Expression ']') |
         ({CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
