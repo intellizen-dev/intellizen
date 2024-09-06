@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { assertNoErrors, assertTypeRef, createParseHelper } from '../utils'
-import type { ArrayLiteral, BooleanLiteral, Expression, ExpressionStatement, FunctionExpression, LocalVariable, MapLiteral, NullLiteral, NumberLiteral, ParenthesizedExpression, StringLiteral } from '../../src/generated/ast'
+import type { ArrayLiteral, BooleanLiteral, CallExpression, Expression, ExpressionStatement, FunctionExpression, LocalVariable, MapLiteral, MemberAccess, NullLiteral, NumberLiteral, ParenthesizedExpression, StringLiteral } from '../../src/generated/ast'
 
 const parse = createParseHelper()
 
@@ -119,5 +119,26 @@ describe.only('parse expression of script with ZenScript ', () => {
     expect(foo.name).toBe('foo')
     assertTypeRef('int', foo.typeRef)
     assertTypeRef('void', functionExpr.returnTypeRef)
+  })
+
+  it('call expression', async () => {
+    const callExprs = await parseExprs<CallExpression>(`
+      call();
+      call(1, 2, 3);
+    `)
+    expect(callExprs).toHaveLength(2)
+    const [noArgs, withArgs] = callExprs
+    expect((noArgs.receiver as LocalVariable).ref.$refText).toBe('call')
+    expect((withArgs.receiver as LocalVariable).ref.$refText).toBe('call')
+    expect(withArgs.arguments).toHaveLength(3)
+    for (const arg of withArgs.arguments) {
+      expect(arg.$type).toBe('NumberLiteral')
+    }
+  })
+
+  it('member access expression', async () => {
+    const memberAccessExpr = await parseExpr<MemberAccess>('foo.bar;')
+    expect(memberAccessExpr.ref.$refText).toBe('bar')
+    expect((memberAccessExpr.receiver as LocalVariable).ref.$refText).toBe('foo')
   })
 })
