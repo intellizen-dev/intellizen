@@ -98,13 +98,14 @@ describe.only('parse expression of script with ZenScript ', () => {
     })
   })
 
-  it.skip('string template', async () => {
+  it('string template', async () => {
     // eslint-disable-next-line no-template-curly-in-string
     const expr = await parseExpr<StringTemplate>('`hello, ${world}!`;')
 
     const [left, localVariable, right] = expr.content
-    // eslint-disable-next-line no-console
-    console.info({ left, localVariable, right })
+    expect(left).toBe('hello, ')
+    assertLocalVariableText(localVariable as Expression, 'world')
+    expect(right).toBe('!')
   })
 
   it('parenthesized expression', async () => {
