@@ -591,8 +591,8 @@ ID returns string
 
 hidden terminal WHITE_SPACE: /\s+/;
 terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
-terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
 terminal FLOATING: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdD]?/;
+terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
 
 hidden terminal BLOCK_COMMENT: /\/\*.*?\*\//;

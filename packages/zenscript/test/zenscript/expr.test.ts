@@ -23,7 +23,7 @@ async function parseExprs<T extends Expression = Expression>(input: string) {
   return exprStmts.map(stmt => (stmt as ExpressionStatement).expr) as T[]
 }
 
-describe.only('parse expression of script with ZenScript ', () => {
+describe('parse expression of script with ZenScript ', () => {
   it('number literal', async () => {
     const numberLiterals = await parseExprs<NumberLiteral>(`
       // integer
@@ -36,8 +36,11 @@ describe.only('parse expression of script with ZenScript ', () => {
       0.0;
       0.0f;
       0.0F;
+      1.0E-1;
+      1.0E-1f;
     `)
-    expect(numberLiterals).toHaveLength(4)
+    expect(numberLiterals).toHaveLength(9)
+
     const [
       int$standard,
       int$hex,
@@ -46,8 +49,9 @@ describe.only('parse expression of script with ZenScript ', () => {
       float$standard,
       float$symbol,
       float$Symbol,
+      float$scientific,
+      float$ScientificSymbol,
     ] = numberLiterals
-
     expect(int$standard.value).toBe('0')
     expect(int$hex.value).toBe('0x0')
     expect(int$long.value).toBe('0l')
@@ -56,6 +60,8 @@ describe.only('parse expression of script with ZenScript ', () => {
     expect(float$standard.value).toBe('0.0')
     expect(float$symbol.value).toBe('0.0f')
     expect(float$Symbol.value).toBe('0.0F')
+    expect(float$scientific.value).toBe('1.0E-1')
+    expect(float$ScientificSymbol.value).toBe('1.0E-1f')
   })
 
   it('string literal', async () => {
@@ -69,7 +75,6 @@ describe.only('parse expression of script with ZenScript ', () => {
     expect(hello.value).toBe('hello')
     expect(world.value).toBe('world')
     expect(escape.value).toBe('\b\f\n\r\t\'\"汉字')
-
   })
 
   it('boolean literal', async () => {
@@ -118,13 +123,12 @@ describe.only('parse expression of script with ZenScript ', () => {
   })
 
   it('string template', async () => {
-    // eslint-disable-next-line no-template-curly-in-string, unused-imports/no-unused-vars
     const expr = await parseExprs<StringTemplate>(`
       \`hello, \${world}!\`;
       \`\\b\\f\\n\\r\\t\\$\\'\\\"\\\`\\u6c49\\u5b57\`;
     `)
 
-    const [helloWorld, escape] = expr;
+    const [helloWorld, escape] = expr
 
     expect(helloWorld.$type).toBe('StringTemplate')
     expect(helloWorld.content).toHaveLength(3)
@@ -138,7 +142,6 @@ describe.only('parse expression of script with ZenScript ', () => {
     expect(escape.content).toHaveLength(1)
     const [escaped] = escape.content
     expect(escaped).toBe('\b\f\n\r\t$\'"`汉字')
-    
   })
 
   it('parenthesized expression', async () => {
