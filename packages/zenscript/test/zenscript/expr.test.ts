@@ -99,10 +99,9 @@ describe.only('parse expression of script with ZenScript ', () => {
     })
   })
 
-  it.skip('string template', async () => {
-    // TODO: waiting fix
+  it('string template', async () => {
     // eslint-disable-next-line no-template-curly-in-string, unused-imports/no-unused-vars
-    const expr = await parseExpr('`hello, ${world}`!')
+    const expr = await parseExpr('`hello, ${world}`;')
   })
 
   it('parenthesized expression', async () => {

@@ -13,10 +13,17 @@ export function createParseHelper() {
 }
 
 export async function assertNoErrors(model: LangiumDocument<Script>) {
+  if (model.parseResult.lexerErrors.length > 0)
+    console.error(model.parseResult.lexerErrors)
   expect(model.parseResult.lexerErrors).toHaveLength(0)
+
+  if (model.parseResult.parserErrors.length > 0)
+    console.error(model.parseResult.parserErrors)
   expect(model.parseResult.parserErrors).toHaveLength(0)
 
   if (model.diagnostics?.[0]?.data?.code !== 'linking-error') {
+    if (model.diagnostics?.length)
+      console.error(model.diagnostics)
     expect(model.diagnostics ?? []).toHaveLength(0)
   }
 }
