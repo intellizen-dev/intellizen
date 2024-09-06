@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { assertNoErrors, assertVariableDeclaration, createParseHelper, assertTypeRef } from '../utils'
-import type { ForStatement, IfStatement } from '../../src/generated/ast'
+import { assertNoErrors, assertTypeRef, assertVariableDeclaration, createParseHelper } from '../utils'
+import type { ForStatement, FunctionDeclaration, IfStatement, ReturnStatement } from '../../src/generated/ast'
 
 const parse = createParseHelper()
 
@@ -9,7 +9,7 @@ async function parseModel(input: string) {
   return parse(input, { validation: true })
 }
 
-describe('parse top-level of script with ZenScript ', () => {
+describe('parse top-level of script with ZenScript', () => {
   it('import declaration', async () => {
     const model = await parseModel('import foo.bar.baz;')
     const refImport = model.parseResult.value.imports[0]
@@ -80,6 +80,30 @@ describe('parse top-level of script with ZenScript ', () => {
 
     expect(bar.name).toBe('Bar')
     expect(bar.superTypes.map(subType => subType.$refText)).toStrictEqual(['Foo', 'Baz'])
+  })
+
+  it('class with members', async () => {
+    const model = await parseModel(`
+      zenClass Foo {
+        static foo as string = 'foo';
+        
+        zenConstructor() {}
+
+        function bar() as Foo {
+          return this;
+        }
+      }
+    `)
+    await assertNoErrors(model)
+
+    const classFoo = model.parseResult.value.classes[0]
+    expect(classFoo.name).toBe('Foo')
+    expect(classFoo.members.length).toBe(3)
+
+    const [foo, constructor, bar] = classFoo.members
+    expect(foo.$type).toBe('FieldDeclaration')
+    expect(constructor.$type).toBe('ConstructorDeclaration')
+    expect(bar.$type).toBe('FunctionDeclaration')
   })
 
   it('statements', async () => {
