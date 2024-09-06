@@ -24,22 +24,38 @@ async function parseExprs<T extends Expression = Expression>(input: string) {
 }
 
 describe.only('parse expression of script with ZenScript ', () => {
-  it('numeric literal', async () => {
-    const numericLiterals = await parseExprs<NumberLiteral>(`
+  it('number literal', async () => {
+    const numberLiterals = await parseExprs<NumberLiteral>(`
       // integer
       0;
       0x0;
-      0L;
       0l;
+      0L;
 
-      // TODO: floating, waiting fix
+      // floating
+      0.0;
+      0.0f;
+      0.0F;
     `)
-    expect(numericLiterals).toHaveLength(4)
-    const [zero$standard, zero$hex, zero$Long, zero$long] = numericLiterals
-    expect(zero$standard.value).toBe('0')
-    expect(zero$hex.value).toBe('0x0')
-    expect(zero$Long.value).toBe('0L')
-    expect(zero$long.value).toBe('0l')
+    expect(numberLiterals).toHaveLength(4)
+    const [
+      int$standard,
+      int$hex,
+      int$long,
+      int$Long,
+      float$standard,
+      float$symbol,
+      float$Symbol,
+    ] = numberLiterals
+
+    expect(int$standard.value).toBe('0')
+    expect(int$hex.value).toBe('0x0')
+    expect(int$long.value).toBe('0l')
+    expect(int$Long.value).toBe('0L')
+
+    expect(float$standard.value).toBe('0.0')
+    expect(float$symbol.value).toBe('0.0f')
+    expect(float$Symbol.value).toBe('0.0F')
   })
 
   it('string literal', async () => {
