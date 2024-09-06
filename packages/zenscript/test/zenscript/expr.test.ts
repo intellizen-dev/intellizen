@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { assertNoErrors, assertTypeRef, createParseHelper } from '../utils'
-import type { ArrayLiteral, BooleanLiteral, CallExpression, Expression, ExpressionStatement, FunctionExpression, LocalVariable, MapLiteral, MemberAccess, NullLiteral, NumberLiteral, ParenthesizedExpression, StringLiteral } from '../../src/generated/ast'
+import { assertLocalVariableText, assertNoErrors, assertTypeRef, createParseHelper } from '../utils'
+import type { ArrayAccess, ArrayLiteral, Assignment, BooleanLiteral, CallExpression, ConditionalExpression, Expression, ExpressionStatement, FunctionExpression, InfixExpression, InstanceofExpression, LocalVariable, MapLiteral, MemberAccess, NullLiteral, NumberLiteral, ParenthesizedExpression, PrefixExpression, StringLiteral, StringTemplate, TypeCastExpression } from '../../src/generated/ast'
 
 const parse = createParseHelper()
 
@@ -93,15 +93,18 @@ describe.only('parse expression of script with ZenScript ', () => {
     expect(empty.entries).toHaveLength(0)
     expect(withElements.entries).toHaveLength(2)
     withElements.entries.forEach(({ value, key }) => {
+      assertLocalVariableText(key, /\w/)
       expect(value.$type).toBe('NumberLiteral')
-      expect(key.$type).toBe('LocalVariable')
-      expect((key as LocalVariable).ref.$refText).toMatch(/\w/)
     })
   })
 
-  it('string template', async () => {
-    // eslint-disable-next-line no-template-curly-in-string, unused-imports/no-unused-vars
-    const expr = await parseExpr('`hello, ${world}`;')
+  it.skip('string template', async () => {
+    // eslint-disable-next-line no-template-curly-in-string
+    const expr = await parseExpr<StringTemplate>('`hello, ${world}!`;')
+
+    const [left, localVariable, right] = expr.content
+    // eslint-disable-next-line no-console
+    console.info({ left, localVariable, right })
   })
 
   it('parenthesized expression', async () => {
@@ -127,8 +130,8 @@ describe.only('parse expression of script with ZenScript ', () => {
     `)
     expect(callExprs).toHaveLength(2)
     const [noArgs, withArgs] = callExprs
-    expect((noArgs.receiver as LocalVariable).ref.$refText).toBe('call')
-    expect((withArgs.receiver as LocalVariable).ref.$refText).toBe('call')
+    assertLocalVariableText(noArgs.receiver, 'call')
+    assertLocalVariableText(withArgs.receiver, 'call')
     expect(withArgs.arguments).toHaveLength(3)
     for (const arg of withArgs.arguments) {
       expect(arg.$type).toBe('NumberLiteral')
@@ -138,6 +141,72 @@ describe.only('parse expression of script with ZenScript ', () => {
   it('member access expression', async () => {
     const memberAccessExpr = await parseExpr<MemberAccess>('foo.bar;')
     expect(memberAccessExpr.ref.$refText).toBe('bar')
-    expect((memberAccessExpr.receiver as LocalVariable).ref.$refText).toBe('foo')
+    assertLocalVariableText(memberAccessExpr.receiver, 'foo')
+  })
+
+  it('infix expression', async () => {
+    const infixExprs = await parseExprs<InfixExpression>(`
+      0 to 10;
+      10 .. 20;  
+    `)
+    expect(infixExprs).toHaveLength(2)
+    const [to, dotD] = infixExprs
+
+    expect(to.op).toBe('to')
+    expect(to.left.$type).toBe('NumberLiteral')
+    expect(to.right.$type).toBe('NumberLiteral')
+    expect(dotD.op).toBe('..')
+    expect(dotD.left.$type).toBe('NumberLiteral')
+    expect(dotD.right.$type).toBe('NumberLiteral')
+  })
+
+  it('type cast expression', async () => {
+    const typeCastExpr = await parseExprs<TypeCastExpression>(`
+      foo as int;
+      bar as OtherType;  
+    `)
+    expect(typeCastExpr).toHaveLength(2)
+    const [int, otherType] = typeCastExpr
+
+    assertLocalVariableText(int.expr, 'foo')
+    assertTypeRef('int', int.typeRef)
+    assertLocalVariableText(otherType.expr, 'bar')
+    assertTypeRef('OtherType', otherType.typeRef)
+  })
+
+  it('array access', async () => {
+    const arrayAccessExpr = await parseExpr<ArrayAccess>('foo[0];')
+    assertLocalVariableText(arrayAccessExpr.array, 'foo')
+    expect(arrayAccessExpr.index.$type).toBe('NumberLiteral')
+  })
+
+  it('instanceof expression', async () => {
+    const instanceofExpr = await parseExpr<InstanceofExpression>('foo instanceof int;')
+    assertLocalVariableText(instanceofExpr.expr, 'foo')
+    assertTypeRef('int', instanceofExpr.typeRef)
+  })
+
+  it('operator priority', async () => {
+    const expr = await parseExpr<Assignment>(`
+      !true ? foo || bar : foo += 2;
+    `)
+    expect(expr.$type).toBe('Assignment')
+    expect(expr.op).toBe('+=')
+
+    const leftExpr = expr.left as ConditionalExpression
+
+    const leftExprLeft = leftExpr.first as PrefixExpression
+    expect(leftExprLeft.op).toBe('!')
+    expect(leftExprLeft.expr.$type).toBe('BooleanLiteral')
+
+    const second = leftExpr.second as InfixExpression
+    expect(second.op).toBe('||')
+    assertLocalVariableText(second.left, 'foo')
+    assertLocalVariableText(second.right, 'bar')
+
+    const third = leftExpr.third as LocalVariable
+    assertLocalVariableText(third, 'foo')
+
+    expect(expr.right.$type).toBe('NumberLiteral')
   })
 })

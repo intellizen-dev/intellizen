@@ -5,7 +5,7 @@ import { parseHelper } from 'langium/test'
 import type { AstNode, LangiumDocument } from 'langium'
 
 import { createIntelliZenServices } from '../src/module'
-import type { PrimitiveType, ReferenceType, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
+import type { Expression, LocalVariable, PrimitiveType, ReferenceType, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
 
 export function createParseHelper() {
   const service = createIntelliZenServices(NodeFileSystem)
@@ -50,4 +50,12 @@ export function assertVariableDeclaration(
   if (type) {
     assertTypeRef(type, variableDeclaration.typeRef)
   }
+}
+
+export function assertLocalVariableText(expr: Expression, matches: string | RegExp) {
+  expect(expr.$type).toBe('LocalVariable')
+  if (typeof matches === 'string')
+    expect((expr as LocalVariable).ref.$refText).toBe(matches)
+  else
+    expect((expr as LocalVariable).ref.$refText).toMatch(matches)
 }
