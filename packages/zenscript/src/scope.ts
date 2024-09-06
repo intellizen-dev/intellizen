@@ -1,13 +1,17 @@
-import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, LangiumCoreServices, LangiumDocument, PrecomputedScopes, ScopeComputation } from 'langium'
+import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, LangiumDocument, NameProvider, PrecomputedScopes, ScopeComputation } from 'langium'
 import { MultiMap, interruptAndCheck } from 'langium'
 import { CancellationToken } from 'vscode-languageserver'
 import type { CallableDeclaration, ClassDeclaration, FunctionDeclaration, ImportDeclaration, Statement } from './generated/ast'
 import { isBlockStatement, isCallableDeclaration, isConstructorDeclaration, isForStatement, isScript, isVariableDeclaration } from './generated/ast'
+import type { IntelliZenServices } from './module'
+import type { QualifiedNameProvider } from './name'
 
 export class ZenScriptScopeComputation implements ScopeComputation {
+  private readonly nameProvider: NameProvider & QualifiedNameProvider
   private readonly descriptions: AstNodeDescriptionProvider
 
-  constructor(services: LangiumCoreServices) {
+  constructor(services: IntelliZenServices) {
+    this.nameProvider = services.references.NameProvider
     this.descriptions = services.workspace.AstNodeDescriptionProvider
   }
 
@@ -19,7 +23,7 @@ export class ZenScriptScopeComputation implements ScopeComputation {
       return exports
     }
 
-    const packageName = getPackageName(document)
+    const packageName = this.nameProvider.getQualifiedName(root) ?? ''
 
     for (const clazz of root.classes) {
       await interruptAndCheck(cancelToken)
@@ -174,27 +178,4 @@ export class ZenScriptScopeComputation implements ScopeComputation {
     }
   }
   // #endregion computeLocalScopes
-}
-
-function getPackageName(document: LangiumDocument): string {
-  const pathStr = document.uri.path
-
-  // iterate over parent dir to find 'scripts' dir and return the relative path
-  const path = pathStr.split('/')
-  const found = path.findIndex(e => e === 'scripts')
-  let packageName = 'scripts'
-  if (found !== -1) {
-    const fileName = path[path.length - 1]
-    const fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'))
-
-    const directory = path.slice(found + 1, path.length - 1)
-    if (directory.length === 0) {
-      packageName = `scripts.${fileNameWithoutExt}`
-    }
-    else {
-      packageName = `scripts.${directory.join('.')}.${fileNameWithoutExt}`
-    }
-  }
-
-  return packageName
 }
