@@ -26,7 +26,7 @@ export type IntelliZenServices = LangiumServices & IntelliZenAddedServices
  * declared custom services. The Langium defaults can be partially specified to override only
  * selected services, while the custom services must be fully specified.
  */
-export const intelliZenModule: Module<IntelliZenServices, PartialLangiumServices & IntelliZenAddedServices> = {
+export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices & IntelliZenAddedServices> = {
   validation: {
     IntelliZenValidator: () => new IntelliZenValidator(),
   },
@@ -66,7 +66,7 @@ export function createIntelliZenServices(context: DefaultSharedModuleContext): {
   const intelliZen = inject(
     createDefaultModule({ shared }),
     IntelliZenGeneratedModule,
-    intelliZenModule,
+    IntelliZenModule,
   )
   shared.ServiceRegistry.register(intelliZen)
   registerValidationChecks(intelliZen)
