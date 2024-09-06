@@ -307,7 +307,7 @@ interface StringLiteral extends Expression {
 }
 
 interface StringTemplate extends Expression {
-    content: (string | ContentExpression)[];
+    content: (string | Expression)[];
 }
 
 interface ArrayLiteral extends Expression {
@@ -443,16 +443,36 @@ StringLiteral returns StringLiteral:
 ;
 
 StringTemplate returns StringTemplate:
-    '`' content+=(ContentText | ContentExpression)* '`'
+    // Either just the full content
+    content+=TEMPLATE_LITERAL_FULL |
+    // Or template literal parts with expressions in between
+    (
+        content+=TEMPLATE_LITERAL_START 
+        content+=Expression?
+        (
+            content+=TEMPLATE_LITERAL_MIDDLE
+            content+=Expression?
+        )*
+        content+=TEMPLATE_LITERAL_END
+    )
 ;
 
-terminal ContentText:
-    /\\.*/
-;
+terminal TEMPLATE_LITERAL_FULL:
+    '`' IN_TEMPLATE_LITERAL* '`';
 
-ContentExpression:
-    '${' expr=Expression '}'
-;
+terminal TEMPLATE_LITERAL_START:
+    '`' IN_TEMPLATE_LITERAL* '${';
+
+terminal TEMPLATE_LITERAL_MIDDLE:
+    '}' IN_TEMPLATE_LITERAL* '${';
+
+terminal TEMPLATE_LITERAL_END:
+    '}' IN_TEMPLATE_LITERAL* '`';
+
+// '{{' is handled in a special way so we can escape normal '{' characters
+// '``' is doing the same for the '`' character
+terminal fragment IN_TEMPLATE_LITERAL:
+    /[^${`]|{{|``/;
 
 NullLiteral:
     value='null'

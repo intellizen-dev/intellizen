@@ -3,6 +3,8 @@ import { type DefaultSharedModuleContext, type LangiumServices, type LangiumShar
 import { IntelliZenGeneratedModule, IntelliZenGeneratedSharedModule } from './generated/module'
 import { IntelliZenValidator, registerValidationChecks } from './validator'
 import { ZenScriptScopeComputation } from './scope'
+import { CustomTokenBuilder } from './lexer/token-builder'
+import { CustomValueConverter } from './lexer/value-converter'
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -31,6 +33,10 @@ export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices
 
   references: {
     ScopeComputation: services => new ZenScriptScopeComputation(services),
+  },
+  parser: {
+    TokenBuilder: () => new CustomTokenBuilder(),
+    ValueConverter: () => new CustomValueConverter(),
   },
 }
 
