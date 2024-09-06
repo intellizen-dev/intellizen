@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { assertNoErrors, createParseHelper, expectTypeToBe } from '../utils'
-import type { IfStatement } from '../../src/generated/ast'
+import { assertNoErrors, assertVariableDeclaration, createParseHelper, expectTypeToBe } from '../utils'
+import type { ForStatement, IfStatement } from '../../src/generated/ast'
 
 const parse = createParseHelper()
 
@@ -82,9 +82,8 @@ describe('parse ZenScript top-level of script ', () => {
     expect(bar.superTypes.map(subType => subType.$refText)).toStrictEqual(['Foo', 'Baz'])
   })
 
-  it.only('statements', async () => {
+  it('statements', async () => {
     const model = await parseModel(`
-    
       if (true) {}
       else if (false) {}
       else {}
@@ -94,9 +93,24 @@ describe('parse ZenScript top-level of script ', () => {
       
       for i in 0 to 10 {}
       for item in Array {}
+
+      global a as int = 1;
+      static b as string = '2';
+      var c as bool = true;
+      val d = false;
     `)
     await assertNoErrors(model)
-    const [ifStatement, blockStatement, whileStatement] = model.parseResult.value.statements
+    const [
+      ifStatement,
+      blockStatement,
+      whileStatement,
+      forStatementEachNumber,
+      forStatementEachArray,
+      global$VariableDeclaration,
+      static$VariableDeclaration,
+      var$VariableDeclaration,
+      val$VariableDeclaration,
+    ] = model.parseResult.value.statements
 
     expect(ifStatement.$type).toBe('IfStatement')
     let _ifStatement = ifStatement as IfStatement
@@ -108,5 +122,15 @@ describe('parse ZenScript top-level of script ', () => {
 
     expect(blockStatement.$type).toBe('BlockStatement')
     expect(whileStatement.$type).toBe('WhileStatement')
+
+    expect(forStatementEachNumber.$type).toBe('ForStatement')
+    expect((forStatementEachNumber as ForStatement).variables.map(item => item.name)).toStrictEqual(['i'])
+    expect(forStatementEachArray.$type).toBe('ForStatement')
+    expect((forStatementEachArray as ForStatement).variables.map(item => item.name)).toStrictEqual(['item'])
+
+    assertVariableDeclaration(global$VariableDeclaration, 'global', 'a', 'int')
+    assertVariableDeclaration(static$VariableDeclaration, 'static', 'b', 'string')
+    assertVariableDeclaration(var$VariableDeclaration, 'var', 'c', 'bool')
+    assertVariableDeclaration(val$VariableDeclaration, 'val', 'd', undefined)
   })
 })

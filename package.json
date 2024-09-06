@@ -56,7 +56,8 @@
     "build": "turbo build",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --cache --fix",
-    "test": "pnpm build && vitest"
+    "test": "pnpm build && vitest",
+    "test:update": "vitest -u"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^2.26.0",
