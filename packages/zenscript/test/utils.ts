@@ -21,7 +21,7 @@ export async function assertNoErrors(model: LangiumDocument<Script>) {
   }
 }
 
-export function expectTypeToBe(matches: string, type?: TypeReference) {
+export function assertTypeRef(matches: string, type?: TypeReference) {
   if (type?.$type === 'PrimitiveType') {
     expect((type as PrimitiveType).value).toBe(matches)
   }
@@ -41,6 +41,6 @@ export function assertVariableDeclaration(
   expect(variableDeclaration.prefix).toBe(prefix)
   expect(variableDeclaration.name).toBeDefined()
   if (type) {
-    expectTypeToBe(type, variableDeclaration.typeRef)
+    assertTypeRef(type, variableDeclaration.typeRef)
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { assertNoErrors, assertVariableDeclaration, createParseHelper, expectTypeToBe } from '../utils'
+import { assertNoErrors, assertVariableDeclaration, createParseHelper, assertTypeRef } from '../utils'
 import type { ForStatement, IfStatement } from '../../src/generated/ast'
 
 const parse = createParseHelper()
@@ -9,7 +9,7 @@ async function parseModel(input: string) {
   return parse(input, { validation: true })
 }
 
-describe('parse ZenScript top-level of script ', () => {
+describe('parse top-level of script with ZenScript ', () => {
   it('import declaration', async () => {
     const model = await parseModel('import foo.bar.baz;')
     const refImport = model.parseResult.value.imports[0]
@@ -30,20 +30,20 @@ describe('parse ZenScript top-level of script ', () => {
     expect(foo.name).toBe('foo')
     expect(foo.parameters.length).toBe(1)
     expect(foo.parameters[0].name).toBe('a')
-    expectTypeToBe('int', foo.parameters[0].typeRef)
-    expectTypeToBe('int', foo.returnTypeRef)
+    assertTypeRef('int', foo.parameters[0].typeRef)
+    assertTypeRef('int', foo.returnTypeRef)
 
     expect(bar.prefix).toBe('static')
     expect(bar.name).toBe('bar')
     expect(bar.parameters.length).toBe(0)
-    expectTypeToBe('void', bar.returnTypeRef)
+    assertTypeRef('void', bar.returnTypeRef)
 
     expect(baz.prefix).toBe('global')
     expect(baz.name).toBe('baz')
     expect(baz.parameters.length).toBe(1)
     expect(baz.parameters[0].name).toBe('c')
-    expectTypeToBe('OtherType', baz.parameters[0].typeRef)
-    expectTypeToBe('any', baz.returnTypeRef)
+    assertTypeRef('OtherType', baz.parameters[0].typeRef)
+    assertTypeRef('any', baz.returnTypeRef)
   })
 
   it('expand function declaration', async () => {
@@ -55,16 +55,16 @@ describe('parse ZenScript top-level of script ', () => {
     const [string$reverse, otherType$foo] = model.parseResult.value.expands
 
     expect(string$reverse.name).toBe('reverse')
-    expectTypeToBe('string', string$reverse.typeRef)
+    assertTypeRef('string', string$reverse.typeRef)
     expect(string$reverse.parameters.length).toBe(0)
-    expectTypeToBe('string', string$reverse.returnTypeRef)
+    assertTypeRef('string', string$reverse.returnTypeRef)
 
     expect(otherType$foo.name).toBe('foo')
-    expectTypeToBe('string', string$reverse.typeRef)
+    assertTypeRef('string', string$reverse.typeRef)
     expect(otherType$foo.parameters.length).toBe(1)
     expect(otherType$foo.parameters[0].name).toBe('foo')
-    expectTypeToBe('OtherType.ChildType', otherType$foo.parameters[0].typeRef)
-    expectTypeToBe('void', otherType$foo.returnTypeRef)
+    assertTypeRef('OtherType.ChildType', otherType$foo.parameters[0].typeRef)
+    assertTypeRef('void', otherType$foo.returnTypeRef)
   })
 
   it('class declaration', async () => {

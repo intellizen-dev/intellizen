@@ -306,6 +306,10 @@ interface StringLiteral extends Expression {
     value: string;
 }
 
+interface NullLiteral extends Expression {
+    value: 'null';
+}
+
 interface StringTemplate extends Expression {
     content: (string | ContentExpression)[];
 }
@@ -442,6 +446,10 @@ StringLiteral returns StringLiteral:
     value=STRING
 ;
 
+NullLiteral returns NullLiteral:
+    value='null'
+;
+
 StringTemplate returns StringTemplate:
     '`' content+=(ContentText | ContentExpression)* '`'
 ;
@@ -452,10 +460,6 @@ terminal ContentText:
 
 ContentExpression:
     '${' expr=Expression '}'
-;
-
-NullLiteral:
-    value='null'
 ;
 
 //endregion Expression
