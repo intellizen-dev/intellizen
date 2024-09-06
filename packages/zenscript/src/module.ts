@@ -57,23 +57,23 @@ export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices
  */
 export function createIntelliZenServices(context: DefaultSharedModuleContext): {
   shared: LangiumSharedServices
-  IntelliZen: IntelliZenServices
+  intelliZen: IntelliZenServices
 } {
   const shared = inject(
     createDefaultSharedModule(context),
     IntelliZenGeneratedSharedModule,
   )
-  const IntelliZen = inject(
+  const intelliZen = inject(
     createDefaultModule({ shared }),
     IntelliZenGeneratedModule,
     IntelliZenModule,
   )
-  shared.ServiceRegistry.register(IntelliZen)
-  registerValidationChecks(IntelliZen)
+  shared.ServiceRegistry.register(intelliZen)
+  registerValidationChecks(intelliZen)
   if (!context.connection) {
     // We don't run inside a language server
     // Therefore, initialize the configuration provider instantly
     shared.workspace.ConfigurationProvider.initialized({})
   }
-  return { shared, IntelliZen }
+  return { shared, intelliZen }
 }
