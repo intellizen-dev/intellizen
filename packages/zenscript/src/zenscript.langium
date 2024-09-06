@@ -477,8 +477,6 @@ terminal TEMPLATE_LITERAL_MIDDLE:
 terminal TEMPLATE_LITERAL_END:
     '}' IN_TEMPLATE_LITERAL* '`';
 
-// '{{' is handled in a special way so we can escape normal '{' characters
-// '``' is doing the same for the '`' character
 terminal fragment IN_TEMPLATE_LITERAL:
     /[^$`\\]|\\./;
 
