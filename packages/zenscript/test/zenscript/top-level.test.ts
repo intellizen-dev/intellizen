@@ -82,14 +82,21 @@ describe('parse ZenScript top-level of script ', () => {
     expect(bar.superTypes.map(subType => subType.$refText)).toStrictEqual(['Foo', 'Baz'])
   })
 
-  it('statements', async () => {
+  it.only('statements', async () => {
     const model = await parseModel(`
+    
       if (true) {}
       else if (false) {}
-      else {}  
+      else {}
+
+      {}
+      while(true) {}
+      
+      for i in 0 to 10 {}
+      for item in Array {}
     `)
     await assertNoErrors(model)
-    const [ifStatement] = model.parseResult.value.statements
+    const [ifStatement, blockStatement, whileStatement] = model.parseResult.value.statements
 
     expect(ifStatement.$type).toBe('IfStatement')
     let _ifStatement = ifStatement as IfStatement
@@ -98,5 +105,8 @@ describe('parse ZenScript top-level of script ', () => {
       expect(ifStatement.$type).toBe('IfStatement')
     }
     expect(_ifStatement.elseBody?.$type).toBe('BlockStatement')
+
+    expect(blockStatement.$type).toBe('BlockStatement')
+    expect(whileStatement.$type).toBe('WhileStatement')
   })
 })
