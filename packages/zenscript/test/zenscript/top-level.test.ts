@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { assertNoErrors, createParseHelper, expectTypeToBe } from '../utils'
+import type { IfStatement } from '../../src/generated/ast'
 
 const parse = createParseHelper()
 
@@ -23,8 +24,8 @@ describe('parse ZenScript top-level of script ', () => {
       global function baz(c as OtherType) as any {}
     `)
     await assertNoErrors(model)
-
     const [foo, bar, baz] = model.parseResult.value.functions
+
     expect(foo.prefix).toBeUndefined()
     expect(foo.name).toBe('foo')
     expect(foo.parameters.length).toBe(1)
@@ -51,8 +52,8 @@ describe('parse ZenScript top-level of script ', () => {
       $expand OtherType$foo(foo as OtherType.ChildType) as void {}
     `)
     await assertNoErrors(model)
-
     const [string$reverse, otherType$foo] = model.parseResult.value.expands
+
     expect(string$reverse.name).toBe('reverse')
     expectTypeToBe('string', string$reverse.typeRef)
     expect(string$reverse.parameters.length).toBe(0)
@@ -79,5 +80,23 @@ describe('parse ZenScript top-level of script ', () => {
 
     expect(bar.name).toBe('Bar')
     expect(bar.superTypes.map(subType => subType.$refText)).toStrictEqual(['Foo', 'Baz'])
+  })
+
+  it('statements', async () => {
+    const model = await parseModel(`
+      if (true) {}
+      else if (false) {}
+      else {}  
+    `)
+    await assertNoErrors(model)
+    const [ifStatement] = model.parseResult.value.statements
+
+    expect(ifStatement.$type).toBe('IfStatement')
+    let _ifStatement = ifStatement as IfStatement
+    while (_ifStatement.elseBody!.$type === 'IfStatement') {
+      _ifStatement = (_ifStatement.elseBody as IfStatement)!
+      expect(ifStatement.$type).toBe('IfStatement')
+    }
+    expect(_ifStatement.elseBody?.$type).toBe('BlockStatement')
   })
 })
