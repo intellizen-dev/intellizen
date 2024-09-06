@@ -39,7 +39,7 @@ export function assertVariableDeclaration(
   expect(astNode.$type).toBe('VariableDeclaration')
   const variableDeclaration = astNode as VariableDeclaration
   expect(variableDeclaration.prefix).toBe(prefix)
-  expect(variableDeclaration.name).toBeDefined()
+  expect(variableDeclaration.name).toBe(name)
   if (type) {
     assertTypeRef(type, variableDeclaration.typeRef)
   }
