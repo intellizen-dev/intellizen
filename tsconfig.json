@@ -12,6 +12,7 @@
     "skipLibCheck": true
   },
   "include": [
+    "env.d.ts",
     "packages/**/*.ts",
     "tsup-default.config.ts"
   ]
