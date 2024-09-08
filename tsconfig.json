@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ES2017",
     "lib": ["ESNext"],
+    "customConditions": ["dev"],
     "module": "Preserve",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
@@ -12,6 +13,7 @@
     "skipLibCheck": true
   },
   "include": [
+    "env.d.ts",
     "packages/**/*.ts",
     "tsup-default.config.ts"
   ]

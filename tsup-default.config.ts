@@ -1,24 +1,23 @@
-import type { Options } from 'tsup'
+import { env } from 'node:process'
+import { defineConfig } from 'tsup'
 
-export default {
-  entry: [
-    'src/main.ts',
-  ],
-  format: ['cjs'],
+export const DEV_MODE = env.NODE_ENV === 'development'
+
+export default defineConfig({
   bundle: true,
-  shims: false,
+  splitting: false,
+  format: ['cjs'],
+  entry: ['src/main.ts'],
   dts: false,
-  external: [
-    'vscode',
-  ],
-  // TODO: when build we should't expose sourcemap
-  sourcemap: true,
   clean: true,
-  // TODO: when dev we should't bundle any package
+  shims: false,
+  external: ['vscode'],
   noExternal: [],
+  sourcemap: DEV_MODE,
+  minify: !DEV_MODE,
   outExtension: ({ format }) => {
     return {
       js: format === 'cjs' ? '.cjs' : '.js',
     }
   },
-} as Options
+})

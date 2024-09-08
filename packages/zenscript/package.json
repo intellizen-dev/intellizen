@@ -2,8 +2,8 @@
   "name": "@intellizen/zenscript",
   "type": "module",
   "scripts": {
-    "dev": "pnpm build --watch",
     "build": "tsup",
+    "dev": "rimraf src/generated && wait-on src/generated && pnpm build --watch",
     "langium:generate": "langium generate",
     "langium:generate:watch": "pnpm langium:generate --watch"
   },
