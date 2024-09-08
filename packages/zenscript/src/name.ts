@@ -1,6 +1,6 @@
 import { type AstNode, AstUtils, type CstNode, GrammarUtils, type NameProvider, isNamed } from 'langium'
 import { substringBeforeLast } from '@intellizen/shared'
-import { isClassDeclaration, isFunctionDeclaration, isScript, isVariableDeclaration } from './generated/ast'
+import { isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isScript, isVariableDeclaration } from './generated/ast'
 import { isToplevel } from './utils/ast'
 
 export interface QualifiedNameProvider {
@@ -14,6 +14,9 @@ export class ZenScriptNameProvider implements NameProvider, QualifiedNameProvide
       if (fileName) {
         return substringBeforeLast(fileName, '.')
       }
+    }
+    else if (isImportDeclaration(node)) {
+      return node.alias || node.ref.$refText.split('.').at(-1)
     }
     else if (isNamed(node)) {
       return node.name
