@@ -4,17 +4,17 @@ import { defineConfig } from 'tsup'
 export const DEV_MODE = env.NODE_ENV === 'development'
 
 export default defineConfig({
-  entry: DEV_MODE ? ['src/**/*.ts'] : ['src/main.ts'],
+  bundle: true,
+  splitting: false,
   format: ['cjs'],
-  bundle: !DEV_MODE,
-  shims: false,
+  entry: ['src/main.ts'],
   dts: false,
-  external: ['vscode'],
-  splitting: !DEV_MODE,
-  sourcemap: DEV_MODE,
   clean: true,
-  minify: !DEV_MODE,
+  shims: false,
+  external: ['vscode'],
   noExternal: [],
+  sourcemap: DEV_MODE,
+  minify: !DEV_MODE,
   outExtension: ({ format }) => {
     return {
       js: format === 'cjs' ? '.cjs' : '.js',
