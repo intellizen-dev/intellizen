@@ -42,11 +42,10 @@ export class ZenScriptNameProvider implements NameProvider, QualifiedNameProvide
         return
       }
 
-      const directory = path.slice(scriptsIndex, -1)
       const fileNameWithoutExt = substringBeforeLast(fileName, '.')
-      directory.push(fileNameWithoutExt)
-
-      return directory.join('.')
+      const names = path.slice(scriptsIndex, -1)
+      names.push(fileNameWithoutExt)
+      return names.join('.')
     }
 
     if (isToplevel(node)) {
