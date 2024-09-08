@@ -1,5 +1,7 @@
-import { type AstNode, type CstNode, GrammarUtils, type LangiumDocument, type NameProvider, isNamed } from 'langium'
-import { type Script, isScript } from './generated/ast'
+import { type AstNode, AstUtils, type CstNode, GrammarUtils, type NameProvider, isNamed } from 'langium'
+import { substringBeforeLast } from '@intellizen/shared'
+import { isClassDeclaration, isFunctionDeclaration, isScript, isVariableDeclaration } from './generated/ast'
+import { isToplevel } from './utils/ast'
 
 export interface QualifiedNameProvider {
   getQualifiedName: (node: AstNode) => string | undefined
@@ -8,8 +10,12 @@ export interface QualifiedNameProvider {
 export class ZenScriptNameProvider implements NameProvider, QualifiedNameProvider {
   getName(node: AstNode): string | undefined {
     if (isScript(node)) {
-      return getName(node)
+      const fileName = node.$document?.uri?.path?.split('/')?.at(-1)
+      if (fileName) {
+        return substringBeforeLast(fileName, '.')
+      }
     }
+
     if (isNamed(node)) {
       return node.name
     }
@@ -21,46 +27,47 @@ export class ZenScriptNameProvider implements NameProvider, QualifiedNameProvide
 
   getQualifiedName(node: AstNode): string | undefined {
     if (isScript(node)) {
-      return getQualifiedName(node)
+      const path = node.$document?.uri?.path?.split('/')
+      if (!path) {
+        return
+      }
+
+      const scriptsIndex = path.indexOf('scripts')
+      if (scriptsIndex === -1) {
+        return
+      }
+
+      const fileName = path.at(-1)
+      if (!fileName) {
+        return
+      }
+
+      const directory = path.slice(scriptsIndex, -1)
+      const fileNameWithoutExt = substringBeforeLast(fileName, '.')
+      directory.push(fileNameWithoutExt)
+
+      return directory.join('.')
+    }
+
+    if (isToplevel(node)) {
+      if (isVariableDeclaration(node) || isFunctionDeclaration(node) || isClassDeclaration(node)) {
+        return concat(this.getScriptQualifiedName(node), node.name)
+      }
+    }
+  }
+
+  private getScriptQualifiedName(node: AstNode): string | undefined {
+    const root = AstUtils.findRootNode(node)
+    if (isScript(root)) {
+      return this.getQualifiedName(root)
     }
   }
 }
 
-function getName(node: Script): string | undefined {
-  if (!node.$document) {
-    return
+function concat(qualifiedName: string | undefined, name: string): string | undefined {
+  const names = qualifiedName?.split('.')
+  if (names) {
+    names.push(name)
+    return names.join('.')
   }
-
-  const path = node.$document.uri.path
-  const fileName = path[path.length - 1]
-  const fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'))
-  return fileNameWithoutExt
-}
-
-function getQualifiedName(node: Script): string | undefined {
-  if (!node.$document) {
-    return
-  }
-
-  const document: LangiumDocument = node.$document
-  const pathStr = document.uri.path
-
-  // iterate over parent dir to find 'scripts' dir and return the relative path
-  const path = pathStr.split('/')
-  const found = path.findIndex(e => e === 'scripts')
-  let qualifiedName = 'scripts'
-  if (found !== -1) {
-    const fileName = path[path.length - 1]
-    const fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'))
-
-    const directory = path.slice(found + 1, path.length - 1)
-    if (directory.length === 0) {
-      qualifiedName = `scripts.${fileNameWithoutExt}`
-    }
-    else {
-      qualifiedName = `scripts.${directory.join('.')}.${fileNameWithoutExt}`
-    }
-  }
-
-  return qualifiedName
 }
