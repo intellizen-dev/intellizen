@@ -11,7 +11,9 @@
       "sourceMaps": true,
       "outFiles": [
         "${workspaceFolder}/out/**/*.cjs"
-      ]
+      ],
+      "trace": true,
+      "autoAttachChildProcesses": true
     },
     {
       "name": "Attach to Language Server",
