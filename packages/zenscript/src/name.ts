@@ -15,8 +15,7 @@ export class ZenScriptNameProvider implements NameProvider, QualifiedNameProvide
         return substringBeforeLast(fileName, '.')
       }
     }
-
-    if (isNamed(node)) {
+    else if (isNamed(node)) {
       return node.name
     }
   }
@@ -47,8 +46,7 @@ export class ZenScriptNameProvider implements NameProvider, QualifiedNameProvide
       names.push(fileNameWithoutExt)
       return names.join('.')
     }
-
-    if (isToplevel(node)) {
+    else if (isToplevel(node)) {
       if (isVariableDeclaration(node) || isFunctionDeclaration(node) || isClassDeclaration(node)) {
         return concat(this.getScriptQualifiedName(node), node.name)
       }
