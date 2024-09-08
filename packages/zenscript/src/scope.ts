@@ -49,6 +49,70 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
     super.processNode(node, document, scopes)
   }
 
+  private async processImport(importDecl: ImportDeclaration, document: LangiumDocument, scopes: PrecomputedScopes, cancelToken: CancellationToken): Promise<void> {
+    await interruptAndCheck(cancelToken)
+    const name = importDecl.alias || importDecl.ref.$refText.substring(importDecl.ref.$refText.lastIndexOf('.') + 1)
+    const desc = this.descriptions.createDescription(importDecl, name, document)
+    scopes.add(importDecl.$container, desc)
+  }
+
+  private async processClassMembers(clazz: ClassDeclaration, document: LangiumDocument, scopes: PrecomputedScopes, cancelToken: CancellationToken): Promise<void> {
+    await interruptAndCheck(cancelToken)
+    if (clazz.name) {
+      const desc = this.descriptions.createDescription(clazz, clazz.name, document)
+      scopes.add(clazz.$container, desc)
+    }
+
+    for (const member of clazz.members) {
+      await interruptAndCheck(cancelToken)
+      if (isCallableDeclaration(member)) {
+        this.processCallable(member, document, scopes, cancelToken)
+      }
+    }
+  }
+
+  private async processCallable(callable: CallableDeclaration, document: LangiumDocument, scopes: PrecomputedScopes, cancelToken: CancellationToken): Promise<void> {
+    await interruptAndCheck(cancelToken)
+    if (!isConstructorDeclaration(callable) && callable.name) {
+      const desc = this.descriptions.createDescription(callable, callable.name, document)
+      scopes.add(callable.$container, desc)
+    }
+
+    const parameters = callable.parameters
+    for (const param of parameters) {
+      if (param.name) {
+        const desc = this.descriptions.createDescription(param, param.name, document)
+        scopes.add(callable, desc)
+      }
+    }
+
+    this.processStatements(callable, callable.body, document, scopes, cancelToken)
+  }
+
+  private async processStatements(container: AstNode, stmts: Array<Statement>, document: LangiumDocument, scopes: PrecomputedScopes, cancelToken: CancellationToken): Promise<void> {
+    await interruptAndCheck(cancelToken)
+    for (const stmt of stmts) {
+      await interruptAndCheck(cancelToken)
+      if (isBlockStatement(stmt)) {
+        this.processStatements(stmt, stmt.body, document, scopes, cancelToken)
+      }
+      else if (isForStatement(stmt)) {
+        for (const variables of stmt.variables) {
+          if (variables.name) {
+            const desc = this.descriptions.createDescription(variables, variables.name, document)
+            scopes.add(stmt, desc)
+          }
+        }
+
+        this.processStatements(stmt, stmt.body, document, scopes, cancelToken)
+      }
+      else if (isVariableDeclaration(stmt) && stmt.name) {
+        const desc = this.descriptions.createDescription(stmt, stmt.name, document)
+        scopes.add(container, desc)
+      }
+    }
+  }
+
   // async computeExports(document: LangiumDocument, cancelToken: CancellationToken = CancellationToken.None): Promise<AstNodeDescription[]> {
   //   const exports: AstNodeDescription[] = []
   //
@@ -147,70 +211,4 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
   //   }
   // }
   // #endregion computeExports
-
-  // #region computeLocalScopes
-  private async processImport(importDecl: ImportDeclaration, document: LangiumDocument, scopes: PrecomputedScopes, cancelToken: CancellationToken): Promise<void> {
-    await interruptAndCheck(cancelToken)
-    const name = importDecl.alias || importDecl.ref.$refText.substring(importDecl.ref.$refText.lastIndexOf('.') + 1)
-    const desc = this.descriptions.createDescription(importDecl, name, document)
-    scopes.add(importDecl.$container, desc)
-  }
-
-  private async processClassMembers(clazz: ClassDeclaration, document: LangiumDocument, scopes: PrecomputedScopes, cancelToken: CancellationToken): Promise<void> {
-    await interruptAndCheck(cancelToken)
-    if (clazz.name) {
-      const desc = this.descriptions.createDescription(clazz, clazz.name, document)
-      scopes.add(clazz.$container, desc)
-    }
-
-    for (const member of clazz.members) {
-      await interruptAndCheck(cancelToken)
-      if (isCallableDeclaration(member)) {
-        this.processCallable(member, document, scopes, cancelToken)
-      }
-    }
-  }
-
-  private async processCallable(callable: CallableDeclaration, document: LangiumDocument, scopes: PrecomputedScopes, cancelToken: CancellationToken): Promise<void> {
-    await interruptAndCheck(cancelToken)
-    if (!isConstructorDeclaration(callable) && callable.name) {
-      const desc = this.descriptions.createDescription(callable, callable.name, document)
-      scopes.add(callable.$container, desc)
-    }
-
-    const parameters = callable.parameters
-    for (const param of parameters) {
-      if (param.name) {
-        const desc = this.descriptions.createDescription(param, param.name, document)
-        scopes.add(callable, desc)
-      }
-    }
-
-    this.processStatements(callable, callable.body, document, scopes, cancelToken)
-  }
-
-  private async processStatements(container: AstNode, stmts: Array<Statement>, document: LangiumDocument, scopes: PrecomputedScopes, cancelToken: CancellationToken): Promise<void> {
-    await interruptAndCheck(cancelToken)
-    for (const stmt of stmts) {
-      await interruptAndCheck(cancelToken)
-      if (isBlockStatement(stmt)) {
-        this.processStatements(stmt, stmt.body, document, scopes, cancelToken)
-      }
-      else if (isForStatement(stmt)) {
-        for (const variables of stmt.variables) {
-          if (variables.name) {
-            const desc = this.descriptions.createDescription(variables, variables.name, document)
-            scopes.add(stmt, desc)
-          }
-        }
-
-        this.processStatements(stmt, stmt.body, document, scopes, cancelToken)
-      }
-      else if (isVariableDeclaration(stmt) && stmt.name) {
-        const desc = this.descriptions.createDescription(stmt, stmt.name, document)
-        scopes.add(container, desc)
-      }
-    }
-  }
-  // #endregion computeLocalScopes
 }
