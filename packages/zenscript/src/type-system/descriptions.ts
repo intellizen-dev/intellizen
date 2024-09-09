@@ -1,6 +1,6 @@
 import type { PrimitiveType, TypeReference } from '../generated/ast'
 
-export type UnArray<T extends []> = T extends (infer U)[] ? U : never
+type IsUnion<T, U = T> = T extends any ? [U] extends [T] ? false : true : never
 
 type PrimitiveTypes = PrimitiveType['value']
 type AllTypes = Exclude<TypeReference['$type'], 'ParenthesizedType' | 'TypeReference'>
@@ -8,17 +8,16 @@ type SingleTypes = Exclude<AllTypes, 'UnionType' | 'IntersectionType' | 'ListTyp
 
 export interface TypeDescription<
   T extends SingleTypes = 'PrimitiveType',
-  BaseType = T extends 'FunctionType' ? 'function' : PrimitiveTypes,
-  FunctionParams = BaseType extends 'function' ? TypeDescription[] : never,
-  FunctionReturnType = BaseType extends 'function' ? TypeDescription : never,
+  ResultType extends PrimitiveTypes = 'any',
+  FunctionParamTypes extends TypeDescription<any, any>[] = never,
 > {
   $type: T
-  type: T extends 'PrimitiveType'
-    ? BaseType
-    : T extends 'ReferenceType'
-      ? string[]
-      : T extends 'FunctionType'
-        ? { params: FunctionParams, return: FunctionReturnType }
+  type: T extends 'FunctionType'
+    ? { params: FunctionParamTypes, return: ResultType }
+    : T extends 'PrimitiveType'
+      ? IsUnion<ResultType> extends true ? 'any' : ResultType
+      : T extends 'ReferenceType'
+        ? string[]
         : never
 }
 
