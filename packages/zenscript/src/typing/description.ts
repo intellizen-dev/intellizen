@@ -38,7 +38,7 @@ export interface MultiTypeDescription<
 > extends TypeDefinition<N> {
   elementType: T
 }
-// end region
+// endregion
 
 // region Predicates
 export function isStringType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription<'string'> {
@@ -108,4 +108,4 @@ export function isUnionType(typeDesc: TypeDescription): typeDesc is MultiTypeDes
 export function isIntersectionType(typeDesc: TypeDescription): typeDesc is MultiTypeDescription<'intersection'> {
   return typeDesc.$type === 'intersection'
 }
-// end region
+// endregion
