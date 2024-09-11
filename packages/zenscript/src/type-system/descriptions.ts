@@ -5,22 +5,23 @@ type AllTypes = Exclude<TypeReference['$type'], 'ParenthesizedType' | 'TypeRefer
 type MultiType = Extract<AllTypes, 'UnionType' | 'IntersectionType' | 'ListType' | 'MapType' | 'ArrayType'>
 type SingleTypes = Exclude<AllTypes, MultiType>
 
+type DefaultTypeDescription = TypeDescription<SingleTypes, PrimitiveTypes, DefaultTypeDescription, DefaultTypeDescription[]>
+
 export interface TypeDescription<
   T extends SingleTypes = 'PrimitiveType',
   ResultType extends PrimitiveTypes = 'any',
-  FunctionParamTypes extends TypeDescription<any, any>[] = never,
+  ReturnType extends DefaultTypeDescription = never,
+  FunctionParamTypes extends DefaultTypeDescription[] = never,
 > {
   $type: T
   type: T extends 'FunctionType'
-    ? { params: FunctionParamTypes, return: ResultType }
+    ? { params: FunctionParamTypes, return: ReturnType }
     : T extends 'PrimitiveType'
       ? ResultType
       : T extends 'ReferenceType'
-        ? string[]
+        ? string[] // todo
         : never
 }
-
-type DefaultTypeDescription = TypeDescription<SingleTypes, PrimitiveTypes>
 
 export interface MapTypeDescription<
   K extends DefaultTypeDescription,
@@ -40,9 +41,22 @@ export interface MultiTypeDescription<
 }
 
 export class TypeDescriptionUtils {
+  public static createFunctionType<R extends DefaultTypeDescription, P extends DefaultTypeDescription[]>(
+    returnType: R,
+    paramTypes: P,
+  ): TypeDescription<'FunctionType', 'any', R, P> {
+    return {
+      $type: 'FunctionType',
+      type: {
+        params: paramTypes,
+        return: returnType,
+      },
+    }
+  }
+
   public static createPrimitiveType<T extends PrimitiveTypes>(
     type: T,
-  ): TypeDescription<'PrimitiveType', PrimitiveTypes> {
+  ): TypeDescription<'PrimitiveType', T> {
     return {
       $type: 'PrimitiveType',
       type,
