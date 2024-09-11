@@ -11,9 +11,4 @@ describe('type description test', () => {
     type Type = TypeDescription<'PrimitiveType', 'string'>
     expectTypeOf<Type['type']>().toMatchTypeOf<'string'>()
   })
-
-  it('union type should be any', () => {
-    type Type = TypeDescription<'PrimitiveType', 'string' | 'long'>
-    expectTypeOf<Type['type']>().toMatchTypeOf<'any'>()
-  })
 })

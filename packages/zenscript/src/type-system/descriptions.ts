@@ -1,10 +1,9 @@
 import type { PrimitiveType, TypeReference } from '../generated/ast'
 
-type IsUnion<T, U = T> = T extends any ? [U] extends [T] ? false : true : never
-
 type PrimitiveTypes = PrimitiveType['value']
 type AllTypes = Exclude<TypeReference['$type'], 'ParenthesizedType' | 'TypeReference'>
-type SingleTypes = Exclude<AllTypes, 'UnionType' | 'IntersectionType' | 'ListType' | 'MapType' | 'ArrayType'>
+type MultiType = Extract<AllTypes, 'UnionType' | 'IntersectionType' | 'ListType' | 'MapType' | 'ArrayType'>
+type SingleTypes = Exclude<AllTypes, MultiType>
 
 export interface TypeDescription<
   T extends SingleTypes = 'PrimitiveType',
@@ -15,15 +14,17 @@ export interface TypeDescription<
   type: T extends 'FunctionType'
     ? { params: FunctionParamTypes, return: ResultType }
     : T extends 'PrimitiveType'
-      ? IsUnion<ResultType> extends true ? 'any' : ResultType
+      ? ResultType
       : T extends 'ReferenceType'
         ? string[]
         : never
 }
 
+type DefaultTypeDescription = TypeDescription<SingleTypes, PrimitiveTypes>
+
 export interface MapTypeDescription<
-  K extends TypeDescription,
-  V extends TypeDescription,
+  K extends DefaultTypeDescription,
+  V extends DefaultTypeDescription,
 > {
   $type: 'MapType'
   key: K
@@ -31,9 +32,9 @@ export interface MapTypeDescription<
 }
 
 export interface MultiTypeDescription<
-  N extends 'array' | 'list' | 'union' | 'intersection',
-  T extends TypeDescription,
+  N extends Exclude<MultiType, 'MapType'>,
+  T extends DefaultTypeDescription,
 > {
-  $type: N extends `${infer F}${infer R}` ? `${Uppercase<F>}${R}Type` : never
-  type: T extends 'array' | 'list' ? T : T[]
+  $type: N
+  type: N extends 'ArrayType' | 'ListType' ? T : T[]
 }
