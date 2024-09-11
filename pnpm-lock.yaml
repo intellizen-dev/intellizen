@@ -74,6 +74,9 @@ importers:
 
   packages/zenscript:
     dependencies:
+      '@intellizen/shared':
+        specifier: workspace:^
+        version: link:../shared
       langium:
         specifier: ^3.1.3
         version: 3.1.3
