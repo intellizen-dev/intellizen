@@ -5,7 +5,10 @@ type AllTypes = Exclude<TypeReference['$type'], 'ParenthesizedType' | 'TypeRefer
 type MultiType = Extract<AllTypes, 'UnionType' | 'IntersectionType' | 'ListType' | 'MapType' | 'ArrayType'>
 type SingleTypes = Exclude<AllTypes, MultiType>
 
-type DefaultTypeDescription = TypeDescription<SingleTypes, PrimitiveTypes, DefaultTypeDescription, DefaultTypeDescription[]>
+type DefaultTypeDescription =
+  TypeDescription<SingleTypes, PrimitiveTypes, DefaultTypeDescription, DefaultTypeDescription[]>
+  | MapTypeDescription<DefaultTypeDescription, DefaultTypeDescription>
+  | MultiTypeDescription<Exclude<MultiType, 'MapType'>, DefaultTypeDescription>
 
 export interface TypeDescription<
   T extends SingleTypes = 'PrimitiveType',
