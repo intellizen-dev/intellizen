@@ -41,71 +41,71 @@ export interface MultiTypeDescription<
 // end region
 
 // region Predicates
-export function isStringType(type: TypeDescription) {
-  return type.$type === 'string'
+export function isStringType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription<'string'> {
+  return typeDesc.$type === 'string'
 }
 
-export function isAnyType(type: TypeDescription) {
-  return type.$type === 'any'
+export function isAnyType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription<'any'> {
+  return typeDesc.$type === 'any'
 }
 
-export function isBoolType(type: TypeDescription) {
-  return type.$type === 'bool'
+export function isBoolType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription<'bool'> {
+  return typeDesc.$type === 'bool'
 }
 
-export function isByteType(type: TypeDescription) {
-  return type.$type === 'byte'
+export function isByteType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription<'byte'> {
+  return typeDesc.$type === 'byte'
 }
 
-export function isDoubleType(type: TypeDescription) {
-  return type.$type === 'double'
+export function isDoubleType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription<'double'> {
+  return typeDesc.$type === 'double'
 }
 
-export function isFloatType(type: TypeDescription) {
-  return type.$type === 'float'
+export function isFloatType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription<'float'> {
+  return typeDesc.$type === 'float'
 }
 
-export function isIntType(type: TypeDescription) {
-  return type.$type === 'int'
+export function isIntType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription<'int'> {
+  return typeDesc.$type === 'int'
 }
 
-export function isLongType(type: TypeDescription) {
-  return type.$type === 'long'
+export function isLongType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription<'long'> {
+  return typeDesc.$type === 'long'
 }
 
-export function isShortType(type: TypeDescription) {
-  return type.$type === 'short'
+export function isShortType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription<'short'> {
+  return typeDesc.$type === 'short'
 }
 
-export function isVoidType(type: TypeDescription) {
-  return type.$type === 'void'
+export function isVoidType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription<'void'> {
+  return typeDesc.$type === 'void'
 }
 
-export function isPrimitiveType(type: TypeDescription) {
-  return ['string', 'any', 'bool', 'byte', 'double', 'float', 'int', 'long', 'short', 'void'].includes(type.$type)
+export function isPrimitiveType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription<PrimitiveTypes> {
+  return ['string', 'any', 'bool', 'byte', 'double', 'float', 'int', 'long', 'short', 'void'].includes(typeDesc.$type)
 }
 
-export function isClassType(type: TypeDescription) {
-  return type.$type === 'class'
+export function isClassType(typeDesc: TypeDescription): typeDesc is ClassTypeDescription {
+  return typeDesc.$type === 'class'
 }
 
-export function isMapType(type: TypeDescription) {
-  return type.$type === 'map'
+export function isMapType(typeDesc: TypeDescription): typeDesc is MapTypeDescription {
+  return typeDesc.$type === 'map'
 }
 
-export function isArrayType(type: TypeDescription) {
-  return type.$type === 'array'
+export function isArrayType(typeDesc: TypeDescription): typeDesc is MultiTypeDescription<'array'> {
+  return typeDesc.$type === 'array'
 }
 
-export function isListType(type: TypeDescription) {
-  return type.$type === 'list'
+export function isListType(typeDesc: TypeDescription): typeDesc is MultiTypeDescription<'list'> {
+  return typeDesc.$type === 'list'
 }
 
-export function isUnionType(type: TypeDescription) {
-  return type.$type === 'union'
+export function isUnionType(typeDesc: TypeDescription): typeDesc is MultiTypeDescription<'union'> {
+  return typeDesc.$type === 'union'
 }
 
-export function isIntersectionType(type: TypeDescription) {
-  return type.$type === 'intersection'
+export function isIntersectionType(typeDesc: TypeDescription): typeDesc is MultiTypeDescription<'intersection'> {
+  return typeDesc.$type === 'intersection'
 }
 // end region
