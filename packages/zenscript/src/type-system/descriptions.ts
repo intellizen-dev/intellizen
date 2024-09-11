@@ -38,3 +38,42 @@ export interface MultiTypeDescription<
   $type: N
   type: N extends 'ArrayType' | 'ListType' ? T : T[]
 }
+
+export class TypeDescriptionUtils {
+  public static createPrimitiveType<T extends PrimitiveTypes>(
+    type: T,
+  ): TypeDescription<'PrimitiveType', PrimitiveTypes> {
+    return {
+      $type: 'PrimitiveType',
+      type,
+    }
+  }
+
+  public static createReferenceType(type: string[]): TypeDescription<'ReferenceType'> {
+    return {
+      $type: 'ReferenceType',
+      type,
+    }
+  }
+
+  public static createMapType<K extends DefaultTypeDescription, V extends DefaultTypeDescription>(
+    typeKey: K,
+    typeValue: V,
+  ): MapTypeDescription<K, V> {
+    return {
+      $type: 'MapType',
+      key: typeKey,
+      value: typeValue,
+    }
+  }
+
+  public static createMultiType<N extends Exclude<MultiType, 'MapType'>, T extends DefaultTypeDescription>(
+    typeName: N,
+    typeInclude: N extends 'ArrayType' | 'ListType' ? T : T[],
+  ): MultiTypeDescription<N, T> {
+    return {
+      $type: typeName,
+      type: typeInclude,
+    }
+  }
+}
