@@ -1,31 +1,29 @@
 import type { AstNode } from 'langium'
 import type { BracketExpression, ConditionalExpression, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference } from '../generated/ast'
 import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isConditionalExpression, isExpression, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isNumberLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isReferenceType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
-
 import { ClassTypeDescription, type TypeDescription } from './description'
-
 import { createAnyType, createArrayType, createClassType, createFunctionType, createIntersectionType, createListType, createMapType, createPrimitiveType, createUnionType } from './factory'
 
-export interface TypeInferrer {
+export interface TypeComputer {
   inferType: (node: AstNode) => TypeDescription | undefined
 }
 
-export class ZenScriptTypeInferrer implements TypeInferrer {
+export class ZenScriptTypeComputer implements TypeComputer {
   public inferType(node: AstNode): TypeDescription | undefined {
     if (isExpression(node)) {
-      return this.inferExpressionType(node)
+      return this.inferExpression(node)
     }
 
     if (isTypeReference(node)) {
-      return this.resolveTypeReference(node)
+      return this.inferTypeReference(node)
     }
 
     if (isVariableDeclaration(node)) {
       if (node.typeRef) {
-        return this.resolveTypeReference(node.typeRef)
+        return this.inferTypeReference(node.typeRef)
       }
       if (node.initializer) {
-        return this.inferType(node.initializer)
+        return this.inferExpression(node.initializer)
       }
     }
 
@@ -34,44 +32,44 @@ export class ZenScriptTypeInferrer implements TypeInferrer {
     }
   }
 
-  public resolveTypeReference(type: TypeReference): TypeDescription | undefined {
+  private inferTypeReference(type: TypeReference): TypeDescription | undefined {
     if (isPrimitiveType(type)) {
       return createPrimitiveType(type.value)
     }
 
     if (isListType(type)) {
-      const elementType = this.resolveTypeReference(type.value) || createAnyType()
+      const elementType = this.inferTypeReference(type.value) || createAnyType()
       return createListType(elementType)
     }
 
     if (isArrayType(type)) {
-      const elementType = this.resolveTypeReference(type.value) || createAnyType()
+      const elementType = this.inferTypeReference(type.value) || createAnyType()
       return createListType(elementType)
     }
 
     if (isMapType(type)) {
-      const keyType = this.resolveTypeReference(type.key) || createAnyType()
-      const valueType = this.resolveTypeReference(type.value) || createAnyType()
+      const keyType = this.inferTypeReference(type.key) || createAnyType()
+      const valueType = this.inferTypeReference(type.value) || createAnyType()
       return createMapType(keyType, valueType)
     }
 
     if (isUnionType(type)) {
-      const elementTypes = type.values.map(t => this.resolveTypeReference(t) || createAnyType())
+      const elementTypes = type.values.map(t => this.inferTypeReference(t) || createAnyType())
       return createUnionType(...elementTypes)
     }
 
     if (isIntersectionType(type)) {
-      const elementTypes = type.values.map(t => this.resolveTypeReference(t) || createAnyType())
+      const elementTypes = type.values.map(t => this.inferTypeReference(t) || createAnyType())
       return createIntersectionType(...elementTypes)
     }
 
     if (isParenthesizedType(type)) {
-      return this.resolveTypeReference(type.value)
+      return this.inferTypeReference(type.value)
     }
 
     if (isFunctionType(type)) {
-      const paramTypes = type.params.map(t => this.resolveTypeReference(t) || createAnyType())
-      const returnType = this.resolveTypeReference(type.returnType) || createAnyType()
+      const paramTypes = type.params.map(t => this.inferTypeReference(t) || createAnyType())
+      const returnType = this.inferTypeReference(type.returnType) || createAnyType()
       return createFunctionType(paramTypes, returnType)
     }
 
@@ -80,23 +78,23 @@ export class ZenScriptTypeInferrer implements TypeInferrer {
     }
   }
 
-  // #region Expression
-  inferExpressionType(node: Expression): TypeDescription | undefined {
+  // region Expression
+  private inferExpression(node: Expression): TypeDescription | undefined {
     if (isAssignment(node)) {
       return this.inferType(node.right)
     }
 
     if (isConditionalExpression(node)) {
-      return this.inferConditionalExpressionType(node)
+      return this.inferConditionalExpression(node)
     }
 
     if (isInfixExpression(node)) {
-      return this.inferInfixExpressionType(node)
+      return this.inferInfixExpression(node)
     }
 
     if (isTypeCastExpression(node)) {
       const ref = node.typeRef
-      return this.resolveTypeReference(ref)
+      return this.inferTypeReference(ref)
     }
 
     if (isInstanceofExpression(node)) {
@@ -104,7 +102,7 @@ export class ZenScriptTypeInferrer implements TypeInferrer {
     }
 
     if (isPrefixExpression(node)) {
-      return this.inferPrefixExpressionType(node)
+      return this.inferPrefixExpression(node)
     }
 
     if (isParenthesizedExpression(node)) {
@@ -112,23 +110,23 @@ export class ZenScriptTypeInferrer implements TypeInferrer {
     }
 
     if (isBracketExpression(node)) {
-      return this.inferBracketExpressionType(node)
+      return this.inferBracketExpression(node)
     }
 
     if (isFunctionExpression(node)) {
-      return this.inferFunctionExpressionType(node)
+      return this.inferFunctionExpression(node)
     }
 
     if (isLiteralExpression(node)) {
-      return this.inferLiteralExpressionType(node)
+      return this.inferLiteralExpression(node)
     }
 
     if (isLocalVariable(node)) {
-      return this.inferLocalVariableType(node)
+      return this.inferLocalVariable(node)
     }
   }
 
-  private inferLocalVariableType(node: LocalVariable): TypeDescription | undefined {
+  private inferLocalVariable(node: LocalVariable): TypeDescription | undefined {
     const ref = node.ref.ref
     if (!ref) {
       return
@@ -137,9 +135,9 @@ export class ZenScriptTypeInferrer implements TypeInferrer {
     return this.inferType(ref)
   }
 
-  private inferLiteralExpressionType(node: LiteralExpression): TypeDescription | undefined {
+  private inferLiteralExpression(node: LiteralExpression): TypeDescription | undefined {
     if (isArrayLiteral(node)) {
-      const elementType = (node.values.length > 0 && this.inferExpressionType(node.values[0]))
+      const elementType = (node.values.length > 0 && this.inferExpression(node.values[0]))
         || createAnyType()
       return createArrayType(elementType)
     }
@@ -149,9 +147,9 @@ export class ZenScriptTypeInferrer implements TypeInferrer {
     }
 
     if (isMapLiteral(node)) {
-      const keyType = (node.entries.length > 0 && this.inferExpressionType(node.entries[0].key))
+      const keyType = (node.entries.length > 0 && this.inferExpression(node.entries[0].key))
         || createAnyType()
-      const valueType = (node.entries.length > 0 && this.inferExpressionType(node.entries[0].value))
+      const valueType = (node.entries.length > 0 && this.inferExpression(node.entries[0].value))
         || createAnyType()
       return createMapType(keyType, valueType)
     }
@@ -170,30 +168,30 @@ export class ZenScriptTypeInferrer implements TypeInferrer {
     }
   }
 
-  private inferFunctionExpressionType(node: FunctionExpression): TypeDescription | undefined {
+  private inferFunctionExpression(node: FunctionExpression): TypeDescription | undefined {
     const paramTypes = node.parameters.map((p) => {
       const ref = p.typeRef
-      return (ref && this.resolveTypeReference(ref)) || createAnyType()
+      return (ref && this.inferTypeReference(ref)) || createAnyType()
     })
 
-    const returnType = (node.returnTypeRef && this.resolveTypeReference(node.returnTypeRef)) || createAnyType()
+    const returnType = (node.returnTypeRef && this.inferTypeReference(node.returnTypeRef)) || createAnyType()
 
     return createFunctionType(paramTypes, returnType)
   }
 
-  private inferBracketExpressionType(node: BracketExpression): TypeDescription | undefined {
+  private inferBracketExpression(node: BracketExpression): TypeDescription | undefined {
     const _ = node.value
     // TODO: 解析尖括号
     return createClassType('unknown bracket type')
   }
 
-  private inferConditionalExpressionType(node: ConditionalExpression): TypeDescription | undefined {
+  private inferConditionalExpression(node: ConditionalExpression): TypeDescription | undefined {
     // TODO: 运算符重载
     const _ = node
     return createPrimitiveType('bool')
   }
 
-  private inferPrefixExpressionType(node: PrefixExpression): TypeDescription {
+  private inferPrefixExpression(node: PrefixExpression): TypeDescription {
     const op = node.op
     switch (op) {
       case '-':
@@ -203,7 +201,7 @@ export class ZenScriptTypeInferrer implements TypeInferrer {
     }
   }
 
-  private inferInfixExpressionType(node: InfixExpression): TypeDescription | undefined {
+  private inferInfixExpression(node: InfixExpression): TypeDescription | undefined {
     // TODO: 运算符重载
     const op = node.op
     switch (op) {
@@ -238,6 +236,5 @@ export class ZenScriptTypeInferrer implements TypeInferrer {
         return createClassType('internal.IntRange') // TODO: IntRange 是个什么类型
     }
   }
-
-  // #endregion
+  // endregion
 }

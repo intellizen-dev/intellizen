@@ -1,16 +1,17 @@
 import type { ReferenceInfo, Scope } from 'langium'
 import { DefaultScopeProvider } from 'langium'
 import { isMemberAccess } from '../generated/ast'
-import type { TypeInferrer } from '../typing/infer'
+import type { TypeComputer } from '../typing/infer'
 import type { IntelliZenServices } from '../module'
 import type { ClassTypeDescription } from '../typing/description'
 import { isClassTypeDesc } from '../typing/description'
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
-  private typeInferer: TypeInferrer
+  private typeComputer: TypeComputer
+
   constructor(services: IntelliZenServices) {
     super(services)
-    this.typeInferer = services.typing.TypeInferrer
+    this.typeComputer = services.typing.TypeComputer
   }
 
   override getScope(context: ReferenceInfo): Scope {
@@ -18,7 +19,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     const node = context.container
     if (isMemberAccess(node)) {
       const receiver = node.receiver
-      const receiverType = this.typeInferer.inferExpressionType(receiver)
+      const receiverType = this.typeComputer.inferType(receiver)
 
       if (isClassTypeDesc(receiverType)) {
         return this.scopeClassMembers(receiverType)

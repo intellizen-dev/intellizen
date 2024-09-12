@@ -7,7 +7,7 @@ import { ZenScriptScopeComputation } from './scoping/precomputed-scoping'
 import { CustomTokenBuilder } from './lexer/token-builder'
 import { CustomValueConverter } from './lexer/value-converter'
 import { type QualifiedNameProvider, ZenScriptNameProvider } from './name'
-import { ZenScriptTypeInferrer } from './typing/infer'
+import { ZenScriptTypeComputer } from './typing/infer'
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -20,7 +20,7 @@ export interface IntelliZenAddedServices {
     NameProvider: NameProvider & QualifiedNameProvider
   }
   typing: {
-    TypeInferrer: ZenScriptTypeInferrer
+    TypeComputer: ZenScriptTypeComputer
   }
 }
 
@@ -49,7 +49,7 @@ export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices
     ValueConverter: () => new CustomValueConverter(),
   },
   typing: {
-    TypeInferrer: () => new ZenScriptTypeInferrer(),
+    TypeComputer: () => new ZenScriptTypeComputer(),
   },
 }
 

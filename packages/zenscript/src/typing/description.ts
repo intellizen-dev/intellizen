@@ -1,11 +1,8 @@
 import type { Reference } from 'langium'
-import { ClassDeclaration, ClassMemberDeclaration, PrimitiveType, isClassDeclaration } from '../generated/ast'
+import type { ClassDeclaration, ClassMemberDeclaration, PrimitiveType } from '../generated/ast'
+import { isClassDeclaration } from '../generated/ast'
 
-// region Internal
-export type PrimitiveTypes = PrimitiveType['value']
-export type MultiTypes = 'array' | 'list' | 'union' | 'intersection'
-// endregion
-
+// region TypeDescription
 export class TypeDescription {
   $type: string
 
@@ -13,6 +10,8 @@ export class TypeDescription {
     this.$type = $type
   }
 }
+
+export type PrimitiveTypes = PrimitiveType['value']
 
 export class PrimitiveTypeDescription extends TypeDescription {
   constructor($type: PrimitiveTypes = 'any' as PrimitiveTypes) {
