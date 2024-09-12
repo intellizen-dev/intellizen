@@ -1,41 +1,42 @@
 import type { PrimitiveType } from '../generated/ast'
 
-// region TypeDescription
+// region Internal
 export type PrimitiveTypes = PrimitiveType['value']
 export type MultiTypes = 'array' | 'list' | 'union' | 'intersection'
-
-interface TypeDefinition<T> {
+interface TypeFor<T extends string> {
   $type: T
 }
+// endregion
 
+// region TypeDescription
 export type TypeDescription = FunctionTypeDescription | ClassTypeDescription | MapTypeDescription | PrimitiveTypeDescription<PrimitiveTypes> | MultiTypeDescription<MultiTypes>
 
-export interface PrimitiveTypeDescription<T extends PrimitiveTypes = 'any'> extends TypeDefinition<T> { }
+export interface PrimitiveTypeDescription<T extends PrimitiveTypes = 'any'> extends TypeFor<T> { }
 
 export interface FunctionTypeDescription<
   P extends TypeDescription[] = TypeDescription[],
   R extends TypeDescription = TypeDescription,
-> extends TypeDefinition<'function'> {
+> extends TypeFor<'function'> {
   paramTypes: P
   returnType: R
 }
 
-export interface ClassTypeDescription extends TypeDefinition<'class'> {
+export interface ClassTypeDescription extends TypeFor<'class'> {
   className: string
 }
 
 export interface MapTypeDescription<
   K extends TypeDescription = TypeDescription,
   V extends TypeDescription = TypeDescription,
-> extends TypeDefinition<'map'> {
+> extends TypeFor<'map'> {
   keyType: K
   valueType: V
 }
 
 export interface MultiTypeDescription<
-  N extends MultiTypes = 'array',
+  N extends MultiTypes,
   T = N extends Extract<MultiTypes, 'array' | 'list'> ? TypeDescription : TypeDescription[],
-> extends TypeDefinition<N> {
+> extends TypeFor<N> {
   elementType: T
 }
 // endregion
