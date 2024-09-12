@@ -1,6 +1,6 @@
 import type { AstNode } from 'langium'
 import type { BracketExpression, ConditionalExpression, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference } from '../generated/ast'
-import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isConditionalExpression, isExpression, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isNumberLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isReferenceType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
+import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isConditionalExpression, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isReferenceType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
 import { ClassTypeDescription, type TypeDescription } from './description'
 import { createAnyType, createArrayType, createClassType, createFunctionType, createIntRangeType, createIntersectionType, createListType, createMapType, createPrimitiveType, createUnionType } from './factory'
 
@@ -155,12 +155,34 @@ export class ZenScriptTypeComputer implements TypeComputer {
     }
 
     if (isNullLiteral(node)) {
-      // return createPrimitiveType('null')
-      // TODO: what is the type of null?
+      // TODO: does it make sense?
+      return createAnyType()
     }
 
-    if (isNumberLiteral(node)) {
-      return createPrimitiveType('int')
+    if (isIntegerLiteral(node)) {
+      switch (node.value.at(-1)) {
+        case 'l':
+        case 'L':
+          return createPrimitiveType('long')
+
+        default:
+          return createPrimitiveType('int')
+      }
+    }
+
+    if (isFloatingLiteral(node)) {
+      switch (node.value.at(-1)) {
+        case 'f':
+        case 'F':
+          return createPrimitiveType('float')
+
+        case 'd':
+        case 'D':
+          return createPrimitiveType('double')
+
+        default:
+          return createPrimitiveType('double')
+      }
     }
 
     if (isStringLiteral(node) || isStringTemplate(node)) {

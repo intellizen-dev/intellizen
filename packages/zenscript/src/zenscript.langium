@@ -298,6 +298,10 @@ interface NumberLiteral extends Expression {
     value: string;
 }
 
+interface IntegerLiteral extends NumberLiteral {}
+
+interface FloatingLiteral extends NumberLiteral {}
+
 interface BooleanLiteral extends Expression {
     value: boolean;
 }
@@ -407,7 +411,7 @@ ParenthesizedExpression returns ParenthesizedExpression:
 ;
 
 LiteralExpression returns LiteralExpression:
-    StringLiteral | StringTemplate | NumericLiteral | BooleanLiteral | ArrayLiteral | MapLiteral | NullLiteral
+    StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | ArrayLiteral | MapLiteral | NullLiteral
 ;
 
 FunctionExpression returns FunctionExpression:
@@ -434,8 +438,16 @@ LocalVariable returns LocalVariable:
     ref=[VariableDeclaration:ID]
 ;
 
-NumericLiteral returns NumberLiteral:
-    value=(INTEGER | FLOATING)
+NumberLiteral returns NumberLiteral:
+    IntegerLiteral | FloatingLiteral
+;
+
+IntegerLiteral returns IntegerLiteral:
+    value=INTEGER
+;
+
+FloatingLiteral returns FloatingLiteral:
+    value=FLOATING
 ;
 
 BooleanLiteral returns BooleanLiteral:
