@@ -1,5 +1,5 @@
 import type { Reference } from 'langium'
-import type { ClassDeclaration, ClassMemberDeclaration, PrimitiveType, isClassDeclaration } from '../generated/ast'
+import { ClassDeclaration, ClassMemberDeclaration, PrimitiveType, isClassDeclaration } from '../generated/ast'
 
 // region Internal
 export type PrimitiveTypes = PrimitiveType['value']
