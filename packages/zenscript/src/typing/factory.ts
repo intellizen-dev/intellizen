@@ -1,4 +1,4 @@
-import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, PrimitiveTypeDescription, UnionTypeDescription } from './description'
+import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, PrimitiveTypeDescription, UnionTypeDescription } from './description'
 import type { PrimitiveTypes, TypeDescription } from './description'
 
 export function createPrimitiveType<
@@ -43,4 +43,8 @@ export function createUnionType(...elementTypes: TypeDescription[]): UnionTypeDe
 
 export function createIntersectionType(...elementTypes: TypeDescription[]): IntersectionTypeDescription {
   return new IntersectionTypeDescription(elementTypes)
+}
+
+export function createIntRangeType(): IntRangeTypeDescription {
+  return new IntRangeTypeDescription()
 }

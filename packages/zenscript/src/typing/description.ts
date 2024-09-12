@@ -124,6 +124,12 @@ export class IntersectionTypeDescription extends TypeDescription {
   }
 }
 
+export class IntRangeTypeDescription extends TypeDescription {
+  constructor() {
+    super('int_range')
+  }
+}
+
 // endregion
 
 // region Predicates

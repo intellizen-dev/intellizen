@@ -2,7 +2,7 @@ import type { AstNode } from 'langium'
 import type { BracketExpression, ConditionalExpression, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference } from '../generated/ast'
 import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isConditionalExpression, isExpression, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isNumberLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isReferenceType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
 import { ClassTypeDescription, type TypeDescription } from './description'
-import { createAnyType, createArrayType, createClassType, createFunctionType, createIntersectionType, createListType, createMapType, createPrimitiveType, createUnionType } from './factory'
+import { createAnyType, createArrayType, createClassType, createFunctionType, createIntRangeType, createIntersectionType, createListType, createMapType, createPrimitiveType, createUnionType } from './factory'
 
 export interface TypeComputer {
   inferType: (node: AstNode) => TypeDescription | undefined
@@ -233,7 +233,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return createPrimitiveType('string')
       case 'to':
       case '..':
-        return createClassType('internal.IntRange') // TODO: IntRange 是个什么类型
+        return createIntRangeType()
     }
   }
   // endregion
