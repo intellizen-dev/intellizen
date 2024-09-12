@@ -118,7 +118,7 @@ describe('parse expression of script with ZenScript ', () => {
     expect(withElements.entries).toHaveLength(2)
     withElements.entries.forEach(({ value, key }) => {
       assertLocalVariableText(key, /\w/)
-      expect(value.$type).toBe('NumberLiteral')
+      expect(value.$type).toBe('IntegerLiteral')
     })
   })
 
@@ -171,7 +171,7 @@ describe('parse expression of script with ZenScript ', () => {
     assertLocalVariableText(withArgs.receiver, 'call')
     expect(withArgs.arguments).toHaveLength(3)
     for (const arg of withArgs.arguments) {
-      expect(arg.$type).toBe('NumberLiteral')
+      expect(arg.$type).toBe('IntegerLiteral')
     }
   })
 
@@ -190,11 +190,11 @@ describe('parse expression of script with ZenScript ', () => {
     const [to, dotD] = infixExprs
 
     expect(to.op).toBe('to')
-    expect(to.left.$type).toBe('NumberLiteral')
-    expect(to.right.$type).toBe('NumberLiteral')
+    expect(to.left.$type).toBe('IntegerLiteral')
+    expect(to.right.$type).toBe('IntegerLiteral')
     expect(dotD.op).toBe('..')
-    expect(dotD.left.$type).toBe('NumberLiteral')
-    expect(dotD.right.$type).toBe('NumberLiteral')
+    expect(dotD.left.$type).toBe('IntegerLiteral')
+    expect(dotD.right.$type).toBe('IntegerLiteral')
   })
 
   it('type cast expression', async () => {
@@ -214,7 +214,7 @@ describe('parse expression of script with ZenScript ', () => {
   it('array access', async () => {
     const arrayAccessExpr = await parseExpr<ArrayAccess>('foo[0];')
     assertLocalVariableText(arrayAccessExpr.array, 'foo')
-    expect(arrayAccessExpr.index.$type).toBe('NumberLiteral')
+    expect(arrayAccessExpr.index.$type).toBe('IntegerLiteral')
   })
 
   it('instanceof expression', async () => {
@@ -244,6 +244,6 @@ describe('parse expression of script with ZenScript ', () => {
     const third = leftExpr.third as LocalVariable
     assertLocalVariableText(third, 'foo')
 
-    expect(expr.right.$type).toBe('NumberLiteral')
+    expect(expr.right.$type).toBe('IntegerLiteral')
   })
 })
