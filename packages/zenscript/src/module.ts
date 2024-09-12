@@ -50,7 +50,7 @@ export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices
   },
   typing: {
     TypeInferrer: () => new ZenScriptTypeInferrer(),
-  }
+  },
 }
 
 /**

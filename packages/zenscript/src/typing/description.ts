@@ -1,12 +1,9 @@
-import { Reference } from 'langium'
-import { ClassMemberDeclaration, isClassDeclaration, isImportDeclaration, type ClassDeclaration, type PrimitiveType } from '../generated/ast'
+import type { Reference } from 'langium'
+import type { ClassDeclaration, ClassMemberDeclaration, PrimitiveType, isClassDeclaration } from '../generated/ast'
 
 // region Internal
 export type PrimitiveTypes = PrimitiveType['value']
 export type MultiTypes = 'array' | 'list' | 'union' | 'intersection'
-interface TypeFor<T> {
-  $type: T
-}
 // endregion
 
 export class TypeDescription {
@@ -40,50 +37,49 @@ export class ClassTypeDescription extends TypeDescription {
   resolved?: boolean
   declaration?: ClassDeclaration
 
-
   constructor(className: string | Reference | ClassDeclaration) {
     super('class')
-    if(typeof className === 'string') {
+    if (typeof className === 'string') {
       this.className = className
-    } else if(isClassDeclaration(className)) {
+    }
+    else if (isClassDeclaration(className)) {
       this.declaration = className
-    } else {
+    }
+    else {
       this.referrer = className
     }
   }
 
   getMembers(): Array<ClassMemberDeclaration> {
     this.resolve()
-    if(!this.declaration) return []
+    if (!this.declaration)
+      return []
     return this.declaration.members
   }
 
   resolve(): void {
-    if(this.resolved) return
-    if(this.declaration) {
+    if (this.resolved)
+      return
+    if (this.declaration) {
       this.resolved = true
       this.className = this.declaration.name
       return
     }
 
-    if(!this.referrer) {
+    if (!this.referrer) {
       // TODO: how to get reference only by className
       this.resolved = true
       return
     }
-    
-    const refNode = this.referrer.ref;
-    if(isClassDeclaration(refNode)) {
+
+    const refNode = this.referrer.ref
+    if (isClassDeclaration(refNode)) {
       this.declaration = refNode
       this.className = refNode.name
     }
 
     this.resolved = true
   }
-
-
-
-
 }
 
 export class MapTypeDescription extends TypeDescription {

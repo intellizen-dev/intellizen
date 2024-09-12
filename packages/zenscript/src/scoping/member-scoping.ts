@@ -1,36 +1,36 @@
 import type { ReferenceInfo, Scope } from 'langium'
 import { DefaultScopeProvider } from 'langium'
-import { isLocalVariable, isMemberAccess } from '../generated/ast'
+import { isMemberAccess } from '../generated/ast'
 import type { TypeInferrer } from '../typing/infer'
 import type { IntelliZenServices } from '../module'
-import { ClassTypeDescription, isClassTypeDesc } from '../typing/description'
+import type { ClassTypeDescription } from '../typing/description'
+import { isClassTypeDesc } from '../typing/description'
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
-    private typeInferer: TypeInferrer
-    constructor(services: IntelliZenServices) {
-        super(services)
-        this.typeInferer = services.typing.TypeInferrer
-    }
-    override getScope(context: ReferenceInfo): Scope {
-        // member access
-        const node = context.container
-        if (isMemberAccess(node)) {
-            const receiver = node.receiver;
-            const receiverType = this.typeInferer.inferExpressionType(receiver)
+  private typeInferer: TypeInferrer
+  constructor(services: IntelliZenServices) {
+    super(services)
+    this.typeInferer = services.typing.TypeInferrer
+  }
 
-        if (isClassTypeDesc(receiverType)) {
-                return this.scopeClassMembers(receiverType);
-            }
+  override getScope(context: ReferenceInfo): Scope {
+    // member access
+    const node = context.container
+    if (isMemberAccess(node)) {
+      const receiver = node.receiver
+      const receiverType = this.typeInferer.inferExpressionType(receiver)
 
-        }
-
-        return super.getScope(context)
+      if (isClassTypeDesc(receiverType)) {
+        return this.scopeClassMembers(receiverType)
+      }
     }
 
-    private scopeClassMembers(classTypeDesc: ClassTypeDescription): Scope {
-        const members = classTypeDesc.getMembers()
-        // TODO: get parent class members
-        return this.createScopeForNodes(members);
+    return super.getScope(context)
+  }
 
-    }
+  private scopeClassMembers(classTypeDesc: ClassTypeDescription): Scope {
+    const members = classTypeDesc.getMembers()
+    // TODO: get parent class members
+    return this.createScopeForNodes(members)
+  }
 }
