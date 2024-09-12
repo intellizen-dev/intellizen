@@ -8,10 +8,6 @@ import { createAnyType, createArrayType, createClassType, createFunctionType, cr
 
 export interface TypeInferrer {
   inferType: (node: AstNode) => TypeDescription | undefined
-
-  inferExpressionType: (node: Expression) => TypeDescription | undefined
-
-  resolveTypeReference: (type: TypeReference) => TypeDescription | undefined
 }
 
 export class ZenScriptTypeInferrer implements TypeInferrer {
