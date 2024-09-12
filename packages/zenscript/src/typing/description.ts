@@ -3,7 +3,7 @@ import type { PrimitiveType } from '../generated/ast'
 // region Internal
 export type PrimitiveTypes = PrimitiveType['value']
 export type MultiTypes = 'array' | 'list' | 'union' | 'intersection'
-interface TypeFor<T extends string> {
+interface TypeFor<T> {
   $type: T
 }
 // endregion
