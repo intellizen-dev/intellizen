@@ -1,10 +1,14 @@
-import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, PrimitiveTypeDescription, TypeDescription, UnionTypeDescription } from './description'
-import type { PrimitiveTypes } from './description'
+import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, PrimitiveTypeDescription, UnionTypeDescription } from './description'
+import type { PrimitiveTypes, TypeDescription } from './description'
 
 export function createPrimitiveType<
   T extends PrimitiveTypes = 'any',
 >($type: T = 'any' as T): PrimitiveTypeDescription {
   return new PrimitiveTypeDescription($type)
+}
+
+export function createAnyType(): PrimitiveTypeDescription {
+  return createPrimitiveType('any')
 }
 
 export function createFunctionType<
@@ -15,10 +19,7 @@ export function createFunctionType<
 }
 
 export function createClassType(className: string): ClassTypeDescription {
-  return {
-    $type: 'class',
-    className,
-  }
+  return new ClassTypeDescription(className)
 }
 
 export function createMapType<
@@ -43,6 +44,3 @@ export function createUnionType(...elementTypes: TypeDescription[]): UnionTypeDe
 export function createIntersectionType(...elementTypes: TypeDescription[]): IntersectionTypeDescription {
   return new IntersectionTypeDescription(elementTypes)
 }
-
-
-

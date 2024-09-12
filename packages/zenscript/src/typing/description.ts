@@ -1,4 +1,5 @@
-import type { PrimitiveType } from '../generated/ast'
+import { Reference } from 'langium'
+import { ClassMemberDeclaration, isClassDeclaration, isImportDeclaration, type ClassDeclaration, type PrimitiveType } from '../generated/ast'
 
 // region Internal
 export type PrimitiveTypes = PrimitiveType['value']
@@ -7,7 +8,6 @@ interface TypeFor<T> {
   $type: T
 }
 // endregion
-
 
 export class TypeDescription {
   $type: string
@@ -35,12 +35,55 @@ export class FunctionTypeDescription extends TypeDescription {
 }
 
 export class ClassTypeDescription extends TypeDescription {
-  className: string
+  className?: string
+  referrer?: Reference
+  resolved?: boolean
+  declaration?: ClassDeclaration
 
-  constructor(className: string) {
+
+  constructor(className: string | Reference | ClassDeclaration) {
     super('class')
-    this.className = className
+    if(typeof className === 'string') {
+      this.className = className
+    } else if(isClassDeclaration(className)) {
+      this.declaration = className
+    } else {
+      this.referrer = className
+    }
   }
+
+  getMembers(): Array<ClassMemberDeclaration> {
+    this.resolve()
+    if(!this.declaration) return []
+    return this.declaration.members
+  }
+
+  resolve(): void {
+    if(this.resolved) return
+    if(this.declaration) {
+      this.resolved = true
+      this.className = this.declaration.name
+      return
+    }
+
+    if(!this.referrer) {
+      // TODO: how to get reference only by className
+      this.resolved = true
+      return
+    }
+    
+    const refNode = this.referrer.ref;
+    if(isClassDeclaration(refNode)) {
+      this.declaration = refNode
+      this.className = refNode.name
+    }
+
+    this.resolved = true
+  }
+
+
+
+
 }
 
 export class MapTypeDescription extends TypeDescription {
@@ -84,77 +127,76 @@ export class IntersectionTypeDescription extends TypeDescription {
     super('intersection')
     this.elementTypes = elementTypes
   }
-
 }
 
 // endregion
 
 // region Predicates
-export function isStringType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription {
-  return typeDesc.$type === 'string'
+export function isStringTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+  return typeDesc?.$type === 'string'
 }
 
-export function isAnyType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription {
-  return typeDesc.$type === 'any'
+export function isAnyTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+  return typeDesc?.$type === 'any'
 }
 
-export function isBoolType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription {
-  return typeDesc.$type === 'bool'
+export function isBoolTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+  return typeDesc?.$type === 'bool'
 }
 
-export function isByteType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription {
-  return typeDesc.$type === 'byte'
+export function isByteTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+  return typeDesc?.$type === 'byte'
 }
 
-export function isDoubleType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription {
-  return typeDesc.$type === 'double'
+export function isDoubleTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+  return typeDesc?.$type === 'double'
 }
 
-export function isFloatType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription {
-  return typeDesc.$type === 'float'
+export function isFloatTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+  return typeDesc?.$type === 'float'
 }
 
-export function isIntType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription {
-  return typeDesc.$type === 'int'
+export function isIntTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+  return typeDesc?.$type === 'int'
 }
 
-export function isLongType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription {
-  return typeDesc.$type === 'long'
+export function isLongTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+  return typeDesc?.$type === 'long'
 }
 
-export function isShortType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription {
-  return typeDesc.$type === 'short'
+export function isShortTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+  return typeDesc?.$type === 'short'
 }
 
-export function isVoidType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription {
-  return typeDesc.$type === 'void'
+export function isVoidTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+  return typeDesc?.$type === 'void'
 }
 
-export function isPrimitiveType(typeDesc: TypeDescription): typeDesc is PrimitiveTypeDescription {
+export function isPrimitiveTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
   return typeDesc instanceof PrimitiveTypeDescription
 }
 
-export function isClassType(typeDesc: TypeDescription): typeDesc is ClassTypeDescription {
+export function isClassTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
   return typeDesc instanceof ClassTypeDescription
 }
 
-export function isMapType(typeDesc: TypeDescription): typeDesc is MapTypeDescription {
+export function isMapTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is MapTypeDescription {
   return typeDesc instanceof MapTypeDescription
 }
 
-export function isArrayType(typeDesc: TypeDescription): typeDesc is ArrayTypeDescription {
+export function isArrayTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is ArrayTypeDescription {
   return typeDesc instanceof ArrayTypeDescription
 }
 
-export function isListType(typeDesc: TypeDescription): typeDesc is ListTypeDescription {
+export function isListTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is ListTypeDescription {
   return typeDesc instanceof ListTypeDescription
 }
 
-export function isUnionType(typeDesc: TypeDescription): typeDesc is UnionTypeDescription {
+export function isUnionTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is UnionTypeDescription {
   return typeDesc instanceof UnionTypeDescription
 }
 
-export function isIntersectionType(typeDesc: TypeDescription): typeDesc is IntersectionTypeDescription {
+export function isIntersectionTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is IntersectionTypeDescription {
   return typeDesc instanceof IntersectionTypeDescription
 }
 // endregion
