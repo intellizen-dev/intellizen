@@ -8,6 +8,7 @@ import { CustomTokenBuilder } from './lexer/token-builder'
 import { CustomValueConverter } from './lexer/value-converter'
 import { type QualifiedNameProvider, ZenScriptNameProvider } from './name'
 import { ZenScriptTypeComputer } from './typing/infer'
+import { ZenScriptCompletionProvider } from './lsp/completion'
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -50,6 +51,9 @@ export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices
   },
   typing: {
     TypeComputer: () => new ZenScriptTypeComputer(),
+  },
+  lsp: {
+    CompletionProvider: services => new ZenScriptCompletionProvider(services),
   },
 }
 
