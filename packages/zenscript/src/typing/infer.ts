@@ -1,6 +1,6 @@
 import type { AstNode } from 'langium'
 import type { BracketExpression, ClassDeclaration, ConditionalExpression, Declaration, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference, VariableDeclaration } from '../generated/ast'
-import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isConditionalExpression, isDeclaration, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isReferenceType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
+import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isClassType, isConditionalExpression, isDeclaration, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
 import { ClassTypeDescription, type TypeDescription } from './description'
 import { createAnyType, createArrayType, createClassType, createFunctionType, createIntRangeType, createIntersectionType, createListType, createMapType, createPrimitiveType, createUnionType } from './factory'
 
@@ -65,7 +65,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return createFunctionType(paramTypes, returnType)
     }
 
-    if (isReferenceType(type)) {
+    if (isClassType(type)) {
       return new ClassTypeDescription(type.ref)
     }
   }

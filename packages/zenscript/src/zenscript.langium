@@ -526,7 +526,7 @@ interface FunctionType extends TypeReference {
     returnType: TypeReference;
 }
 
-interface ReferenceType extends TypeReference {
+interface ClassType extends TypeReference {
     ref: @TypeElement;
 }
 
@@ -567,7 +567,7 @@ ComplexType returns TypeReference:
 ;
 
 PrimaryType returns TypeReference:
-    PrimitiveType | ListType | FunctionType | ParenthesizedType | ReferenceType
+    PrimitiveType | ListType | FunctionType | ParenthesizedType | ClassType
 ;
 
 ParenthesizedType returns ParenthesizedType:
@@ -588,7 +588,7 @@ FunctionType returns FunctionType:
     ')' returnType=TypeReference
 ;
 
-ReferenceType returns ReferenceType:
+ClassType returns ClassType:
     ref=[TypeElement:QualifiedName]
 ;
 
