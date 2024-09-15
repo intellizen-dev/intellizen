@@ -404,7 +404,7 @@ PostfixExpression returns Expression:
     )?
 ;
 
-PrimaryExpression returns Expression:
+fragment PrimaryExpression returns Expression:
     ParenthesizedExpression | FunctionExpression | LocalVariable | LiteralExpression | BracketExpression
 ;
 
@@ -566,7 +566,7 @@ ComplexType returns TypeReference:
     )']')*
 ;
 
-PrimaryType returns TypeReference:
+fragment PrimaryType returns TypeReference:
     PrimitiveType | ListType | FunctionType | ParenthesizedType | ClassType
 ;
 
