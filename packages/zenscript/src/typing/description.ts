@@ -1,6 +1,5 @@
 import type { Reference } from 'langium'
-import type { ClassDeclaration, ClassMemberDeclaration, PrimitiveType } from '../generated/ast'
-import { isClassDeclaration } from '../generated/ast'
+import type { ClassDeclaration, PrimitiveType } from '../generated/ast'
 
 // region TypeDescription
 export class TypeDescription {
@@ -31,53 +30,12 @@ export class FunctionTypeDescription extends TypeDescription {
 }
 
 export class ClassTypeDescription extends TypeDescription {
-  className?: string
-  referrer?: Reference
-  resolved?: boolean
-  declaration?: ClassDeclaration
+  className: string
+  ref?: Reference<ClassDeclaration>
 
-  constructor(className: string | Reference | ClassDeclaration) {
+  constructor(className: string) {
     super('class')
-    if (typeof className === 'string') {
-      this.className = className
-    }
-    else if (isClassDeclaration(className)) {
-      this.declaration = className
-    }
-    else {
-      this.referrer = className
-    }
-  }
-
-  getMembers(): Array<ClassMemberDeclaration> {
-    this.resolve()
-    if (!this.declaration)
-      return []
-    return this.declaration.members
-  }
-
-  resolve(): void {
-    if (this.resolved)
-      return
-    if (this.declaration) {
-      this.resolved = true
-      this.className = this.declaration.name
-      return
-    }
-
-    if (!this.referrer) {
-      // TODO: how to get reference only by className
-      this.resolved = true
-      return
-    }
-
-    const refNode = this.referrer.ref
-    if (isClassDeclaration(refNode)) {
-      this.declaration = refNode
-      this.className = refNode.name
-    }
-
-    this.resolved = true
+    this.className = className
   }
 }
 

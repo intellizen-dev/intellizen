@@ -1,4 +1,4 @@
-import type { AstNode } from 'langium'
+import type { AstNode, ResolvedReference } from 'langium'
 import type { BracketExpression, ClassDeclaration, ConditionalExpression, Declaration, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference, VariableDeclaration } from '../generated/ast'
 import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isClassType, isConditionalExpression, isDeclaration, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
 import { ClassTypeDescription, type TypeDescription } from './description'
@@ -66,7 +66,9 @@ export class ZenScriptTypeComputer implements TypeComputer {
     }
 
     if (isClassType(type)) {
-      return new ClassTypeDescription(type.ref)
+      const typeDesc = new ClassTypeDescription(type.ref.$refText)
+      typeDesc.ref = type.ref as ResolvedReference<ClassDeclaration>
+      return typeDesc
     }
   }
   // endregion
@@ -94,7 +96,9 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   private inferClassDeclaration(node: ClassDeclaration): TypeDescription | undefined {
-    return new ClassTypeDescription(node)
+    const typeDesc = new ClassTypeDescription(node.name)
+    typeDesc.ref = { ref: node } as ResolvedReference<ClassDeclaration>
+    return typeDesc
   }
   // endregion
 
