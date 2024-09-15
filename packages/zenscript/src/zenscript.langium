@@ -15,12 +15,14 @@ Person:
 Greeting:
     'Hello' person=[Person:ID] '!';
 
-interface ImportDeclaration {
+interface Declaration {}
+
+interface ImportDeclaration extends Declaration {
     ref: @NamedElement;
     alias?: string;
 }
 
-interface ClassDeclaration {
+interface ClassDeclaration extends Declaration {
     name: string;
     superTypes: @TypeElement[];
     members: ClassMemberDeclaration[];
@@ -34,21 +36,21 @@ type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | Construct
 
 type CallableDeclaration = FunctionDeclaration | ExpandFunctionDeclaration | ConstructorDeclaration;
 
-interface FieldDeclaration {
+interface FieldDeclaration extends Declaration {
     prefix: 'static' | 'var' | 'val';
     name: string;
     typeRef?: TypeReference;
     initializer?: Expression;
 }
 
-interface ValueParameter {
+interface ValueParameter extends Declaration {
     varargs?: boolean;
     name: string;
     typeRef?: TypeReference;
     defaultValue?: Expression;
 }
 
-interface FunctionDeclaration {
+interface FunctionDeclaration extends Declaration {
     prefix?: 'static' | 'global';
     name: string;
     parameters: ValueParameter[];
@@ -56,7 +58,7 @@ interface FunctionDeclaration {
     body: Statement[];
 }
 
-interface ExpandFunctionDeclaration {
+interface ExpandFunctionDeclaration extends Declaration {
     typeRef: TypeReference;
     name: string;
     parameters: ValueParameter[];
@@ -64,7 +66,7 @@ interface ExpandFunctionDeclaration {
     body: Statement[];
 }
 
-interface ConstructorDeclaration {
+interface ConstructorDeclaration extends Declaration {
     parameters: ValueParameter[];
     body: Statement[];
 }
@@ -157,11 +159,15 @@ interface BreakStatement extends Statement {}
 
 interface ContinueStatement extends Statement {}
 
-interface VariableDeclaration extends Statement {
+interface VariableDeclaration extends Declaration, Statement {
     prefix: 'global' | 'static' | 'var' | 'val';
     name: string;
     typeRef?: TypeReference;
     initializer?: Expression;
+}
+
+interface ForVariableDeclaration extends Declaration {
+    name: string;
 }
 
 //endregion Statement Interface
@@ -197,7 +203,7 @@ ForStatement returns ForStatement:
     '}'
 ;
 
-ForVariableDeclaration:
+ForVariableDeclaration returns ForVariableDeclaration:
     name=ID
 ;
 

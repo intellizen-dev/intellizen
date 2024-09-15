@@ -1,6 +1,6 @@
 import type { AstNode } from 'langium'
-import type { BracketExpression, ClassDeclaration, ConditionalExpression, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference, VariableDeclaration } from '../generated/ast'
-import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isConditionalExpression, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isReferenceType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
+import type { BracketExpression, ClassDeclaration, ConditionalExpression, Declaration, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference, VariableDeclaration } from '../generated/ast'
+import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isConditionalExpression, isDeclaration, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isReferenceType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
 import { ClassTypeDescription, type TypeDescription } from './description'
 import { createAnyType, createArrayType, createClassType, createFunctionType, createIntRangeType, createIntersectionType, createListType, createMapType, createPrimitiveType, createUnionType } from './factory'
 
@@ -18,12 +18,8 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return this.inferTypeReference(node)
     }
 
-    if (isVariableDeclaration(node)) {
-      return this.inferVariableDeclaration(node)
-    }
-
-    if (isClassDeclaration(node)) {
-      return this.inferClassDeclaration(node)
+    if (isDeclaration(node)) {
+      return this.inferDeclaration(node)
     }
   }
 
@@ -76,6 +72,15 @@ export class ZenScriptTypeComputer implements TypeComputer {
   // endregion
 
   // region Declaration
+  private inferDeclaration(node: Declaration): TypeDescription | undefined {
+    if (isVariableDeclaration(node)) {
+      return this.inferVariableDeclaration(node)
+    }
+    else if (isClassDeclaration(node)) {
+      return this.inferClassDeclaration(node)
+    }
+  }
+
   private inferVariableDeclaration(node: VariableDeclaration): TypeDescription | undefined {
     if (node.typeRef) {
       return this.inferTypeReference(node.typeRef)
