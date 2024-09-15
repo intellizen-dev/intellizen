@@ -1,5 +1,5 @@
 import type { AstNode } from 'langium'
-import type { BracketExpression, ConditionalExpression, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference } from '../generated/ast'
+import type { BracketExpression, ClassDeclaration, ConditionalExpression, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference, VariableDeclaration } from '../generated/ast'
 import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isConditionalExpression, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isReferenceType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
 import { ClassTypeDescription, type TypeDescription } from './description'
 import { createAnyType, createArrayType, createClassType, createFunctionType, createIntRangeType, createIntersectionType, createListType, createMapType, createPrimitiveType, createUnionType } from './factory'
@@ -19,19 +19,15 @@ export class ZenScriptTypeComputer implements TypeComputer {
     }
 
     if (isVariableDeclaration(node)) {
-      if (node.typeRef) {
-        return this.inferTypeReference(node.typeRef)
-      }
-      if (node.initializer) {
-        return this.inferExpression(node.initializer)
-      }
+      return this.inferVariableDeclaration(node)
     }
 
     if (isClassDeclaration(node)) {
-      return new ClassTypeDescription(node)
+      return this.inferClassDeclaration(node)
     }
   }
 
+  // region TypeReference
   private inferTypeReference(type: TypeReference): TypeDescription | undefined {
     if (isPrimitiveType(type)) {
       return createPrimitiveType(type.value)
@@ -77,6 +73,25 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return new ClassTypeDescription(type.ref)
     }
   }
+  // endregion
+
+  // region Declaration
+  private inferVariableDeclaration(node: VariableDeclaration): TypeDescription | undefined {
+    if (node.typeRef) {
+      return this.inferTypeReference(node.typeRef)
+    }
+    else if (node.initializer) {
+      return this.inferExpression(node.initializer)
+    }
+    else {
+      return createAnyType()
+    }
+  }
+
+  private inferClassDeclaration(node: ClassDeclaration): TypeDescription | undefined {
+    return new ClassTypeDescription(node)
+  }
+  // endregion
 
   // region Expression
   private inferExpression(node: Expression): TypeDescription | undefined {
