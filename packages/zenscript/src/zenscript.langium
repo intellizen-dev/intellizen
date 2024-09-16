@@ -24,13 +24,11 @@ interface ImportDeclaration extends Declaration {
 
 interface ClassDeclaration extends Declaration {
     name: string;
-    superTypes: @TypeElement[];
+    superTypes: @ClassDeclaration[];
     members: ClassMemberDeclaration[];
 }
 
 type NamedElement = ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | ForVariableDeclaration | MapEntry | ImportDeclaration;
-
-type TypeElement = ClassDeclaration | ImportDeclaration;
 
 type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
 
@@ -81,7 +79,7 @@ ImportDeclaration returns ImportDeclaration:
 
 ClassDeclaration returns ClassDeclaration:
     'zenClass' name=ID
-    ('extends' (superTypes+=[TypeElement:QualifiedName] (',' superTypes+=[TypeElement:QualifiedName])*))?
+    ('extends' (superTypes+=[ClassDeclaration:QualifiedName] (',' superTypes+=[ClassDeclaration:QualifiedName])*))?
     ('{'
         members+=ClassMemberDeclaration*
     '}')?
@@ -527,7 +525,7 @@ interface FunctionType extends TypeReference {
 }
 
 interface ClassType extends TypeReference {
-    ref: @TypeElement;
+    ref: @ClassDeclaration;
 }
 
 interface ParenthesizedType extends TypeReference {
@@ -589,7 +587,7 @@ FunctionType returns FunctionType:
 ;
 
 ClassType returns ClassType:
-    ref=[TypeElement:QualifiedName]
+    ref=[ClassDeclaration:QualifiedName]
 ;
 
 //endregion TypeReference
