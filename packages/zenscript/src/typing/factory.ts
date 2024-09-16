@@ -1,9 +1,7 @@
 import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, PrimitiveTypeDescription, UnionTypeDescription } from './description'
 import type { PrimitiveTypes, TypeDescription } from './description'
 
-export function createPrimitiveType<
-  T extends PrimitiveTypes = 'any',
->($type: T = 'any' as T): PrimitiveTypeDescription {
+export function createPrimitiveType($type: PrimitiveTypes): PrimitiveTypeDescription {
   return new PrimitiveTypeDescription($type)
 }
 
@@ -11,10 +9,7 @@ export function createAnyType(): PrimitiveTypeDescription {
   return createPrimitiveType('any')
 }
 
-export function createFunctionType<
-  P extends TypeDescription[],
-  R extends TypeDescription,
->(paramTypes: P, returnType: R): FunctionTypeDescription {
+export function createFunctionType(paramTypes: TypeDescription[], returnType: TypeDescription): FunctionTypeDescription {
   return new FunctionTypeDescription(paramTypes, returnType)
 }
 
@@ -22,18 +17,15 @@ export function createClassType(className: string): ClassTypeDescription {
   return new ClassTypeDescription(className)
 }
 
-export function createMapType<
-  K extends TypeDescription,
-  V extends TypeDescription,
->(keyType: K, valueType: V): MapTypeDescription {
+export function createMapType(keyType: TypeDescription, valueType: TypeDescription): MapTypeDescription {
   return new MapTypeDescription(keyType, valueType)
 }
 
-export function createArrayType<E extends TypeDescription>(elementType: E): ArrayTypeDescription {
+export function createArrayType(elementType: TypeDescription): ArrayTypeDescription {
   return new ArrayTypeDescription(elementType)
 }
 
-export function createListType<E extends TypeDescription>(elementType: E): ListTypeDescription {
+export function createListType(elementType: TypeDescription): ListTypeDescription {
   return new ListTypeDescription(elementType)
 }
 
