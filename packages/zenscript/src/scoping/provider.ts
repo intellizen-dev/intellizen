@@ -30,8 +30,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   private scopeClassMembers(classTypeDesc: ClassTypeDescription): Scope {
-    const members = classTypeDesc.ref?.ref?.members ?? []
-    // TODO: get parent class members
+    const members = this.typeComputer.getClassMembers(classTypeDesc.ref?.ref) ?? []
     return this.createScopeForNodes(members)
   }
 }
