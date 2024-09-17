@@ -1,10 +1,10 @@
 import type { AstNode, AstNodeDescription, LangiumDocument, NameProvider, PrecomputedScopes } from 'langium'
 import { AstUtils, DefaultScopeComputation } from 'langium'
-import type { ClassDeclaration, ValueParameter } from './generated/ast'
-import { isClassDeclaration, isFunctionDeclaration, isValueParameter, isVariableDeclaration } from './generated/ast'
-import type { IntelliZenServices } from './module'
-import type { QualifiedNameProvider } from './name'
-import { isToplevel } from './utils/ast'
+import type { ClassDeclaration, ValueParameter } from '../generated/ast'
+import { isClassDeclaration, isFunctionDeclaration, isValueParameter, isVariableDeclaration } from '../generated/ast'
+import type { IntelliZenServices } from '../module'
+import type { QualifiedNameProvider } from '../name'
+import { isToplevel } from '../utils/ast'
 
 export class ZenScriptScopeComputation extends DefaultScopeComputation {
   override readonly nameProvider: NameProvider & QualifiedNameProvider

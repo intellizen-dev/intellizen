@@ -15,40 +15,40 @@ Person:
 Greeting:
     'Hello' person=[Person:ID] '!';
 
-interface ImportDeclaration {
+interface Declaration {}
+
+interface ImportDeclaration extends Declaration {
     ref: @NamedElement;
     alias?: string;
 }
 
-interface ClassDeclaration {
+interface ClassDeclaration extends Declaration {
     name: string;
-    superTypes: @TypeElement[];
+    superTypes: @ClassDeclaration[];
     members: ClassMemberDeclaration[];
 }
 
 type NamedElement = ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | ForVariableDeclaration | MapEntry | ImportDeclaration;
 
-type TypeElement = ClassDeclaration | ImportDeclaration;
-
 type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
 
 type CallableDeclaration = FunctionDeclaration | ExpandFunctionDeclaration | ConstructorDeclaration;
 
-interface FieldDeclaration {
+interface FieldDeclaration extends Declaration {
     prefix: 'static' | 'var' | 'val';
     name: string;
     typeRef?: TypeReference;
     initializer?: Expression;
 }
 
-interface ValueParameter {
+interface ValueParameter extends Declaration {
     varargs?: boolean;
     name: string;
     typeRef?: TypeReference;
     defaultValue?: Expression;
 }
 
-interface FunctionDeclaration {
+interface FunctionDeclaration extends Declaration {
     prefix?: 'static' | 'global';
     name: string;
     parameters: ValueParameter[];
@@ -56,7 +56,7 @@ interface FunctionDeclaration {
     body: Statement[];
 }
 
-interface ExpandFunctionDeclaration {
+interface ExpandFunctionDeclaration extends Declaration {
     typeRef: TypeReference;
     name: string;
     parameters: ValueParameter[];
@@ -64,7 +64,7 @@ interface ExpandFunctionDeclaration {
     body: Statement[];
 }
 
-interface ConstructorDeclaration {
+interface ConstructorDeclaration extends Declaration {
     parameters: ValueParameter[];
     body: Statement[];
 }
@@ -79,7 +79,7 @@ ImportDeclaration returns ImportDeclaration:
 
 ClassDeclaration returns ClassDeclaration:
     'zenClass' name=ID
-    ('extends' (superTypes+=[TypeElement:QualifiedName] (',' superTypes+=[TypeElement:QualifiedName])*))?
+    ('extends' (superTypes+=[ClassDeclaration:QualifiedName] (',' superTypes+=[ClassDeclaration:QualifiedName])*))?
     ('{'
         members+=ClassMemberDeclaration*
     '}')?
@@ -157,11 +157,15 @@ interface BreakStatement extends Statement {}
 
 interface ContinueStatement extends Statement {}
 
-interface VariableDeclaration extends Statement {
+interface VariableDeclaration extends Declaration, Statement {
     prefix: 'global' | 'static' | 'var' | 'val';
     name: string;
     typeRef?: TypeReference;
     initializer?: Expression;
+}
+
+interface ForVariableDeclaration extends Declaration {
+    name: string;
 }
 
 //endregion Statement Interface
@@ -197,7 +201,7 @@ ForStatement returns ForStatement:
     '}'
 ;
 
-ForVariableDeclaration:
+ForVariableDeclaration returns ForVariableDeclaration:
     name=ID
 ;
 
@@ -298,6 +302,10 @@ interface NumberLiteral extends Expression {
     value: string;
 }
 
+interface IntegerLiteral extends NumberLiteral {}
+
+interface FloatingLiteral extends NumberLiteral {}
+
 interface BooleanLiteral extends Expression {
     value: boolean;
 }
@@ -394,7 +402,7 @@ PostfixExpression returns Expression:
     )?
 ;
 
-PrimaryExpression returns Expression:
+fragment PrimaryExpression returns Expression:
     ParenthesizedExpression | FunctionExpression | LocalVariable | LiteralExpression | BracketExpression
 ;
 
@@ -407,7 +415,7 @@ ParenthesizedExpression returns ParenthesizedExpression:
 ;
 
 LiteralExpression returns LiteralExpression:
-    StringLiteral | StringTemplate | NumericLiteral | BooleanLiteral | ArrayLiteral | MapLiteral | NullLiteral
+    StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | ArrayLiteral | MapLiteral | NullLiteral
 ;
 
 FunctionExpression returns FunctionExpression:
@@ -434,8 +442,16 @@ LocalVariable returns LocalVariable:
     ref=[VariableDeclaration:ID]
 ;
 
-NumericLiteral returns NumberLiteral:
-    value=(INTEGER | FLOATING)
+NumberLiteral returns NumberLiteral:
+    IntegerLiteral | FloatingLiteral
+;
+
+IntegerLiteral returns IntegerLiteral:
+    value=INTEGER
+;
+
+FloatingLiteral returns FloatingLiteral:
+    value=FLOATING
 ;
 
 BooleanLiteral returns BooleanLiteral:
@@ -508,8 +524,8 @@ interface FunctionType extends TypeReference {
     returnType: TypeReference;
 }
 
-interface ReferenceType extends TypeReference {
-    ref: @TypeElement;
+interface ClassType extends TypeReference {
+    ref: @ClassDeclaration;
 }
 
 interface ParenthesizedType extends TypeReference {
@@ -548,8 +564,8 @@ ComplexType returns TypeReference:
     )']')*
 ;
 
-PrimaryType returns TypeReference:
-    PrimitiveType | ListType | FunctionType | ParenthesizedType | ReferenceType
+fragment PrimaryType returns TypeReference:
+    PrimitiveType | ListType | FunctionType | ParenthesizedType | ClassType
 ;
 
 ParenthesizedType returns ParenthesizedType:
@@ -570,8 +586,8 @@ FunctionType returns FunctionType:
     ')' returnType=TypeReference
 ;
 
-ReferenceType returns ReferenceType:
-    ref=[TypeElement:QualifiedName]
+ClassType returns ClassType:
+    ref=[ClassDeclaration:QualifiedName]
 ;
 
 //endregion TypeReference

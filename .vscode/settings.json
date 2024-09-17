@@ -3,6 +3,8 @@
   "prettier.enable": false,
   "editor.formatOnSave": false,
 
+  "editor.foldingStrategy": "indentation",
+
   // Auto fix
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",
@@ -39,6 +41,7 @@
   "cSpell.words": [
     "antfu",
     "bumpp",
+    "endregion",
     "esno",
     "intellizen",
     "langium",
