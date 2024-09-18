@@ -33,8 +33,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return super.getScope(context)
   }
 
-  private scopeInstanceMembers(properTypeDesc: ClassTypeDescription): Scope {
-    const members = getClassMembers(properTypeDesc.ref?.ref).filter(m => !isStaticMember(m))
+  private scopeInstanceMembers(classTypeDesc: ClassTypeDescription): Scope {
+    const members = getClassMembers(classTypeDesc.ref?.ref).filter(m => !isStaticMember(m))
     return this.createScopeForNodes(members)
   }
 
