@@ -1,6 +1,6 @@
 import { type AstNode, AstUtils, type CstNode, GrammarUtils, type NameProvider, isNamed } from 'langium'
 import { substringBeforeLast } from '@intellizen/shared'
-import { isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isScript, isVariableDeclaration, reflection } from './generated/ast'
+import { isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isScript, isVariableDeclaration } from './generated/ast'
 import { isToplevel } from './utils/ast'
 
 export interface QualifiedNameProvider {

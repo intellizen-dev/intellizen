@@ -1,6 +1,6 @@
 import type { ReferenceInfo, Scope } from 'langium'
 import { DefaultScopeProvider, EMPTY_SCOPE } from 'langium'
-import { isClassDeclaration, isImportDeclaration, isMemberAccess, reflection } from '../generated/ast'
+import { isMemberAccess } from '../generated/ast'
 import type { TypeComputer } from '../typing/infer'
 import type { IntelliZenServices } from '../module'
 import type { ClassTypeDescription, PackageTypeDescription, ProperTypeDescription, TypeDescription } from '../typing/description'
