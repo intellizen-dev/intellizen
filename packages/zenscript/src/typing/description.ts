@@ -39,6 +39,16 @@ export class ClassTypeDescription extends TypeDescription {
   }
 }
 
+export class ProperTypeDescription extends TypeDescription {
+  className: string
+  ref?: Reference<ClassDeclaration>
+
+  constructor(className: string) {
+    super('proper')
+    this.className = className
+  }
+}
+
 export class MapTypeDescription extends TypeDescription {
   keyType: TypeDescription
   valueType: TypeDescription
@@ -137,6 +147,10 @@ export function isPrimitiveTypeDesc(typeDesc: TypeDescription | undefined): type
 
 export function isClassTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
   return typeDesc instanceof ClassTypeDescription
+}
+
+export function isProperTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is ProperTypeDescription {
+  return typeDesc instanceof ProperTypeDescription
 }
 
 export function isMapTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is MapTypeDescription {

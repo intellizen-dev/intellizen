@@ -1,4 +1,4 @@
-import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, PrimitiveTypeDescription, UnionTypeDescription } from './description'
+import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, PrimitiveTypeDescription, ProperTypeDescription, UnionTypeDescription } from './description'
 import type { PrimitiveTypes, TypeDescription } from './description'
 
 export function createPrimitiveType($type: PrimitiveTypes): PrimitiveTypeDescription {
@@ -15,6 +15,10 @@ export function createFunctionType(paramTypes: TypeDescription[], returnType: Ty
 
 export function createClassType(className: string): ClassTypeDescription {
   return new ClassTypeDescription(className)
+}
+
+export function createProperType(className: string): ProperTypeDescription {
+  return new ProperTypeDescription(className)
 }
 
 export function createMapType(keyType: TypeDescription, valueType: TypeDescription): MapTypeDescription {

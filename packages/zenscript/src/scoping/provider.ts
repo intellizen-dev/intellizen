@@ -3,8 +3,8 @@ import { DefaultScopeProvider } from 'langium'
 import { isMemberAccess } from '../generated/ast'
 import type { TypeComputer } from '../typing/infer'
 import type { IntelliZenServices } from '../module'
-import type { ClassTypeDescription } from '../typing/description'
-import { isClassTypeDesc } from '../typing/description'
+import type { ClassTypeDescription, ProperTypeDescription } from '../typing/description'
+import { isClassTypeDesc, isProperTypeDesc } from '../typing/description'
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private typeComputer: TypeComputer
@@ -15,14 +15,17 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   override getScope(context: ReferenceInfo): Scope {
-    // member access
-    const node = context.container
-    if (isMemberAccess(node)) {
-      const receiver = node.receiver
+    const { container } = context
+
+    if (isMemberAccess(container)) {
+      const receiver = container.receiver
       const receiverType = this.typeComputer.inferType(receiver)
 
       if (isClassTypeDesc(receiverType)) {
-        return this.scopeClassMembers(receiverType)
+        return this.scopeInstanceMembers(receiverType)
+      }
+      else if (isProperTypeDesc(receiverType)) {
+        return this.scopeStaticMembers(receiverType)
       }
     }
 
@@ -31,6 +34,20 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
   private scopeClassMembers(classTypeDesc: ClassTypeDescription): Scope {
     const members = this.typeComputer.getClassMembers(classTypeDesc.ref?.ref) ?? []
+    return this.createScopeForNodes(members)
+  }
+
+  private scopeInstanceMembers(properTypeDesc: ProperTypeDescription): Scope {
+    const members = this.typeComputer.getClassMembers(properTypeDesc.ref?.ref)
+      ?.filter(it => (it as any).prefix !== 'static')
+      ?? []
+    return this.createScopeForNodes(members)
+  }
+
+  private scopeStaticMembers(properTypeDesc: ProperTypeDescription): Scope {
+    const members = this.typeComputer.getClassMembers(properTypeDesc.ref?.ref)
+      ?.filter(it => (it as any).prefix === 'static')
+      ?? []
     return this.createScopeForNodes(members)
   }
 }
