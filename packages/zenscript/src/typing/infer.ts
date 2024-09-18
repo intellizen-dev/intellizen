@@ -1,15 +1,12 @@
 import type { AstNode, ResolvedReference } from 'langium'
-import type { BracketExpression, ClassDeclaration, ClassMemberDeclaration, ConditionalExpression, Declaration, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference, VariableDeclaration } from '../generated/ast'
-import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isCallExpression, isClassDeclaration, isClassType, isConditionalExpression, isDeclaration, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
+import type { BracketExpression, ClassDeclaration, ConditionalExpression, Declaration, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference, VariableDeclaration } from '../generated/ast'
+import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isClassType, isConditionalExpression, isDeclaration, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
 import { ClassTypeDescription, type TypeDescription } from './description'
-import { createAnyType, createArrayType, createClassType, createFunctionType, createIntRangeType, createIntersectionType, createListType, createMapType, createPrimitiveType, createUnionType } from './factory'
+import { createAnyType, createArrayType, createClassType, createFunctionType, createIntRangeType, createIntersectionType, createListType, createMapType, createPrimitiveType, createProperType, createUnionType } from './factory'
 
-export interface TypeComputer {
-  inferType: (node: AstNode) => TypeDescription | undefined
-  getClassMembers: (clazz?: ClassDeclaration) => ClassMemberDeclaration[]
-}
+export type TypeComputer = Pick<InstanceType<typeof ZenScriptTypeComputer>, 'inferType'>
 
-export class ZenScriptTypeComputer implements TypeComputer {
+export class ZenScriptTypeComputer {
   public inferType(node: AstNode): TypeDescription | undefined {
     if (isExpression(node)) {
       return this.inferExpression(node)
@@ -22,17 +19,6 @@ export class ZenScriptTypeComputer implements TypeComputer {
     if (isDeclaration(node)) {
       return this.inferDeclaration(node)
     }
-  }
-
-  public getClassMembers(clazz: ClassDeclaration | undefined): ClassMemberDeclaration[] {
-    if (!clazz)
-      return []
-
-    const set = new Set<ClassMemberDeclaration>()
-    clazz.members.map(m => set.add(m))
-    clazz.superTypes?.flatMap(t => this.getClassMembers(t.ref)).forEach(m => set.add(m))
-
-    return Array.from(set)
   }
 
   // region TypeReference
@@ -108,7 +94,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   private inferClassDeclaration(node: ClassDeclaration): TypeDescription | undefined {
-    const typeDesc = new ClassTypeDescription(node.name)
+    const typeDesc = createProperType(node.name)
     typeDesc.ref = { ref: node } as ResolvedReference<ClassDeclaration>
     return typeDesc
   }
