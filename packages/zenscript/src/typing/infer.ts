@@ -4,7 +4,7 @@ import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketE
 import { ClassTypeDescription, type TypeDescription } from './description'
 import { createAnyType, createArrayType, createClassType, createFunctionType, createIntRangeType, createIntersectionType, createListType, createMapType, createPrimitiveType, createProperType, createUnionType } from './factory'
 
-export type TypeComputer = InstanceType<typeof ZenScriptTypeComputer>
+export type TypeComputer = Pick<InstanceType<typeof ZenScriptTypeComputer>, 'inferType'>
 
 export class ZenScriptTypeComputer {
   public inferType(node: AstNode): TypeDescription | undefined {
@@ -19,16 +19,6 @@ export class ZenScriptTypeComputer {
     if (isDeclaration(node)) {
       return this.inferDeclaration(node)
     }
-  }
-
-  public getClassChain(clazz?: ClassDeclaration): ClassDeclaration[] {
-    if (!clazz)
-      return []
-
-    const set = new Set<ClassDeclaration>()
-    set.add(clazz)
-    clazz.superTypes?.flatMap(t => this.getClassChain(t.ref)).forEach(c => set.add(c))
-    return Array.from(set)
   }
 
   // region TypeReference
