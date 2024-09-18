@@ -25,22 +25,28 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
       return
     }
 
+    const name = this.nameProvider.getQualifiedName(node)
     if (isVariableDeclaration(node)) {
       switch (node.prefix) {
         case 'global':
-        case 'static':
           super.exportNode(node, exports, document)
+          break
+        case 'static':
+          exports.push(this.descriptions.createDescription(node, name, document))
+          break
       }
     }
     else if (isFunctionDeclaration(node)) {
       switch (node.prefix) {
         case 'global':
-        case 'static':
           super.exportNode(node, exports, document)
+          break
+        case 'static':
+          exports.push(this.descriptions.createDescription(node, name, document))
       }
     }
     else if (isClassDeclaration(node)) {
-      super.exportNode(node, exports, document)
+      exports.push(this.descriptions.createDescription(node, name, document))
     }
   }
 

@@ -1,5 +1,5 @@
 import type { Reference } from 'langium'
-import type { ClassDeclaration, PrimitiveType } from '../generated/ast'
+import type { ClassDeclaration, NamedElement, PrimitiveType } from '../generated/ast'
 
 // region TypeDescription
 export class TypeDescription {
@@ -98,6 +98,13 @@ export class IntRangeTypeDescription extends TypeDescription {
   }
 }
 
+export class PackageTypeDescription extends TypeDescription {
+  ref?: Reference<NamedElement>
+  constructor() {
+    super('package')
+  }
+}
+
 // endregion
 
 // region Predicates
@@ -171,5 +178,9 @@ export function isUnionTypeDesc(typeDesc: TypeDescription | undefined): typeDesc
 
 export function isIntersectionTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is IntersectionTypeDescription {
   return typeDesc instanceof IntersectionTypeDescription
+}
+
+export function isPackageTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PackageTypeDescription {
+  return typeDesc instanceof PackageTypeDescription
 }
 // endregion
