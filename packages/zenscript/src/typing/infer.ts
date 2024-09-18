@@ -1,15 +1,12 @@
 import type { AstNode, ResolvedReference } from 'langium'
-import type { BracketExpression, ClassDeclaration, ClassMemberDeclaration, ConditionalExpression, Declaration, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference, VariableDeclaration } from '../generated/ast'
+import type { BracketExpression, ClassDeclaration, ConditionalExpression, Declaration, Expression, FunctionExpression, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference, VariableDeclaration } from '../generated/ast'
 import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isClassType, isConditionalExpression, isDeclaration, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionType, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
 import { ClassTypeDescription, type TypeDescription } from './description'
 import { createAnyType, createArrayType, createClassType, createFunctionType, createIntRangeType, createIntersectionType, createListType, createMapType, createPrimitiveType, createProperType, createUnionType } from './factory'
 
-export interface TypeComputer {
-  inferType: (node: AstNode) => TypeDescription | undefined
-  getClassMembers: (clazz?: ClassDeclaration) => ClassMemberDeclaration[]
-}
+export type TypeComputer = InstanceType<typeof ZenScriptTypeComputer>
 
-export class ZenScriptTypeComputer implements TypeComputer {
+export class ZenScriptTypeComputer {
   public inferType(node: AstNode): TypeDescription | undefined {
     if (isExpression(node)) {
       return this.inferExpression(node)
@@ -24,14 +21,13 @@ export class ZenScriptTypeComputer implements TypeComputer {
     }
   }
 
-  public getClassMembers(clazz: ClassDeclaration | undefined): ClassMemberDeclaration[] {
+  public getClassChain(clazz?: ClassDeclaration): ClassDeclaration[] {
     if (!clazz)
       return []
 
-    const set = new Set<ClassMemberDeclaration>()
-    clazz.members.map(m => set.add(m))
-    clazz.superTypes?.flatMap(t => this.getClassMembers(t.ref)).forEach(m => set.add(m))
-
+    const set = new Set<ClassDeclaration>()
+    set.add(clazz)
+    clazz.superTypes?.flatMap(t => this.getClassChain(t.ref)).forEach(c => set.add(c))
     return Array.from(set)
   }
 

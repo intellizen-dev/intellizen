@@ -1,5 +1,6 @@
 import type { ReferenceInfo, Scope } from 'langium'
 import { DefaultScopeProvider } from 'langium'
+import type { ClassDeclaration, ClassMemberDeclaration } from '../generated/ast'
 import { isMemberAccess } from '../generated/ast'
 import type { TypeComputer } from '../typing/infer'
 import type { IntelliZenServices } from '../module'
@@ -32,22 +33,21 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return super.getScope(context)
   }
 
-  private scopeClassMembers(classTypeDesc: ClassTypeDescription): Scope {
-    const members = this.typeComputer.getClassMembers(classTypeDesc.ref?.ref) ?? []
-    return this.createScopeForNodes(members)
-  }
-
-  private scopeInstanceMembers(properTypeDesc: ProperTypeDescription): Scope {
-    const members = this.typeComputer.getClassMembers(properTypeDesc.ref?.ref)
-      ?.filter(it => (it as any).prefix !== 'static')
-      ?? []
+  private scopeInstanceMembers(properTypeDesc: ClassTypeDescription): Scope {
+    const members = this.handleClassMembers(properTypeDesc.ref?.ref).filter(m => !this.isStaticMember(m))
     return this.createScopeForNodes(members)
   }
 
   private scopeStaticMembers(properTypeDesc: ProperTypeDescription): Scope {
-    const members = this.typeComputer.getClassMembers(properTypeDesc.ref?.ref)
-      ?.filter(it => (it as any).prefix === 'static')
-      ?? []
+    const members = this.handleClassMembers(properTypeDesc.ref?.ref).filter(m => this.isStaticMember(m))
     return this.createScopeForNodes(members)
+  }
+
+  private handleClassMembers(clazz?: ClassDeclaration) {
+    return this.typeComputer.getClassChain(clazz).flatMap(c => c.members)
+  }
+
+  private isStaticMember(member: ClassMemberDeclaration) {
+    return member.$type !== 'ConstructorDeclaration' && member.prefix === 'static'
   }
 }
