@@ -1,8 +1,7 @@
 import type { AstNode, ResolvedReference } from 'langium'
 import type { BracketExpression, ClassDeclaration, ConditionalExpression, Declaration, Expression, FunctionExpression, ImportDeclaration, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference, VariableDeclaration } from '../generated/ast'
 import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isClassType, isConditionalExpression, isDeclaration, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionType, isImportDeclaration, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
-import { ClassTypeDescription, type TypeDescription } from './description'
-import { createAnyType, createArrayType, createClassType, createFunctionType, createIntRangeType, createIntersectionType, createListType, createMapType, createPackageType, createPrimitiveType, createProperType, createUnionType } from './factory'
+import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, PackageTypeDescription, PrimitiveTypeDescription, ProperTypeDescription, type TypeDescription, UnionTypeDescription } from './description'
 
 export type TypeComputer = Pick<InstanceType<typeof ZenScriptTypeComputer>, 'inferType'>
 
@@ -24,33 +23,33 @@ export class ZenScriptTypeComputer {
   // region TypeReference
   private inferTypeReference(type: TypeReference): TypeDescription | undefined {
     if (isPrimitiveType(type)) {
-      return createPrimitiveType(type.value)
+      return new PrimitiveTypeDescription(type.value)
     }
 
     if (isListType(type)) {
-      const elementType = this.inferTypeReference(type.value) || createAnyType()
-      return createListType(elementType)
+      const elementType = this.inferTypeReference(type.value) || PrimitiveTypeDescription.ANY
+      return new ListTypeDescription(elementType)
     }
 
     if (isArrayType(type)) {
-      const elementType = this.inferTypeReference(type.value) || createAnyType()
-      return createListType(elementType)
+      const elementType = this.inferTypeReference(type.value) || PrimitiveTypeDescription.ANY
+      return new ListTypeDescription(elementType)
     }
 
     if (isMapType(type)) {
-      const keyType = this.inferTypeReference(type.key) || createAnyType()
-      const valueType = this.inferTypeReference(type.value) || createAnyType()
-      return createMapType(keyType, valueType)
+      const keyType = this.inferTypeReference(type.key) || PrimitiveTypeDescription.ANY
+      const valueType = this.inferTypeReference(type.value) || PrimitiveTypeDescription.ANY
+      return new MapTypeDescription(keyType, valueType)
     }
 
     if (isUnionType(type)) {
-      const elementTypes = type.values.map(t => this.inferTypeReference(t) || createAnyType())
-      return createUnionType(...elementTypes)
+      const elementTypes = type.values.map(t => this.inferTypeReference(t) || PrimitiveTypeDescription.ANY)
+      return new UnionTypeDescription(elementTypes)
     }
 
     if (isIntersectionType(type)) {
-      const elementTypes = type.values.map(t => this.inferTypeReference(t) || createAnyType())
-      return createIntersectionType(...elementTypes)
+      const elementTypes = type.values.map(t => this.inferTypeReference(t) || PrimitiveTypeDescription.ANY)
+      return new IntersectionTypeDescription(elementTypes)
     }
 
     if (isParenthesizedType(type)) {
@@ -58,9 +57,9 @@ export class ZenScriptTypeComputer {
     }
 
     if (isFunctionType(type)) {
-      const paramTypes = type.params.map(t => this.inferTypeReference(t) || createAnyType())
-      const returnType = this.inferTypeReference(type.returnType) || createAnyType()
-      return createFunctionType(paramTypes, returnType)
+      const paramTypes = type.params.map(t => this.inferTypeReference(t) || PrimitiveTypeDescription.ANY)
+      const returnType = this.inferTypeReference(type.returnType) || PrimitiveTypeDescription.ANY
+      return new FunctionTypeDescription(paramTypes, returnType)
     }
 
     if (isClassType(type)) {
@@ -92,18 +91,18 @@ export class ZenScriptTypeComputer {
       return this.inferExpression(node.initializer)
     }
     else {
-      return createAnyType()
+      return PrimitiveTypeDescription.ANY
     }
   }
 
   private inferClassDeclaration(node: ClassDeclaration): TypeDescription | undefined {
-    const typeDesc = createProperType(node.name)
+    const typeDesc = new ProperTypeDescription(node.name)
     typeDesc.ref = { ref: node } as ResolvedReference<ClassDeclaration>
     return typeDesc
   }
 
   private inferImportDeclaration(node: ImportDeclaration): TypeDescription | undefined {
-    return createPackageType(node.ref.$refText)
+    return new PackageTypeDescription(node.ref.$refText)
   }
   // endregion
 
@@ -127,7 +126,7 @@ export class ZenScriptTypeComputer {
     }
 
     if (isInstanceofExpression(node)) {
-      return createPrimitiveType('bool')
+      return PrimitiveTypeDescription.BOOL
     }
 
     if (isPrefixExpression(node)) {
@@ -167,35 +166,35 @@ export class ZenScriptTypeComputer {
   private inferLiteralExpression(node: LiteralExpression): TypeDescription | undefined {
     if (isArrayLiteral(node)) {
       const elementType = (node.values.length > 0 && this.inferExpression(node.values[0]))
-        || createAnyType()
-      return createArrayType(elementType)
+        || PrimitiveTypeDescription.ANY
+      return new ArrayTypeDescription(elementType)
     }
 
     if (isBooleanLiteral(node)) {
-      return createPrimitiveType('bool')
+      return PrimitiveTypeDescription.BOOL
     }
 
     if (isMapLiteral(node)) {
       const keyType = (node.entries.length > 0 && this.inferExpression(node.entries[0].key))
-        || createAnyType()
+        || PrimitiveTypeDescription.ANY
       const valueType = (node.entries.length > 0 && this.inferExpression(node.entries[0].value))
-        || createAnyType()
-      return createMapType(keyType, valueType)
+        || PrimitiveTypeDescription.ANY
+      return new MapTypeDescription(keyType, valueType)
     }
 
     if (isNullLiteral(node)) {
       // TODO: does it make sense?
-      return createAnyType()
+      return PrimitiveTypeDescription.ANY
     }
 
     if (isIntegerLiteral(node)) {
       switch (node.value.at(-1)) {
         case 'l':
         case 'L':
-          return createPrimitiveType('long')
+          return PrimitiveTypeDescription.LONG
 
         default:
-          return createPrimitiveType('int')
+          return PrimitiveTypeDescription.INT
       }
     }
 
@@ -203,52 +202,52 @@ export class ZenScriptTypeComputer {
       switch (node.value.at(-1)) {
         case 'f':
         case 'F':
-          return createPrimitiveType('float')
+          return PrimitiveTypeDescription.FLOAT
 
         case 'd':
         case 'D':
-          return createPrimitiveType('double')
+          return PrimitiveTypeDescription.DOUBLE
 
         default:
-          return createPrimitiveType('double')
+          return PrimitiveTypeDescription.DOUBLE
       }
     }
 
     if (isStringLiteral(node) || isStringTemplate(node)) {
-      return createPrimitiveType('string')
+      return PrimitiveTypeDescription.STRING
     }
   }
 
   private inferFunctionExpression(node: FunctionExpression): TypeDescription | undefined {
     const paramTypes = node.parameters.map((p) => {
       const ref = p.typeRef
-      return (ref && this.inferTypeReference(ref)) || createAnyType()
+      return (ref && this.inferTypeReference(ref)) || PrimitiveTypeDescription.ANY
     })
 
-    const returnType = (node.returnTypeRef && this.inferTypeReference(node.returnTypeRef)) || createAnyType()
+    const returnType = (node.returnTypeRef && this.inferTypeReference(node.returnTypeRef)) || PrimitiveTypeDescription.ANY
 
-    return createFunctionType(paramTypes, returnType)
+    return new FunctionTypeDescription(paramTypes, returnType)
   }
 
   private inferBracketExpression(node: BracketExpression): TypeDescription | undefined {
     const _ = node.value
     // TODO: 解析尖括号
-    return createClassType('unknown bracket type')
+    return new ClassTypeDescription('unknown bracket type')
   }
 
   private inferConditionalExpression(node: ConditionalExpression): TypeDescription | undefined {
     // TODO: 运算符重载
     const _ = node
-    return createPrimitiveType('bool')
+    return PrimitiveTypeDescription.BOOL
   }
 
   private inferPrefixExpression(node: PrefixExpression): TypeDescription {
     const op = node.op
     switch (op) {
       case '-':
-        return createPrimitiveType('int')
+        return PrimitiveTypeDescription.INT
       case '!':
-        return createPrimitiveType('bool')
+        return PrimitiveTypeDescription.BOOL
     }
   }
 
@@ -261,30 +260,30 @@ export class ZenScriptTypeComputer {
       case '*':
       case '/':
       case '%':
-        return createPrimitiveType('int')
+        return PrimitiveTypeDescription.INT
       case '<':
       case '>':
       case '<=':
       case '>=':
-        return createPrimitiveType('bool')
+        return PrimitiveTypeDescription.BOOL
       case '==':
       case '!=':
-        return createPrimitiveType('bool')
+        return PrimitiveTypeDescription.BOOL
       case '&&':
       case '||':
-        return createPrimitiveType('bool')
+        return PrimitiveTypeDescription.BOOL
       case 'has':
       case 'in':
-        return createPrimitiveType('bool')
+        return PrimitiveTypeDescription.BOOL
       case '&':
       case '|':
       case '^':
-        return createPrimitiveType('int')
+        return PrimitiveTypeDescription.INT
       case '~':
-        return createPrimitiveType('string')
+        return PrimitiveTypeDescription.STRING
       case 'to':
       case '..':
-        return createIntRangeType()
+        return new IntRangeTypeDescription()
     }
   }
   // endregion
