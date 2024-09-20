@@ -1,4 +1,4 @@
-import { type Module, type NameProvider, inject } from 'langium'
+import { type Module, inject } from 'langium'
 import { type DefaultSharedModuleContext, type LangiumServices, type LangiumSharedServices, type PartialLangiumServices, createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
 import { IntelliZenGeneratedModule, IntelliZenGeneratedSharedModule } from './generated/module'
 import { IntelliZenValidator, registerValidationChecks } from './validator'
@@ -6,7 +6,7 @@ import { ZenScriptScopeProvider } from './scoping/provider'
 import { ZenScriptScopeComputation } from './scoping/computation'
 import { CustomTokenBuilder } from './lexer/token-builder'
 import { CustomValueConverter } from './lexer/value-converter'
-import { type QualifiedNameProvider, ZenScriptNameProvider } from './name'
+import { ZenScriptNameProvider } from './name'
 import { ZenScriptTypeComputer } from './typing/infer'
 import { ZenScriptCompletionProvider } from './lsp/completion'
 
@@ -16,9 +16,6 @@ import { ZenScriptCompletionProvider } from './lsp/completion'
 export interface IntelliZenAddedServices {
   validation: {
     IntelliZenValidator: IntelliZenValidator
-  }
-  references: {
-    NameProvider: NameProvider & QualifiedNameProvider
   }
   typing: {
     TypeComputer: ZenScriptTypeComputer
