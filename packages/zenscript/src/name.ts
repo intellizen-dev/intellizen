@@ -3,11 +3,13 @@ import { substringBeforeLast } from '@intellizen/shared'
 import { isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isScript, isVariableDeclaration } from './generated/ast'
 import { isToplevel } from './utils/ast'
 
-export interface QualifiedNameProvider {
-  getQualifiedName: (node: AstNode) => string | undefined
+declare module 'langium' {
+  interface NameProvider {
+    getQualifiedName: (node: AstNode) => string | undefined
+  }
 }
 
-export class ZenScriptNameProvider implements NameProvider, QualifiedNameProvider {
+export class ZenScriptNameProvider implements NameProvider {
   getName(node: AstNode): string | undefined {
     if (isScript(node)) {
       const fileName = node.$document?.uri?.path?.split('/')?.at(-1)
@@ -16,7 +18,7 @@ export class ZenScriptNameProvider implements NameProvider, QualifiedNameProvide
       }
     }
     else if (isImportDeclaration(node)) {
-      return node.alias || node.ref.$refText.split('.').at(-1)
+      return node.alias || node.ref?.$refText.split('.').at(-1)
     }
     else if (isNamed(node)) {
       return node.name

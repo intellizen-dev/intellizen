@@ -28,7 +28,7 @@ interface ClassDeclaration extends Declaration {
     members: ClassMemberDeclaration[];
 }
 
-type NamedElement = ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | ForVariableDeclaration | MapEntry | ImportDeclaration;
+type NamedElement = Script | ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | ForVariableDeclaration | MapEntry | ImportDeclaration;
 
 type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
 

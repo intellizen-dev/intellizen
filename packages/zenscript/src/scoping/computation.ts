@@ -1,20 +1,22 @@
-import type { AstNode, AstNodeDescription, LangiumDocument, NameProvider, PrecomputedScopes } from 'langium'
+import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes } from 'langium'
 import { AstUtils, DefaultScopeComputation } from 'langium'
 import type { ClassDeclaration, ValueParameter } from '../generated/ast'
-import { isClassDeclaration, isFunctionDeclaration, isValueParameter, isVariableDeclaration } from '../generated/ast'
+import { isClassDeclaration, isFunctionDeclaration, isScript, isValueParameter, isVariableDeclaration } from '../generated/ast'
 import type { IntelliZenServices } from '../module'
-import type { QualifiedNameProvider } from '../name'
 import { isToplevel } from '../utils/ast'
 
 export class ZenScriptScopeComputation extends DefaultScopeComputation {
-  override readonly nameProvider: NameProvider & QualifiedNameProvider
-
   constructor(services: IntelliZenServices) {
     super(services)
-    this.nameProvider = services.references.NameProvider
   }
 
   protected override exportNode(node: AstNode, exports: AstNodeDescription[], document: LangiumDocument): void {
+    // TODO: workaround, needs rewrite
+    if (isScript(node)) {
+      const name = this.nameProvider.getQualifiedName(node)
+      exports.push(this.descriptions.createDescription(node, name, document))
+    }
+
     // non-toplevel nodes cannot be referenced from other documents
     if (!isToplevel(node)) {
       return
@@ -25,22 +27,28 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
       return
     }
 
+    const name = this.nameProvider.getQualifiedName(node)
     if (isVariableDeclaration(node)) {
       switch (node.prefix) {
         case 'global':
-        case 'static':
           super.exportNode(node, exports, document)
+          break
+        case 'static':
+          exports.push(this.descriptions.createDescription(node, name, document))
+          break
       }
     }
     else if (isFunctionDeclaration(node)) {
       switch (node.prefix) {
         case 'global':
-        case 'static':
           super.exportNode(node, exports, document)
+          break
+        case 'static':
+          exports.push(this.descriptions.createDescription(node, name, document))
       }
     }
     else if (isClassDeclaration(node)) {
-      super.exportNode(node, exports, document)
+      exports.push(this.descriptions.createDescription(node, name, document))
     }
   }
 

@@ -98,6 +98,14 @@ export class IntRangeTypeDescription extends TypeDescription {
   }
 }
 
+export class PackageTypeDescription extends TypeDescription {
+  packageName: string
+  constructor(packageName: string) {
+    super('package')
+    this.packageName = packageName
+  }
+}
+
 // endregion
 
 // region Predicates
@@ -171,5 +179,9 @@ export function isUnionTypeDesc(typeDesc: TypeDescription | undefined): typeDesc
 
 export function isIntersectionTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is IntersectionTypeDescription {
   return typeDesc instanceof IntersectionTypeDescription
+}
+
+export function isPackageTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PackageTypeDescription {
+  return typeDesc instanceof PackageTypeDescription
 }
 // endregion
