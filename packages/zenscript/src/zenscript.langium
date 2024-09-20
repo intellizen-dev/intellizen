@@ -9,12 +9,6 @@ entry Script:
     )*
 ;
 
-Person:
-    'person' name=ID;
-
-Greeting:
-    'Hello' person=[Person:ID] '!';
-
 interface Declaration {}
 
 interface ImportDeclaration extends Declaration {

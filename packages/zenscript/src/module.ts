@@ -1,7 +1,6 @@
 import { type Module, inject } from 'langium'
 import { type DefaultSharedModuleContext, type LangiumServices, type LangiumSharedServices, type PartialLangiumServices, createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
 import { IntelliZenGeneratedModule, IntelliZenGeneratedSharedModule } from './generated/module'
-import { IntelliZenValidator, registerValidationChecks } from './validator'
 import { ZenScriptScopeProvider } from './scoping/provider'
 import { ZenScriptScopeComputation } from './scoping/computation'
 import { CustomTokenBuilder } from './lexer/token-builder'
@@ -9,13 +8,14 @@ import { CustomValueConverter } from './lexer/value-converter'
 import { ZenScriptNameProvider } from './name'
 import { ZenScriptTypeComputer } from './typing/infer'
 import { ZenScriptCompletionProvider } from './lsp/completion'
+import { ZenScriptValidator, registerValidationChecks } from './validation/validator'
 
 /**
  * Declaration of custom services - add your own service classes here.
  */
 export interface IntelliZenAddedServices {
   validation: {
-    IntelliZenValidator: IntelliZenValidator
+    Validator: ZenScriptValidator
   }
   typing: {
     TypeComputer: ZenScriptTypeComputer
@@ -35,7 +35,7 @@ export type IntelliZenServices = LangiumServices & IntelliZenAddedServices
  */
 export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices & IntelliZenAddedServices> = {
   validation: {
-    IntelliZenValidator: () => new IntelliZenValidator(),
+    Validator: () => new ZenScriptValidator(),
   },
   references: {
     NameProvider: () => new ZenScriptNameProvider(),
