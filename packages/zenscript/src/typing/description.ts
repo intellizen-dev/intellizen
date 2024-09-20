@@ -10,12 +10,21 @@ export class TypeDescription {
   }
 }
 
-export type PrimitiveTypes = PrimitiveType['value']
-
 export class PrimitiveTypeDescription extends TypeDescription {
-  constructor($type: PrimitiveTypes = 'any' as PrimitiveTypes) {
+  constructor($type: PrimitiveType['value']) {
     super($type)
   }
+
+  static ANY = new PrimitiveTypeDescription('any')
+  static BOOL = new PrimitiveTypeDescription('bool')
+  static BYTE = new PrimitiveTypeDescription('byte')
+  static SHORT = new PrimitiveTypeDescription('short')
+  static INT = new PrimitiveTypeDescription('int')
+  static LONG = new PrimitiveTypeDescription('long')
+  static FLOAT = new PrimitiveTypeDescription('float')
+  static DOUBLE = new PrimitiveTypeDescription('double')
+  static STRING = new PrimitiveTypeDescription('string')
+  static VOID = new PrimitiveTypeDescription('void')
 }
 
 export class FunctionTypeDescription extends TypeDescription {
