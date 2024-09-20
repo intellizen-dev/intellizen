@@ -1,6 +1,6 @@
 import type { AstNode, AstNodeDescription, LangiumDocument, NameProvider, PrecomputedScopes } from 'langium'
 import { AstUtils, DefaultScopeComputation } from 'langium'
-import type { ClassDeclaration, Script, ValueParameter } from '../generated/ast'
+import type { ClassDeclaration, ValueParameter } from '../generated/ast'
 import { isClassDeclaration, isFunctionDeclaration, isScript, isValueParameter, isVariableDeclaration } from '../generated/ast'
 import type { IntelliZenServices } from '../module'
 import type { QualifiedNameProvider } from '../name'
@@ -57,10 +57,6 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
   }
 
   protected override processNode(node: AstNode, document: LangiumDocument, scopes: PrecomputedScopes): void {
-    // TODO: workaround, needs rewrite
-    if (isScript(node)) {
-      this.processScript(node, document, scopes)
-    }
     if (isClassDeclaration(node)) {
       this.processClass(node, document, scopes)
     }
@@ -68,19 +64,6 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
       this.processValueParameter(node, document, scopes)
     }
     super.processNode(node, document, scopes)
-  }
-
-  // TODO: workaround, needs rewrite
-  private processScript(node: Script, document: LangiumDocument, scopes: PrecomputedScopes): void {
-    const name = this.nameProvider.getName(node)
-    if (!name) {
-      return
-    }
-
-    const desc = this.descriptions.createDescription(node, name, document)
-    node.classes.forEach(it => scopes.add(it, desc))
-    node.functions.filter(it => it.prefix === 'static').forEach(it => scopes.add(it, desc))
-    node.statements.filter(it => isVariableDeclaration(it) && it.prefix === 'static').forEach(it => scopes.add(it, desc))
   }
 
   private processClass(node: ClassDeclaration, document: LangiumDocument, scopes: PrecomputedScopes): void {

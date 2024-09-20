@@ -103,9 +103,7 @@ export class ZenScriptTypeComputer {
   }
 
   private inferImportDeclaration(node: ImportDeclaration): TypeDescription | undefined {
-    const typeDesc = createPackageType()
-    typeDesc.ref = { ref: node.ref.ref } as ResolvedReference<ImportDeclaration>
-    return typeDesc
+    return createPackageType(node.ref.$refText)
   }
   // endregion
 

@@ -1,18 +1,21 @@
-import type { ReferenceInfo, Scope } from 'langium'
+import type { AstNode, NameProvider, ReferenceInfo, Scope } from 'langium'
 import { DefaultScopeProvider, EMPTY_SCOPE } from 'langium'
-import { isMemberAccess } from '../generated/ast'
+import { isClassDeclaration, isMemberAccess, isScript } from '../generated/ast'
 import type { TypeComputer } from '../typing/infer'
 import type { IntelliZenServices } from '../module'
 import type { ClassTypeDescription, PackageTypeDescription, ProperTypeDescription, TypeDescription } from '../typing/description'
 import { isClassTypeDesc, isPackageTypeDesc, isProperTypeDesc } from '../typing/description'
 import { getClassMembers, isStaticMember } from '../utils/ast'
+import type { QualifiedNameProvider } from '../name'
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private typeComputer: TypeComputer
+  override readonly nameProvider: NameProvider & QualifiedNameProvider
 
   constructor(services: IntelliZenServices) {
     super(services)
     this.typeComputer = services.typing.TypeComputer
+    this.nameProvider = services.references.NameProvider
   }
 
   override getScope(context: ReferenceInfo): Scope {
@@ -33,12 +36,26 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return super.getScope(context)
   }
 
-  private handlePackageTypeRef(packageTypeRef?: PackageTypeDescription): Scope {
-    if (packageTypeRef && packageTypeRef.ref?.ref) {
-      const type = this.typeComputer.inferType(packageTypeRef.ref.ref)
-      return this.handleTypeDescScope(type)
+  private handlePackageTypeRef(packageTypeDesc: PackageTypeDescription): Scope {
+    const element = this.indexManager.allElements().find((it) => {
+      const qname = this.nameProvider.getQualifiedName(it.node!)
+      return packageTypeDesc.packageName === qname
+    })?.node
+
+    if (!element)
+      return EMPTY_SCOPE
+
+    const members: AstNode[] = []
+    if (isScript(element)) {
+      element.classes.forEach(it => members.push(it))
+      element.functions.forEach(it => members.push(it))
+      element.statements.forEach(it => members.push(it))
     }
-    return EMPTY_SCOPE
+    else if (isClassDeclaration(element)) {
+      element.members.forEach(it => members.push(it))
+    }
+
+    return this.createScopeForNodes(members)
   }
 
   private handleTypeDescScope(type?: TypeDescription): Scope {

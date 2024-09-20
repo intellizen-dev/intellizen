@@ -99,9 +99,10 @@ export class IntRangeTypeDescription extends TypeDescription {
 }
 
 export class PackageTypeDescription extends TypeDescription {
-  ref?: Reference<NamedElement>
-  constructor() {
+  packageName: string
+  constructor(packageName: string) {
     super('package')
+    this.packageName = packageName
   }
 }
 

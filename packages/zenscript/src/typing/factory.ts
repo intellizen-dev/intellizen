@@ -45,6 +45,6 @@ export function createIntRangeType(): IntRangeTypeDescription {
   return new IntRangeTypeDescription()
 }
 
-export function createPackageType(): PackageTypeDescription {
-  return new PackageTypeDescription()
+export function createPackageType(packageName: string): PackageTypeDescription {
+  return new PackageTypeDescription(packageName)
 }
