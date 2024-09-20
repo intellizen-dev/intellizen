@@ -1,17 +1,13 @@
-import type { AstNode, AstNodeDescription, LangiumDocument, NameProvider, PrecomputedScopes } from 'langium'
+import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes } from 'langium'
 import { AstUtils, DefaultScopeComputation } from 'langium'
 import type { ClassDeclaration, ValueParameter } from '../generated/ast'
 import { isClassDeclaration, isFunctionDeclaration, isScript, isValueParameter, isVariableDeclaration } from '../generated/ast'
 import type { IntelliZenServices } from '../module'
-import type { QualifiedNameProvider } from '../name'
 import { isToplevel } from '../utils/ast'
 
 export class ZenScriptScopeComputation extends DefaultScopeComputation {
-  override readonly nameProvider: NameProvider & QualifiedNameProvider
-
   constructor(services: IntelliZenServices) {
     super(services)
-    this.nameProvider = services.references.NameProvider
   }
 
   protected override exportNode(node: AstNode, exports: AstNodeDescription[], document: LangiumDocument): void {

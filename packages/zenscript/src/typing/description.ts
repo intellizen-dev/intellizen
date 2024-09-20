@@ -1,5 +1,5 @@
 import type { Reference } from 'langium'
-import type { ClassDeclaration, NamedElement, PrimitiveType } from '../generated/ast'
+import type { ClassDeclaration, PrimitiveType } from '../generated/ast'
 
 // region TypeDescription
 export class TypeDescription {

@@ -1,4 +1,4 @@
-import type { AstNode, NameProvider, ReferenceInfo, Scope } from 'langium'
+import type { AstNode, ReferenceInfo, Scope } from 'langium'
 import { DefaultScopeProvider, EMPTY_SCOPE } from 'langium'
 import { isClassDeclaration, isMemberAccess, isScript } from '../generated/ast'
 import type { TypeComputer } from '../typing/infer'
@@ -6,16 +6,13 @@ import type { IntelliZenServices } from '../module'
 import type { ClassTypeDescription, PackageTypeDescription, ProperTypeDescription, TypeDescription } from '../typing/description'
 import { isClassTypeDesc, isPackageTypeDesc, isProperTypeDesc } from '../typing/description'
 import { getClassMembers, isStaticMember } from '../utils/ast'
-import type { QualifiedNameProvider } from '../name'
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private typeComputer: TypeComputer
-  override readonly nameProvider: NameProvider & QualifiedNameProvider
 
   constructor(services: IntelliZenServices) {
     super(services)
     this.typeComputer = services.typing.TypeComputer
-    this.nameProvider = services.references.NameProvider
   }
 
   override getScope(context: ReferenceInfo): Scope {
@@ -38,8 +35,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
   private handlePackageTypeRef(packageTypeDesc: PackageTypeDescription): Scope {
     const element = this.indexManager.allElements().find((it) => {
-      const qname = this.nameProvider.getQualifiedName(it.node!)
-      return packageTypeDesc.packageName === qname
+      const qName = this.nameProvider.getQualifiedName(it.node!)
+      return packageTypeDesc.packageName === qName
     })?.node
 
     if (!element)
