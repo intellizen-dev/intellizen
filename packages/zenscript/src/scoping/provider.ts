@@ -1,7 +1,7 @@
 import type { AstNode, ReferenceInfo, Scope } from 'langium'
 import { DefaultScopeProvider } from 'langium'
-import type { ClassDeclaration, Declaration, Expression, ImportDeclaration, LocalVariable } from '../generated/ast'
-import { isClassDeclaration, isDeclaration, isExpression, isImportDeclaration, isLocalVariable, isMemberAccess, isScript } from '../generated/ast'
+import type { ClassDeclaration, Declaration, Expression, ImportDeclaration, LocalVariable, Script } from '../generated/ast'
+import { isClassDeclaration, isDeclaration, isExpression, isImportDeclaration, isLocalVariable, isMemberAccess, isScript, isVariableDeclaration } from '../generated/ast'
 import type { TypeComputer } from '../typing/infer'
 import type { IntelliZenServices } from '../module'
 import type { ClassTypeDescription, TypeDescription } from '../typing/description'
@@ -27,7 +27,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return super.getScope(context)
   }
 
-  private member(node: AstNode): AstNode[] {
+  private member(node: AstNode | undefined): AstNode[] {
     if (isExpression(node)) {
       return this.memberExpression(node)
     }
@@ -40,7 +40,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   // region Declaration
-  private memberDeclaration(node: Declaration): AstNode[] {
+  private memberDeclaration(node: Declaration | undefined): AstNode[] {
     if (isImportDeclaration(node)) {
       return this.memberImportDeclaration(node)
     }
@@ -50,6 +50,16 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     else {
       return []
     }
+  }
+
+  private memberScript(node: Script): AstNode[] {
+    const members: AstNode[] = []
+    node.classes.forEach(it => members.push(it))
+    node.functions.forEach(it => members.push(it))
+    node.statements.filter(it => isVariableDeclaration(it))
+      .filter(it => it.prefix === 'static')
+      .forEach(it => members.push(it))
+    return members
   }
 
   private memberImportDeclaration(node: ImportDeclaration): AstNode[] {
@@ -63,14 +73,11 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     const members: AstNode[] = []
     if (isScript(element)) {
-      element.classes.forEach(it => members.push(it))
-      element.functions.forEach(it => members.push(it))
-      element.statements.forEach(it => members.push(it))
+      return this.memberScript(element)
     }
     else if (isClassDeclaration(element)) {
-      element.members.forEach(it => members.push(it))
+      return this.memberClassDeclaration(element)
     }
-
     return members
   }
 
