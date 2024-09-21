@@ -1,10 +1,11 @@
 import type { AstNode, ReferenceInfo, Scope } from 'langium'
-import { DefaultScopeProvider, EMPTY_SCOPE } from 'langium'
-import { isClassDeclaration, isMemberAccess, isScript } from '../generated/ast'
+import { DefaultScopeProvider } from 'langium'
+import type { ClassDeclaration, Declaration, Expression, ImportDeclaration, LocalVariable } from '../generated/ast'
+import { isClassDeclaration, isDeclaration, isExpression, isImportDeclaration, isLocalVariable, isMemberAccess, isScript } from '../generated/ast'
 import type { TypeComputer } from '../typing/infer'
 import type { IntelliZenServices } from '../module'
-import type { ClassTypeDescription, PackageTypeDescription, ProperTypeDescription, TypeDescription } from '../typing/description'
-import { isClassTypeDesc, isPackageTypeDesc, isProperTypeDesc } from '../typing/description'
+import type { ClassTypeDescription, TypeDescription } from '../typing/description'
+import { isClassTypeDesc } from '../typing/description'
 import { getClassMembers, isStaticMember } from '../utils/ast'
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
@@ -19,28 +20,46 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     const { container } = context
 
     if (isMemberAccess(container)) {
-      const receiver = container.receiver
-      const receiverType = this.typeComputer.inferType(receiver)
-
-      if (isPackageTypeDesc(receiverType)) {
-        return this.handlePackageTypeRef(receiverType)
-      }
-      else {
-        return this.handleTypeDescScope(receiverType)
-      }
+      const members = this.member(container.receiver)
+      return this.createScopeForNodes(members)
     }
 
     return super.getScope(context)
   }
 
-  private handlePackageTypeRef(packageTypeDesc: PackageTypeDescription): Scope {
+  private member(node: AstNode): AstNode[] {
+    if (isExpression(node)) {
+      return this.memberExpression(node)
+    }
+    else if (isDeclaration(node)) {
+      return this.memberDeclaration(node)
+    }
+    else {
+      return []
+    }
+  }
+
+  // region Declaration
+  private memberDeclaration(node: Declaration): AstNode[] {
+    if (isImportDeclaration(node)) {
+      return this.memberImportDeclaration(node)
+    }
+    else if (isClassDeclaration(node)) {
+      return this.memberClassDeclaration(node)
+    }
+    else {
+      return []
+    }
+  }
+
+  private memberImportDeclaration(node: ImportDeclaration): AstNode[] {
     const element = this.indexManager.allElements().find((it) => {
       const qName = this.nameProvider.getQualifiedName(it.node!)
-      return packageTypeDesc.packageName === qName
+      return node.ref.$refText === qName
     })?.node
 
     if (!element)
-      return EMPTY_SCOPE
+      return []
 
     const members: AstNode[] = []
     if (isScript(element)) {
@@ -52,26 +71,51 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       element.members.forEach(it => members.push(it))
     }
 
-    return this.createScopeForNodes(members)
+    return members
   }
 
-  private handleTypeDescScope(type?: TypeDescription): Scope {
+  private memberClassDeclaration(node: ClassDeclaration): AstNode[] {
+    return getClassMembers(node).filter(m => isStaticMember(m))
+  }
+  // endregion
+
+  // region Expression
+  private memberExpression(node: Expression): AstNode[] {
+    if (isLocalVariable(node)) {
+      return this.memberLocalVariable(node)
+    }
+    else {
+      const type = this.typeComputer.inferType(node)
+      return this.memberTypeDescription(type)
+    }
+  }
+
+  private memberLocalVariable(node: LocalVariable): AstNode[] {
+    const ref = node.ref.ref
+    if (isImportDeclaration(ref)) {
+      return this.memberImportDeclaration(ref)
+    }
+    else if (isClassDeclaration(ref)) {
+      return ref.members
+    }
+    else {
+      return []
+    }
+  }
+  // endregion
+
+  // region TypeDescription
+  private memberTypeDescription(type: TypeDescription | undefined): AstNode[] {
     if (isClassTypeDesc(type)) {
-      return this.scopeInstanceMembers(type)
+      return this.memberClassTypeDescription(type)
     }
-    else if (isProperTypeDesc(type)) {
-      return this.scopeStaticMembers(type)
+    else {
+      return []
     }
-    return EMPTY_SCOPE
   }
 
-  private scopeInstanceMembers(classTypeDesc: ClassTypeDescription): Scope {
-    const members = getClassMembers(classTypeDesc.ref?.ref).filter(m => !isStaticMember(m))
-    return this.createScopeForNodes(members)
+  private memberClassTypeDescription(type: ClassTypeDescription): AstNode[] {
+    return getClassMembers(type.ref?.ref).filter(m => !isStaticMember(m))
   }
-
-  private scopeStaticMembers(properTypeDesc: ProperTypeDescription): Scope {
-    const members = getClassMembers(properTypeDesc.ref?.ref).filter(m => isStaticMember(m))
-    return this.createScopeForNodes(members)
-  }
+  // endregion
 }
