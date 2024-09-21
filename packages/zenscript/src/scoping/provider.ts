@@ -34,18 +34,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     else if (isDeclaration(node)) {
       return this.memberDeclaration(node)
     }
-    else {
-      return []
-    }
-  }
-
-  // region Declaration
-  private memberDeclaration(node: Declaration | undefined): AstNode[] {
-    if (isImportDeclaration(node)) {
-      return this.memberImportDeclaration(node)
-    }
-    else if (isClassDeclaration(node)) {
-      return this.memberClassDeclaration(node)
+    else if (isScript(node)) {
+      return this.memberScript(node)
     }
     else {
       return []
@@ -62,23 +52,34 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return members
   }
 
+  // region Declaration
+  private memberDeclaration(node: Declaration | undefined): AstNode[] {
+    if (isImportDeclaration(node)) {
+      return this.memberImportDeclaration(node)
+    }
+    else if (isClassDeclaration(node)) {
+      return this.memberClassDeclaration(node)
+    }
+    else {
+      return []
+    }
+  }
+
   private memberImportDeclaration(node: ImportDeclaration): AstNode[] {
     const element = this.indexManager.allElements().find((it) => {
       const qName = this.nameProvider.getQualifiedName(it.node!)
       return node.ref.$refText === qName
     })?.node
 
-    if (!element)
-      return []
-
-    const members: AstNode[] = []
     if (isScript(element)) {
       return this.memberScript(element)
     }
     else if (isClassDeclaration(element)) {
       return this.memberClassDeclaration(element)
     }
-    return members
+    else {
+      return []
+    }
   }
 
   private memberClassDeclaration(node: ClassDeclaration): AstNode[] {
