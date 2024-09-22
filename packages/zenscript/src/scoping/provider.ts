@@ -1,7 +1,7 @@
 import type { AstNode, ReferenceInfo, Scope } from 'langium'
 import { DefaultScopeProvider } from 'langium'
-import type { ClassDeclaration, Declaration, Expression, ImportDeclaration, LocalVariable, Script } from '../generated/ast'
-import { isClassDeclaration, isDeclaration, isExpression, isImportDeclaration, isLocalVariable, isMemberAccess, isScript, isVariableDeclaration } from '../generated/ast'
+import type { ClassDeclaration, ClassType, Declaration, Expression, ImportDeclaration, LocalVariable, Script, TypeReference } from '../generated/ast'
+import { isClassDeclaration, isClassType, isDeclaration, isExpression, isImportDeclaration, isLocalVariable, isMemberAccess, isScript, isTypeReference, isVariableDeclaration } from '../generated/ast'
 import type { TypeComputer } from '../typing/infer'
 import type { IntelliZenServices } from '../module'
 import type { ClassTypeDescription, TypeDescription } from '../typing/description'
@@ -33,6 +33,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     }
     else if (isDeclaration(node)) {
       return this.memberDeclaration(node)
+    }
+    else if (isTypeReference(node)) {
+      return this.memberTypeReference(node)
     }
     else if (isScript(node)) {
       return this.memberScript(node)
@@ -111,6 +114,22 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     else {
       return []
     }
+  }
+  // endregion
+
+  // region TypeReference
+  private memberTypeReference(node: TypeReference | undefined): AstNode[] {
+    if (isClassType(node)) {
+      return this.memberClassTypeReference(node)
+    }
+    else {
+      return []
+    }
+  }
+
+  private memberClassTypeReference(node: ClassType): AstNode[] {
+    // TODO
+    return []
   }
   // endregion
 
