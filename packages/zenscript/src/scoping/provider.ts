@@ -6,7 +6,7 @@ import type { TypeComputer } from '../typing/infer'
 import type { IntelliZenServices } from '../module'
 import type { ClassTypeDescription, TypeDescription } from '../typing/description'
 import { isClassTypeDesc } from '../typing/description'
-import { getClassMembers, isStaticMember } from '../utils/ast'
+import { getClassChain, isStaticMember } from '../utils/ast'
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private typeComputer: TypeComputer
@@ -83,7 +83,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   private memberClassDeclaration(node: ClassDeclaration): AstNode[] {
-    return getClassMembers(node).filter(m => isStaticMember(m))
+    return getClassChain(node)
+      .flatMap(it => it.members)
+      .filter(it => isStaticMember(it))
   }
   // endregion
 
@@ -104,7 +106,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       return this.memberImportDeclaration(ref)
     }
     else if (isClassDeclaration(ref)) {
-      return ref.members
+      return this.memberClassDeclaration(ref)
     }
     else {
       return []
@@ -123,7 +125,10 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   private memberClassTypeDescription(type: ClassTypeDescription): AstNode[] {
-    return getClassMembers(type.ref?.ref).filter(m => !isStaticMember(m))
+    const ref = type.ref?.ref
+    return getClassChain(ref)
+      .flatMap(it => it.members)
+      .filter(it => !isStaticMember(it))
   }
   // endregion
 }
