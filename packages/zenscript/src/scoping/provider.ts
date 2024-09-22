@@ -1,5 +1,5 @@
-import type { AstNode, ReferenceInfo, Scope } from 'langium'
-import { DefaultScopeProvider } from 'langium'
+import type { AstNode, AstNodeDescription, ReferenceInfo, Scope } from 'langium'
+import { AstUtils, DefaultScopeProvider } from 'langium'
 import type { ClassDeclaration, ClassType, Declaration, Expression, ImportDeclaration, LocalVariable, Script, TypeReference } from '../generated/ast'
 import { isClassDeclaration, isClassType, isDeclaration, isExpression, isImportDeclaration, isLocalVariable, isMemberAccess, isScript, isTypeReference, isVariableDeclaration } from '../generated/ast'
 import type { TypeComputer } from '../typing/infer'
@@ -21,13 +21,17 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     if (isMemberAccess(container)) {
       const members = this.member(container.receiver)
-      return this.createScopeForNodes(members)
+      return this.createScope(members)
+    }
+    else if (isTypeReference(container)) {
+      const members = this.memberTypeReference(container)
+      return this.createScope(members)
     }
 
     return super.getScope(context)
   }
 
-  private member(node: AstNode | undefined): AstNode[] {
+  private member(node: AstNode | undefined): AstNodeDescription[] {
     if (isExpression(node)) {
       return this.memberExpression(node)
     }
@@ -45,18 +49,19 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     }
   }
 
-  private memberScript(node: Script): AstNode[] {
+  private memberScript(node: Script): AstNodeDescription[] {
     const members: AstNode[] = []
     node.classes.forEach(it => members.push(it))
     node.functions.forEach(it => members.push(it))
     node.statements.filter(it => isVariableDeclaration(it))
       .filter(it => it.prefix === 'static')
       .forEach(it => members.push(it))
-    return members
+    return members.map(it => this.createDescriptionForNode(it))
+      .filter(it => !!it)
   }
 
   // region Declaration
-  private memberDeclaration(node: Declaration | undefined): AstNode[] {
+  private memberDeclaration(node: Declaration | undefined): AstNodeDescription[] {
     if (isImportDeclaration(node)) {
       return this.memberImportDeclaration(node)
     }
@@ -68,7 +73,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     }
   }
 
-  private memberImportDeclaration(node: ImportDeclaration): AstNode[] {
+  private memberImportDeclaration(node: ImportDeclaration): AstNodeDescription[] {
     const element = this.indexManager.allElements().find((it) => {
       const qName = this.nameProvider.getQualifiedName(it.node!)
       return node.ref.$refText === qName
@@ -85,15 +90,17 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     }
   }
 
-  private memberClassDeclaration(node: ClassDeclaration): AstNode[] {
+  private memberClassDeclaration(node: ClassDeclaration): AstNodeDescription[] {
     return getClassChain(node)
       .flatMap(it => it.members)
       .filter(it => isStaticMember(it))
+      .map(it => this.createDescriptionForNode(it))
+      .filter(it => !!it)
   }
   // endregion
 
   // region Expression
-  private memberExpression(node: Expression): AstNode[] {
+  private memberExpression(node: Expression): AstNodeDescription[] {
     if (isLocalVariable(node)) {
       return this.memberLocalVariable(node)
     }
@@ -103,7 +110,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     }
   }
 
-  private memberLocalVariable(node: LocalVariable): AstNode[] {
+  private memberLocalVariable(node: LocalVariable): AstNodeDescription[] {
     const ref = node.ref.ref
     if (isImportDeclaration(ref)) {
       return this.memberImportDeclaration(ref)
@@ -118,7 +125,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   // endregion
 
   // region TypeReference
-  private memberTypeReference(node: TypeReference | undefined): AstNode[] {
+  private memberTypeReference(node: TypeReference | undefined): AstNodeDescription[] {
     if (isClassType(node)) {
       return this.memberClassTypeReference(node)
     }
@@ -127,14 +134,20 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     }
   }
 
-  private memberClassTypeReference(node: ClassType): AstNode[] {
-    // TODO
-    return []
+  private memberClassTypeReference(node: ClassType): AstNodeDescription[] {
+    const script = AstUtils.findRootNode(node) as Script
+    return script.imports.flatMap((importDecl) => {
+      const importDeclName = this.nameProvider.getName(importDecl)!
+      return this.memberImportDeclaration(importDecl).map((target) => {
+        const targetName = this.nameProvider.getName(target.node!)
+        return this.descriptions.createDescription(target.node!, `${importDeclName}.${targetName}`)
+      })
+    })
   }
   // endregion
 
   // region TypeDescription
-  private memberTypeDescription(type: TypeDescription | undefined): AstNode[] {
+  private memberTypeDescription(type: TypeDescription | undefined): AstNodeDescription[] {
     if (isClassTypeDesc(type)) {
       return this.memberClassTypeDescription(type)
     }
@@ -143,11 +156,20 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     }
   }
 
-  private memberClassTypeDescription(type: ClassTypeDescription): AstNode[] {
+  private memberClassTypeDescription(type: ClassTypeDescription): AstNodeDescription[] {
     const ref = type.ref?.ref
     return getClassChain(ref)
       .flatMap(it => it.members)
       .filter(it => !isStaticMember(it))
+      .map(it => this.createDescriptionForNode(it))
+      .filter(it => !!it)
   }
   // endregion
+
+  private createDescriptionForNode(node: AstNode): AstNodeDescription | undefined {
+    const name = this.nameProvider.getName(node)
+    if (name) {
+      return this.descriptions.createDescription(node, name)
+    }
+  }
 }
