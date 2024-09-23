@@ -12,13 +12,14 @@ entry Script:
 interface Declaration {}
 
 interface ImportDeclaration extends Declaration {
+    path: @NamedElement[];
     ref: @NamedElement;
     alias?: string;
 }
 
 interface ClassDeclaration extends Declaration {
     name: string;
-    superTypes: @ClassDeclaration[];
+    superTypes: ClassType[];
     members: ClassMemberDeclaration[];
 }
 
@@ -63,17 +64,13 @@ interface ConstructorDeclaration extends Declaration {
     body: Statement[];
 }
 
-QualifiedName returns string:
-    ID ('.' ID)*
-;
-
 ImportDeclaration returns ImportDeclaration:
-    'import' ref=[NamedElement:QualifiedName] ('as' alias=ID)? ';'?
+    'import' (path+=[NamedElement:ID] '.')* ref=[NamedElement:ID] ('as' alias=ID)? ';'?
 ;
 
 ClassDeclaration returns ClassDeclaration:
     'zenClass' name=ID
-    ('extends' (superTypes+=[ClassDeclaration:QualifiedName] (',' superTypes+=[ClassDeclaration:QualifiedName])*))?
+    ('extends' (superTypes+=ClassType (',' superTypes+=ClassType)*))?
     ('{'
         members+=ClassMemberDeclaration*
     '}')?
@@ -519,6 +516,7 @@ interface FunctionType extends TypeReference {
 }
 
 interface ClassType extends TypeReference {
+    path: @NamedElement[];
     ref: @ClassDeclaration;
 }
 
@@ -581,7 +579,7 @@ FunctionType returns FunctionType:
 ;
 
 ClassType returns ClassType:
-    ref=[ClassDeclaration:QualifiedName]
+    (path+=[NamedElement:ID] '.')* ref=[ClassDeclaration:ID]
 ;
 
 //endregion TypeReference
