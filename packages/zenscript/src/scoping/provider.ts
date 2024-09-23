@@ -57,7 +57,6 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .filter(it => it.prefix === 'static')
       .forEach(it => members.push(it))
     return members.map(it => this.createDescriptionForNode(it))
-      .filter(it => !!it)
   }
 
   // region Declaration
@@ -95,7 +94,6 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .flatMap(it => it.members)
       .filter(it => isStaticMember(it))
       .map(it => this.createDescriptionForNode(it))
-      .filter(it => !!it)
   }
   // endregion
 
@@ -147,7 +145,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         return scriptMembers
       }
       else {
-        return this.createDescriptionForNode(imported!)!
+        return this.createDescriptionForNode(imported!)
       }
     })
   }
@@ -169,14 +167,11 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .flatMap(it => it.members)
       .filter(it => !isStaticMember(it))
       .map(it => this.createDescriptionForNode(it))
-      .filter(it => !!it)
   }
   // endregion
 
-  private createDescriptionForNode(node: AstNode): AstNodeDescription | undefined {
+  private createDescriptionForNode(node: AstNode): AstNodeDescription {
     const name = this.nameProvider.getName(node)
-    if (name) {
-      return this.descriptions.createDescription(node, name)
-    }
+    return this.descriptions.createDescription(node, name)
   }
 }
