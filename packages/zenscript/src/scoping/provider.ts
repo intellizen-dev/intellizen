@@ -56,7 +56,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     node.statements.filter(it => isVariableDeclaration(it))
       .filter(it => it.prefix === 'static')
       .forEach(it => members.push(it))
-    return members.map(it => this.createDescriptionForNode(it))
+    return members.map(this.createDescriptionForNode)
   }
 
   // region Declaration
@@ -93,7 +93,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return getClassChain(node)
       .flatMap(it => it.members)
       .filter(it => isStaticMember(it))
-      .map(it => this.createDescriptionForNode(it))
+      .map(this.createDescriptionForNode)
   }
   // endregion
 
@@ -166,7 +166,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return getClassChain(ref)
       .flatMap(it => it.members)
       .filter(it => !isStaticMember(it))
-      .map(it => this.createDescriptionForNode(it))
+      .map(this.createDescriptionForNode)
   }
   // endregion
 
