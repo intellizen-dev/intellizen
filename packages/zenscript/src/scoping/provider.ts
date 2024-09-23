@@ -146,7 +146,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         result.push(...scriptMembers)
       }
       else if (ref) {
-        result.push(this.createDescriptionForNode(ref))
+        result.push(this.createDescriptionForNode(ref, importDeclName))
       }
     })
     return result

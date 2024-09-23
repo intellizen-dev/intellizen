@@ -50,7 +50,7 @@ describe('check cross reference of class type', () => {
     expect(referenced?.name).toBe('Alpha')
   })
 
-  it.todo('class be imported as alias', () => {
+  it('class be imported as alias', () => {
     const class_be_imported_as_alias = user_zs.parseResult.value.statements[3] as VariableDeclaration
     expect(class_be_imported_as_alias.$container?.$document).toBe(user_zs)
 
