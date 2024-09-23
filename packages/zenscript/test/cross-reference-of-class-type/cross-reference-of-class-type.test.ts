@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import * as path from 'node:path'
-import * as url from 'node:url'
+import { pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { LangiumDocument } from 'langium'
 import { assertNoErrors, createParseHelper } from '../utils'
@@ -13,7 +13,7 @@ const user_zs = await parseFile(path.resolve(__dirname, 'scripts', 'user.zs'))
 
 async function parseFile(filePath: string): Promise<LangiumDocument<Script>> {
   const content = readFileSync(filePath).toString()
-  const uri = url.pathToFileURL(filePath).toString()
+  const uri = pathToFileURL(filePath).toString()
   return parse(content, { documentUri: uri })
 }
 
