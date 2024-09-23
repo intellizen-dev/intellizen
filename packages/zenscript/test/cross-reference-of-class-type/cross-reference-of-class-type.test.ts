@@ -32,11 +32,29 @@ describe('check cross reference of class type', () => {
     expect(referenced?.name).toBe('Alpha')
   })
 
+  it('script be imported as alias', () => {
+    const script_be_imported_as_alias = user_zs.parseResult.value.statements[1] as VariableDeclaration
+    expect(script_be_imported_as_alias.$container?.$document).toBe(user_zs)
+
+    const referenced = (script_be_imported_as_alias.typeRef as ClassType).ref.ref
+    expect(referenced?.$container.$document).toBe(provider_zs)
+    expect(referenced?.name).toBe('Alpha')
+  })
+
   it('class be imported', () => {
-    const class_be_imported = user_zs.parseResult.value.statements[1] as VariableDeclaration
+    const class_be_imported = user_zs.parseResult.value.statements[2] as VariableDeclaration
     expect(class_be_imported.$container?.$document).toBe(user_zs)
 
     const referenced = (class_be_imported.typeRef as ClassType).ref.ref
+    expect(referenced?.$container.$document).toBe(provider_zs)
+    expect(referenced?.name).toBe('Alpha')
+  })
+
+  it.todo('class be imported as alias', () => {
+    const class_be_imported_as_alias = user_zs.parseResult.value.statements[3] as VariableDeclaration
+    expect(class_be_imported_as_alias.$container?.$document).toBe(user_zs)
+
+    const referenced = (class_be_imported_as_alias.typeRef as ClassType).ref.ref
     expect(referenced?.$container.$document).toBe(provider_zs)
     expect(referenced?.name).toBe('Alpha')
   })
