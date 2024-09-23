@@ -134,20 +134,22 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
   private memberClassTypeReference(node: ClassType): AstNodeDescription[] {
     const script = AstUtils.findRootNode(node) as Script
-    return script.imports.flatMap((importDecl) => {
-      const imported = importDecl.ref.ref
-      if (isScript(imported)) {
-        const importDeclName = this.nameProvider.getName(importDecl)!
-        const scriptMembers = this.memberScript(imported)
+    const result: AstNodeDescription[] = []
+    script.imports.forEach((importDecl) => {
+      const importDeclName = this.nameProvider.getName(importDecl)
+      const ref = importDecl.ref.ref
+      if (isScript(ref)) {
+        const scriptMembers = this.memberScript(ref)
         scriptMembers.forEach((member) => {
           member.name = `${importDeclName}.${member.name}`
         })
-        return scriptMembers
+        result.push(...scriptMembers)
       }
-      else {
-        return this.createDescriptionForNode(imported!)
+      else if (ref) {
+        result.push(this.createDescriptionForNode(ref))
       }
     })
+    return result
   }
   // endregion
 
@@ -170,8 +172,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
   // endregion
 
-  private createDescriptionForNode(node: AstNode): AstNodeDescription {
-    const name = this.nameProvider.getName(node)
+  private createDescriptionForNode(node: AstNode, name?: string): AstNodeDescription {
+    name ??= this.nameProvider.getName(node)
     return this.descriptions.createDescription(node, name)
   }
 }
