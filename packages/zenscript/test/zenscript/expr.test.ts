@@ -177,7 +177,7 @@ describe('parse expression of script with ZenScript ', () => {
 
   it('member access expression', async () => {
     const memberAccessExpr = await parseExpr<MemberAccess>('foo.bar;')
-    expect(memberAccessExpr.ref.$refText).toBe('bar')
+    expect(memberAccessExpr.refer.$refText).toBe('bar')
     assertLocalVariableText(memberAccessExpr.receiver, 'foo')
   })
 

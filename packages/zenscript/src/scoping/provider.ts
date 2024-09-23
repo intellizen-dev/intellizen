@@ -75,7 +75,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private memberImportDeclaration(node: ImportDeclaration): AstNodeDescription[] {
     const element = this.indexManager.allElements().find((it) => {
       const qName = this.nameProvider.getQualifiedName(it.node!)
-      return node.ref.$refText === qName
+      return node.refer.$refText === qName
     })?.node
 
     if (isScript(element)) {
@@ -109,7 +109,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   private memberLocalVariable(node: LocalVariable): AstNodeDescription[] {
-    const ref = node.ref.ref
+    const ref = node.refer.ref
     if (isImportDeclaration(ref)) {
       return this.memberImportDeclaration(ref)
     }
@@ -137,7 +137,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     const result: AstNodeDescription[] = []
     script.imports.forEach((importDecl) => {
       const importDeclName = this.nameProvider.getName(importDecl)
-      const ref = importDecl.ref.ref
+      const ref = importDecl.refer.ref
       if (isScript(ref)) {
         const scriptMembers = this.memberScript(ref)
         scriptMembers.forEach((member) => {

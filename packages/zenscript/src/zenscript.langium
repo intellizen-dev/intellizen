@@ -13,7 +13,7 @@ interface Declaration {}
 
 interface ImportDeclaration extends Declaration {
     path: @NamedElement[];
-    ref: @NamedElement;
+    refer: @NamedElement;
     alias?: string;
 }
 
@@ -65,7 +65,7 @@ interface ConstructorDeclaration extends Declaration {
 }
 
 ImportDeclaration returns ImportDeclaration:
-    'import' (path+=[NamedElement:ID] '.')* ref=[NamedElement:ID] ('as' alias=ID)? ';'?
+    'import' (path+=[NamedElement:ID] '.')* refer=[NamedElement:ID] ('as' alias=ID)? ';'?
 ;
 
 ClassDeclaration returns ClassDeclaration:
@@ -262,7 +262,7 @@ interface ParenthesizedExpression extends Expression {
 
 interface MemberAccess extends Expression {
     receiver: Expression;
-    ref: @NamedElement;
+    refer: @NamedElement;
 }
 
 interface TypeCastExpression extends Expression {
@@ -286,7 +286,7 @@ interface InstanceofExpression extends Expression {
 }
 
 interface LocalVariable extends Expression {
-    ref: @NamedElement;
+    refer: @NamedElement;
 }
 
 interface NumberLiteral extends Expression {
@@ -384,7 +384,7 @@ MemberAccessName returns string:
 
 PostfixExpression returns Expression:
     PrimaryExpression (
-        ({MemberAccess.receiver=current} '.' ref=[NamedElement:MemberAccessName] ) |
+        ({MemberAccess.receiver=current} '.' refer=[NamedElement:MemberAccessName] ) |
         ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
         ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
         ({ArrayAccess.array=current} '[' index=Expression ']') |
@@ -430,7 +430,7 @@ MapEntry returns MapEntry:
 ;
 
 LocalVariable returns LocalVariable:
-    ref=[VariableDeclaration:ID]
+    refer=[VariableDeclaration:ID]
 ;
 
 NumberLiteral returns NumberLiteral:
@@ -517,7 +517,7 @@ interface FunctionType extends TypeReference {
 
 interface ClassType extends TypeReference {
     path: @NamedElement[];
-    ref: @ClassDeclaration;
+    refer: @ClassDeclaration;
 }
 
 interface ParenthesizedType extends TypeReference {
@@ -579,7 +579,7 @@ FunctionType returns FunctionType:
 ;
 
 ClassType returns ClassType:
-    (path+=[NamedElement:ID] '.')* ref=[ClassDeclaration:ID]
+    (path+=[NamedElement:ID] '.')* refer=[ClassDeclaration:ID]
 ;
 
 //endregion TypeReference

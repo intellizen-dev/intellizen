@@ -33,7 +33,7 @@ export function assertTypeRef(matches: string, type?: TypeReference) {
     expect((type as PrimitiveType).value).toBe(matches)
   }
   else if (type?.$type === 'ClassType') {
-    expect((type as ClassType).ref.$refText).toBe(matches)
+    expect((type as ClassType).refer.$refText).toBe(matches)
   }
 }
 
@@ -55,7 +55,7 @@ export function assertVariableDeclaration(
 export function assertLocalVariableText(expr: Expression, matches: string | RegExp) {
   expect(expr.$type).toBe('LocalVariable')
   if (typeof matches === 'string')
-    expect((expr as LocalVariable).ref.$refText).toBe(matches)
+    expect((expr as LocalVariable).refer.$refText).toBe(matches)
   else
-    expect((expr as LocalVariable).ref.$refText).toMatch(matches)
+    expect((expr as LocalVariable).refer.$refText).toMatch(matches)
 }

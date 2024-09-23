@@ -12,7 +12,7 @@ export function getClassChain(clazz?: ClassDeclaration): ClassDeclaration[] {
 
   const set = new Set<ClassDeclaration>()
   set.add(clazz)
-  clazz.superTypes?.flatMap(t => getClassChain(t.ref)).forEach(c => set.add(c))
+  clazz.superTypes?.flatMap(t => getClassChain(t.refer.ref)).forEach(c => set.add(c))
   return Array.from(set)
 }
 
