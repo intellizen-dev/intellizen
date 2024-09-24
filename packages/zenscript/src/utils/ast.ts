@@ -1,5 +1,6 @@
-import type { AstNode } from 'langium'
-import type { ClassDeclaration, ClassMemberDeclaration } from '../generated/ast'
+import type { AstNode, ReferenceInfo } from 'langium'
+import { take } from 'lodash-es'
+import type { ClassDeclaration, ClassMemberDeclaration, ImportDeclaration } from '../generated/ast'
 import { isScript } from '../generated/ast'
 
 export function isToplevel(node: AstNode): boolean {
@@ -22,4 +23,15 @@ export function getClassMembers(clazz?: ClassDeclaration) {
 
 export function isStaticMember(member: ClassMemberDeclaration) {
   return member.$type !== 'ConstructorDeclaration' && member.prefix === 'static'
+}
+
+export function toQualifiedName(importDecl: ImportDeclaration, context: ReferenceInfo): string {
+  let names = importDecl.path.map(it => it.$refText)
+  if (context.property === 'refer') {
+    names.push(importDecl.refer.$refText)
+  }
+  else if (context.property === 'path' && context.index !== undefined) {
+    names = take(names, context.index + 1)
+  }
+  return names.join('.')
 }
