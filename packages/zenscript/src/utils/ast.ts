@@ -28,10 +28,16 @@ export function isStaticMember(member: ClassMemberDeclaration) {
 export function toQualifiedName(importDecl: ImportDeclaration, context: ReferenceInfo): string {
   let names = importDecl.path.map(it => it.$refText)
   if (context.property === 'refer') {
-    names.push(importDecl.refer.$refText)
+    names.push(importDecl.path.at(-1)!.$refText)
   }
   else if (context.property === 'path' && context.index !== undefined) {
     names = take(names, context.index + 1)
   }
+  return names.join('.')
+}
+
+export function getPathAsString(importDecl: ImportDeclaration, context: ReferenceInfo): string {
+  let names = importDecl.path.map(it => it.$refText)
+  names = take(names, context.index)
   return names.join('.')
 }

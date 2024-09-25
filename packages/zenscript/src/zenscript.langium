@@ -13,7 +13,6 @@ interface Declaration {}
 
 interface ImportDeclaration extends Declaration {
     path: @NamedElement[];
-    refer: @NamedElement;
     alias?: string;
 }
 
@@ -65,7 +64,7 @@ interface ConstructorDeclaration extends Declaration {
 }
 
 ImportDeclaration returns ImportDeclaration:
-    'import' (path+=[NamedElement:ID] '.')* refer=[NamedElement:ID] ('as' alias=ID)? ';'?
+    'import' path+=[NamedElement:ID] ('.' path+=[NamedElement:ID])* ('as' alias=ID)? ';'?
 ;
 
 ClassDeclaration returns ClassDeclaration:

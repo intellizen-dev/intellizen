@@ -102,7 +102,7 @@ export class ZenScriptTypeComputer {
   }
 
   private inferImportDeclaration(node: ImportDeclaration): TypeDescription | undefined {
-    return new PackageTypeDescription(node.refer.$refText)
+    return new PackageTypeDescription(node.path.at(-1)!.$refText)
   }
   // endregion
 

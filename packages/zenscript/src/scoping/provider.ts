@@ -1,12 +1,13 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope } from 'langium'
-import { AstUtils, DefaultScopeProvider } from 'langium'
+import { AstUtils, DefaultScopeProvider, URI } from 'langium'
+import { HierarchyTree } from '@intellizen/shared'
 import type { ClassDeclaration, ClassType, Declaration, Expression, ImportDeclaration, LocalVariable, Script, TypeReference } from '../generated/ast'
-import { isClassDeclaration, isClassType, isDeclaration, isExpression, isImportDeclaration, isLocalVariable, isMemberAccess, isScript, isTypeReference, isVariableDeclaration } from '../generated/ast'
+import { isClassDeclaration, isClassType, isDeclaration, isExpression, isImportDeclaration, isLocalVariable, isScript, isTypeReference, isVariableDeclaration } from '../generated/ast'
 import type { TypeComputer } from '../typing/infer'
 import type { IntelliZenServices } from '../module'
 import type { ClassTypeDescription, TypeDescription } from '../typing/description'
 import { isClassTypeDesc } from '../typing/description'
-import { getClassChain, isStaticMember } from '../utils/ast'
+import { getClassChain, getPathAsString, isStaticMember } from '../utils/ast'
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private typeComputer: TypeComputer
@@ -19,16 +20,48 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   override getScope(context: ReferenceInfo): Scope {
     const { container } = context
 
-    if (isMemberAccess(container)) {
-      const members = this.member(container.receiver)
-      return this.createScope(members)
-    }
-    else if (isTypeReference(container)) {
-      const members = this.memberTypeReference(container)
-      return this.createScope(members)
+    if (isImportDeclaration(container)) {
+      return this.scopeImportDeclaration(context)
     }
 
+    // if (isMemberAccess(container)) {
+    //   const members = this.member(container.receiver)
+    //   return this.createScope(members)
+    // }
+    // else if (isTypeReference(container)) {
+    //   const members = this.memberTypeReference(container)
+    //   return this.createScope(members)
+    // }
+
     return super.getScope(context)
+  }
+
+  /* TODO: WIP, for testing only */
+  private scopeImportDeclaration(context: ReferenceInfo): Scope {
+    const packageTree = new HierarchyTree<AstNode | undefined>()
+    this.indexManager.allElements().forEach(desc => packageTree.setValue(desc.name, desc.node))
+
+    const importDecl = context.container as ImportDeclaration
+    const path = getPathAsString(importDecl, context)
+    const siblings = packageTree.getNode(path)?.children
+
+    const elements: AstNodeDescription[] = []
+    siblings?.forEach((hNode, name) => {
+      let desc: AstNodeDescription
+      if (hNode.value) {
+        desc = this.descriptions.createDescription(hNode.value, name)
+      }
+      else {
+        desc = {
+          type: 'fake',
+          name,
+          documentUri: URI.file('file:///path/to/fake/node'),
+        } as AstNodeDescription
+      }
+      elements.push(desc)
+    })
+
+    return this.createScope(elements)
   }
 
   private member(node: AstNode | undefined): AstNodeDescription[] {
@@ -75,7 +108,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private memberImportDeclaration(node: ImportDeclaration): AstNodeDescription[] {
     const element = this.indexManager.allElements().find((it) => {
       const qName = this.nameProvider.getQualifiedName(it.node!)
-      return node.refer.$refText === qName
+      return node.path.at(-1)?.$refText === qName
     })?.node
 
     if (isScript(element)) {
@@ -137,7 +170,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     const result: AstNodeDescription[] = []
     script.imports.forEach((importDecl) => {
       const importDeclName = this.nameProvider.getName(importDecl)
-      const ref = importDecl.refer.ref
+      const ref = importDecl.path.at(-1)?.ref
       if (isScript(ref)) {
         const scriptMembers = this.memberScript(ref)
         scriptMembers.forEach((member) => {
