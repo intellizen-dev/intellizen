@@ -37,6 +37,9 @@ export function toQualifiedName(importDecl: ImportDeclaration, context: Referenc
 }
 
 export function getPathAsString(importDecl: ImportDeclaration, context: ReferenceInfo): string {
+  if (context.index === undefined) {
+    return ''
+  }
   let names = importDecl.path.map(it => it.$refText)
   names = take(names, context.index)
   return names.join('.')
