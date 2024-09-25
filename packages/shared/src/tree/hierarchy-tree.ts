@@ -26,7 +26,7 @@ export class HierarchyTree<V> {
   setValue(path: string, value: V): void {
     const names = path.split(this.separator)
     const target = names.reduce<HierarchyNode<V>>((node, name) => {
-      return node.children.get(name) || node.addChild(name)
+      return node.children.get(name) || node.createChild(name)
     }, this.root)
     target.value = value
   }
@@ -44,12 +44,9 @@ export class HierarchyNode<V> {
     this.children = new Map()
   }
 
-  addChild(name: string): HierarchyNode<V> {
-    let child = this.children.get(name)
-    if (!child) {
-      child = new HierarchyNode(name, this)
-      this.children.set(name, child)
-    }
+  createChild(name: string): HierarchyNode<V> {
+    const child = new HierarchyNode(name, this)
+    this.children.set(name, child)
     return child
   }
 }
