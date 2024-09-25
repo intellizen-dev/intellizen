@@ -64,7 +64,7 @@ interface ConstructorDeclaration extends Declaration {
 }
 
 ImportDeclaration returns ImportDeclaration:
-    'import' path+=[NamedElement:ID] ('.' path+=[NamedElement:ID])* ('as' alias=ID)? ';'?
+    'import' (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID] ('as' alias=ID)? ';'?
 ;
 
 ClassDeclaration returns ClassDeclaration:
