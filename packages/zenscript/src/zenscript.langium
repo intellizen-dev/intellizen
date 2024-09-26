@@ -429,7 +429,7 @@ MapEntry returns MapEntry:
 ;
 
 LocalVariable returns LocalVariable:
-    refer=[VariableDeclaration:ID]
+    refer=[NamedElement:ID]
 ;
 
 NumberLiteral returns NumberLiteral:
@@ -515,8 +515,7 @@ interface FunctionType extends TypeReference {
 }
 
 interface ClassType extends TypeReference {
-    path: @NamedElement[];
-    refer: @ClassDeclaration;
+    path: @NamedElement[]
 }
 
 interface ParenthesizedType extends TypeReference {
@@ -578,7 +577,7 @@ FunctionType returns FunctionType:
 ;
 
 ClassType returns ClassType:
-    (path+=[NamedElement:ID] '.')* refer=[ClassDeclaration:ID]
+    (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID]
 ;
 
 //endregion TypeReference
