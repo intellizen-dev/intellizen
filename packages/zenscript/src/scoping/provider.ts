@@ -46,19 +46,18 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     const siblings = packageTree.getNode(path)?.children
 
     const elements: AstNodeDescription[] = []
-    siblings?.forEach((hNode, name) => {
-      let desc: AstNodeDescription
+    siblings?.forEach((hNode, hName) => {
       if (hNode.value) {
-        desc = this.descriptions.createDescription(hNode.value, name)
+        elements.push(this.descriptions.createDescription(hNode.value, hName))
       }
       else {
-        desc = {
-          type: 'fake',
-          name,
-          documentUri: URI.file('file:///path/to/fake/node'),
-        } as AstNodeDescription
+        elements.push({
+          type: 'package',
+          name: hName,
+          documentUri: URI.file('file:///path/to/package'),
+          path: '',
+        })
       }
-      elements.push(desc)
     })
 
     return this.createScope(elements)
