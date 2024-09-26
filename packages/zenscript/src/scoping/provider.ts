@@ -38,7 +38,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
   /* TODO: WIP, for testing only */
   private scopeImportDeclaration(context: ReferenceInfo): Scope {
-    const packageTree = new HierarchyTree<AstNode | undefined>()
+    const packageTree = new HierarchyTree<AstNode>()
     this.indexManager.allElements().forEach(desc => packageTree.setValue(desc.name, desc.node))
 
     const importDecl = context.container as ImportDeclaration

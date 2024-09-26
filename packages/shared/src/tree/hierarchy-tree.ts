@@ -23,9 +23,9 @@ export class HierarchyTree<V> {
     return this.getNode(path)?.value
   }
 
-  setValue(path: string, value: V): void {
+  setValue(path: string, value: V | undefined): void {
     const names = path.split(this.separator)
-    const target = names.reduce<HierarchyNode<V>>((node, name) => {
+    const target = names.reduce((node, name) => {
       return node.children.get(name) || node.createChild(name)
     }, this.root)
     target.value = value
