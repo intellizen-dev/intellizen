@@ -1,6 +1,7 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope } from 'langium'
-import { AstUtils, DefaultScopeProvider, URI } from 'langium'
+import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI } from 'langium'
 import { HierarchyTree } from '@intellizen/shared'
+import { last } from 'lodash-es'
 import type { ClassDeclaration, ClassType, Declaration, Expression, ImportDeclaration, LocalVariable, Script, TypeReference } from '../generated/ast'
 import { isClassDeclaration, isClassType, isDeclaration, isExpression, isImportDeclaration, isLocalVariable, isScript, isTypeReference, isVariableDeclaration } from '../generated/ast'
 import type { TypeComputer } from '../typing/infer'
@@ -22,6 +23,10 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     if (isImportDeclaration(container)) {
       return this.scopeImportDeclaration(context)
+    }
+
+    if (isClassType(container)) {
+      return this.scopeClassTypeReference(context)
     }
 
     // if (isMemberAccess(container)) {
@@ -61,6 +66,45 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     })
 
     return this.createScope(elements)
+  }
+
+  private scopeClassTypeReference(context: ReferenceInfo): Scope {
+    const classTypeRef = context.container as ClassType
+
+    if (context.index === 0) {
+      const script = AstUtils.getContainerOfType(classTypeRef, isScript)
+      if (!script) {
+        return EMPTY_SCOPE
+      }
+      const imports = script.imports
+        .map((it) => {
+          const desc = last(it.path)?.$nodeDescription
+          if (desc && it.alias) {
+            desc.name = it.alias
+          }
+          return desc
+        })
+        .filter(it => !!it)
+      return this.createScope(imports)
+    }
+    else if (context.index !== undefined) {
+      const prev = classTypeRef.path[context.index - 1].ref
+      if (isScript(prev)) {
+        return this.createScope(this.memberScript(prev))
+      }
+      else if (isClassDeclaration(prev)) {
+        return this.createScope(this.memberClassDeclaration(prev))
+      }
+      else if (isImportDeclaration(prev)) {
+        return this.createScope([last(prev.path)!.$nodeDescription!])
+      }
+      else {
+        return EMPTY_SCOPE
+      }
+    }
+    else {
+      return EMPTY_SCOPE
+    }
   }
 
   private member(node: AstNode | undefined): AstNodeDescription[] {
