@@ -35,7 +35,7 @@ export class HierarchyTree<V> {
 export class HierarchyNode<V> {
   readonly name: string
   readonly path: string
-  readonly parent: HierarchyNode<V> | undefined
+  readonly parent?: HierarchyNode<V>
   readonly children: Map<string, HierarchyNode<V>>
   value?: V
 
