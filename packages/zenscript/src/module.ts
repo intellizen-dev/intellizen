@@ -9,6 +9,7 @@ import { ZenScriptNameProvider } from './name'
 import { ZenScriptTypeComputer } from './typing/infer'
 import { ZenScriptCompletionProvider } from './lsp/completion'
 import { ZenScriptValidator, registerValidationChecks } from './validation/validator'
+import { ZenScriptPackageManager } from './workspace/package-manager'
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -19,6 +20,9 @@ export interface IntelliZenAddedServices {
   }
   typing: {
     TypeComputer: ZenScriptTypeComputer
+  }
+  workspace: {
+    PackageManager: ZenScriptPackageManager
   }
 }
 
@@ -41,6 +45,9 @@ export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices
     NameProvider: () => new ZenScriptNameProvider(),
     ScopeComputation: services => new ZenScriptScopeComputation(services),
     ScopeProvider: services => new ZenScriptScopeProvider(services),
+  },
+  workspace: {
+    PackageManager: services => new ZenScriptPackageManager(services),
   },
   parser: {
     TokenBuilder: () => new CustomTokenBuilder(),

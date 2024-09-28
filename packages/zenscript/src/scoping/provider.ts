@@ -1,6 +1,5 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope } from 'langium'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI } from 'langium'
-import { HierarchyTree } from '@intellizen/shared'
 import { last } from 'lodash-es'
 import type { ClassDeclaration, ClassType, Declaration, Expression, ImportDeclaration, LocalVariable, Script, TypeReference } from '../generated/ast'
 import { isClassDeclaration, isClassType, isDeclaration, isExpression, isImportDeclaration, isLocalVariable, isScript, isTypeReference, isVariableDeclaration } from '../generated/ast'
@@ -9,13 +8,16 @@ import type { IntelliZenServices } from '../module'
 import type { ClassTypeDescription, TypeDescription } from '../typing/description'
 import { isClassTypeDesc } from '../typing/description'
 import { getClassChain, getPathAsString, isStaticMember } from '../utils/ast'
+import type { PackageManager } from '../workspace/package-manager'
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
-  private typeComputer: TypeComputer
+  private readonly typeComputer: TypeComputer
+  private readonly packageManager: PackageManager
 
   constructor(services: IntelliZenServices) {
     super(services)
     this.typeComputer = services.typing.TypeComputer
+    this.packageManager = services.workspace.PackageManager
   }
 
   override getScope(context: ReferenceInfo): Scope {
@@ -43,12 +45,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
   /* TODO: WIP, for testing only */
   private scopeImportDeclaration(context: ReferenceInfo): Scope {
-    const packageTree = new HierarchyTree<AstNode>()
-    this.indexManager.allElements().forEach(desc => packageTree.setValue(desc.name, desc.node))
-
     const importDecl = context.container as ImportDeclaration
     const path = getPathAsString(importDecl, context)
-    const siblings = packageTree.getNode(path)?.children
+    const siblings = this.packageManager.getHierarchyNode(path)?.children
 
     const elements: AstNodeDescription[] = []
     siblings?.forEach((hNode, hName) => {
