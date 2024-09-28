@@ -34,12 +34,14 @@ export class HierarchyTree<V> {
 
 export class HierarchyNode<V> {
   readonly name: string
+  readonly path: string
   readonly parent: HierarchyNode<V> | undefined
   readonly children: Map<string, HierarchyNode<V>>
   value?: V
 
   constructor(name: string, parent?: HierarchyNode<V>) {
     this.name = name
+    this.path = parent ? (parent.path ? `${parent.path}.${name}` : name) : ''
     this.parent = parent
     this.children = new Map()
   }
