@@ -47,22 +47,25 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private scopeImportDeclaration(context: ReferenceInfo): Scope {
     const importDecl = context.container as ImportDeclaration
     const path = getPathAsString(importDecl, context)
-    const siblings = this.packageManager.getHierarchyNode(path)?.children
+    const siblings = this.packageManager.getHierarchyNode(path)?.children.values()
+    if (!siblings) {
+      return EMPTY_SCOPE
+    }
 
     const elements: AstNodeDescription[] = []
-    siblings?.forEach((hNode, hName) => {
-      if (hNode.value) {
-        elements.push(this.descriptions.createDescription(hNode.value, hName))
+    for (const sibling of siblings) {
+      if (sibling.value) {
+        elements.push(this.descriptions.createDescription(sibling.value, sibling.name))
       }
       else {
         elements.push({
           type: 'package',
-          name: hName,
+          name: sibling.name,
           documentUri: URI.file('file:///path/to/package'),
           path: '',
         })
       }
-    })
+    }
 
     return this.createScope(elements)
   }
