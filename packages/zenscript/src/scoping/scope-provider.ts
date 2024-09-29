@@ -1,7 +1,7 @@
 import type { AstNodeDescription, ReferenceInfo, Scope } from 'langium'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, EMPTY_STREAM, URI, isNamed } from 'langium'
 import type { ClassType, ImportDeclaration } from '../generated/ast'
-import { isClassType, isImportDeclaration, isLocalVariable, isScript, isStatement } from '../generated/ast'
+import { isClassType, isImportDeclaration, isLocalVariable, isMemberAccess, isScript, isStatement } from '../generated/ast'
 import type { IntelliZenServices } from '../module'
 import { getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
@@ -32,14 +32,15 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       return this.scopeLocalVariable(context)
     }
 
-    // if (isMemberAccess(container)) {
-    //   const members = this.member(container.receiver)
-    //   return this.createScope(members)
-    // }
-    // else if (isTypeReference(container)) {
-    //   const members = this.memberTypeReference(container)
-    //   return this.createScope(members)
-    // }
+    if (isMemberAccess(container)) {
+      const members = this.memberProvider.getMember(container.receiver)
+      return this.createScope(members)
+    }
+
+    if (isClassType(container)) {
+      const members = this.memberProvider.getMember(container)
+      return this.createScope(members)
+    }
 
     return super.getScope(context)
   }
