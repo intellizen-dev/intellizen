@@ -63,8 +63,12 @@ export class ZenScriptTypeComputer {
     }
 
     if (isClassType(type)) {
-      const typeDesc = new ClassTypeDescription(type.refer.$refText)
-      typeDesc.ref = type.refer as ResolvedReference<ClassDeclaration>
+      const className = type.path.map(it => it.$refText).join('.')
+      const typeDesc = new ClassTypeDescription(className)
+      const ref = type.path.at(-1)
+      if (isClassDeclaration(ref?.ref)) {
+        typeDesc.ref = ref as ResolvedReference<ClassDeclaration>
+      }
       return typeDesc
     }
   }

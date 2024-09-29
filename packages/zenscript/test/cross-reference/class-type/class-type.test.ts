@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { LangiumDocument } from 'langium'
 import { assertNoErrors, createParseHelper } from '../../utils'
-import type { ClassType, Script, VariableDeclaration } from '../../../src/generated/ast'
+import type { ClassDeclaration, ClassType, Script, VariableDeclaration } from '../../../src/generated/ast'
 
 const parse = createParseHelper()
 
@@ -17,8 +17,7 @@ async function parseFile(filePath: string): Promise<LangiumDocument<Script>> {
   return parse(content, { documentUri: uri })
 }
 
-// TODO: out of heap memory bug
-describe.skip('check cross reference of class type', () => {
+describe('check cross reference of class type', () => {
   it('should no errors', () => {
     assertNoErrors(provider_zs)
     assertNoErrors(user_zs)
@@ -28,8 +27,8 @@ describe.skip('check cross reference of class type', () => {
     const script_be_imported = user_zs.parseResult.value.statements[0] as VariableDeclaration
     expect(script_be_imported.$container?.$document).toBe(user_zs)
 
-    const referenced = (script_be_imported.typeRef as ClassType).refer.ref
-    expect(referenced?.$container.$document).toBe(provider_zs)
+    const referenced = (script_be_imported.typeRef as ClassType).path.at(-1)?.ref as ClassDeclaration
+    expect(referenced?.$container?.$document).toBe(provider_zs)
     expect(referenced?.name).toBe('Alpha')
   })
 
@@ -37,8 +36,8 @@ describe.skip('check cross reference of class type', () => {
     const script_be_imported_as_alias = user_zs.parseResult.value.statements[1] as VariableDeclaration
     expect(script_be_imported_as_alias.$container?.$document).toBe(user_zs)
 
-    const referenced = (script_be_imported_as_alias.typeRef as ClassType).refer.ref
-    expect(referenced?.$container.$document).toBe(provider_zs)
+    const referenced = (script_be_imported_as_alias.typeRef as ClassType).path.at(-1)?.ref as ClassDeclaration
+    expect(referenced?.$container?.$document).toBe(provider_zs)
     expect(referenced?.name).toBe('Alpha')
   })
 
@@ -46,8 +45,8 @@ describe.skip('check cross reference of class type', () => {
     const class_be_imported = user_zs.parseResult.value.statements[2] as VariableDeclaration
     expect(class_be_imported.$container?.$document).toBe(user_zs)
 
-    const referenced = (class_be_imported.typeRef as ClassType).refer.ref
-    expect(referenced?.$container.$document).toBe(provider_zs)
+    const referenced = (class_be_imported.typeRef as ClassType).path.at(-1)?.ref as ClassDeclaration
+    expect(referenced?.$container?.$document).toBe(provider_zs)
     expect(referenced?.name).toBe('Alpha')
   })
 
@@ -55,8 +54,8 @@ describe.skip('check cross reference of class type', () => {
     const class_be_imported_as_alias = user_zs.parseResult.value.statements[3] as VariableDeclaration
     expect(class_be_imported_as_alias.$container?.$document).toBe(user_zs)
 
-    const referenced = (class_be_imported_as_alias.typeRef as ClassType).refer.ref
-    expect(referenced?.$container.$document).toBe(provider_zs)
+    const referenced = (class_be_imported_as_alias.typeRef as ClassType).path.at(-1)?.ref as ClassDeclaration
+    expect(referenced?.$container?.$document).toBe(provider_zs)
     expect(referenced?.name).toBe('Alpha')
   })
 })
