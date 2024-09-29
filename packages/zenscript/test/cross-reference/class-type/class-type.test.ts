@@ -10,8 +10,8 @@ const parse = createParseHelper()
 const document_provider_zs = await parseFile(path.resolve(__dirname, 'scripts', 'provider.zs'))
 const document_user_zs = await parseFile(path.resolve(__dirname, 'scripts', 'user.zs'))
 
-const script_provider_zs = document_provider_zs.parseResult.value
-const zenclass_alpha = script_provider_zs.classes[0] as ClassDeclaration
+const script_provider = document_provider_zs.parseResult.value
+const zenclass_alpha = script_provider.classes[0] as ClassDeclaration
 
 const script_user = document_user_zs.parseResult.value
 const import_scripts_provider = script_user.imports[0] as ImportDeclaration
@@ -37,28 +37,28 @@ describe('check cross reference of class type', () => {
 
   it('script be imported', () => {
     expect(import_scripts_provider.path[0].ref).toBeUndefined()
-    expect(import_scripts_provider.path[1].ref).toBe(script_provider_zs)
-    expect((var_script_be_imported.typeRef as ClassType).path[0].ref).toBe(script_provider_zs)
+    expect(import_scripts_provider.path[1].ref).toBe(script_provider)
+    expect((var_script_be_imported.typeRef as ClassType).path[0].ref).toBe(script_provider)
     expect((var_script_be_imported.typeRef as ClassType).path[1].ref).toBe(zenclass_alpha)
   })
 
   it('script be imported as alias', () => {
     expect(import_scripts_provider_as_supplier.path[0].ref).toBeUndefined()
-    expect(import_scripts_provider_as_supplier.path[1].ref).toBe(script_provider_zs)
-    expect((var_script_be_imported_as_alias.typeRef as ClassType).path[0].ref).toBe(script_provider_zs)
+    expect(import_scripts_provider_as_supplier.path[1].ref).toBe(script_provider)
+    expect((var_script_be_imported_as_alias.typeRef as ClassType).path[0].ref).toBe(script_provider)
     expect((var_script_be_imported_as_alias.typeRef as ClassType).path[1].ref).toBe(zenclass_alpha)
   })
 
   it('class be imported', () => {
     expect(import_scripts_provider_alpha.path[0].ref).toBeUndefined()
-    expect(import_scripts_provider_alpha.path[1].ref).toBe(script_provider_zs)
+    expect(import_scripts_provider_alpha.path[1].ref).toBe(script_provider)
     expect(import_scripts_provider_alpha.path[2].ref).toBe(zenclass_alpha)
     expect((var_class_be_imported.typeRef as ClassType).path[0].ref).toBe(zenclass_alpha)
   })
 
   it('class be imported as alias', () => {
     expect(import_scripts_provider_alpha_as_beta.path[0].ref).toBeUndefined()
-    expect(import_scripts_provider_alpha_as_beta.path[1].ref).toBe(script_provider_zs)
+    expect(import_scripts_provider_alpha_as_beta.path[1].ref).toBe(script_provider)
     expect(import_scripts_provider_alpha_as_beta.path[2].ref).toBe(zenclass_alpha)
     expect((var_class_be_imported_as_alias.typeRef as ClassType).path[0].ref).toBe(zenclass_alpha)
   })
