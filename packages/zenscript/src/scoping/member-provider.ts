@@ -46,6 +46,9 @@ export class ZenScriptMemberProvider implements MemberProvider {
 
   private initRules() {
     const rule: Rule = (match, produce) => {
+      if (this.rules.has(match)) {
+        throw new Error(`Rule "${match}" is already defined.`)
+      }
       this.rules.set(match, produce)
     }
 
