@@ -133,9 +133,8 @@ describe('parse expression of script with ZenScript ', () => {
     expect(helloWorld.$type).toBe('StringTemplate')
     expect(helloWorld.content).toHaveLength(3)
     const [hello, world, tail] = helloWorld.content
-    expect((world as Expression).$type).toBe('LocalVariable')
     expect(hello).toBe('hello, ')
-    assertLocalVariableText(world as Expression, 'world')
+    assertLocalVariableText((world as Expression), 'world')
     expect(tail).toBe('!')
 
     expect(escape.$type).toBe('StringTemplate')
@@ -208,7 +207,7 @@ describe('parse expression of script with ZenScript ', () => {
     assertLocalVariableText(int.expr, 'foo')
     assertTypeRef('int', int.typeRef)
     assertLocalVariableText(otherType.expr, 'bar')
-    assertTypeRef('OtherType', otherType.typeRef)
+    assertTypeRef(['OtherType'], otherType.typeRef)
   })
 
   it('array access', async () => {
