@@ -64,7 +64,6 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return scope
   }
 
-  /* TODO: WIP, for testing only */
   private scopeImportDeclaration(context: ReferenceInfo): Scope {
     const importDecl = context.container as ImportDeclaration
     const path = getPathAsString(importDecl, context)
@@ -79,6 +78,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         elements.push(this.descriptions.createDescription(sibling.value, sibling.name))
       }
       else {
+        // TODO: temporary, needs to be reimplemented
         elements.push({
           type: 'package',
           name: sibling.name,
