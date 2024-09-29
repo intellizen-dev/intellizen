@@ -14,7 +14,7 @@ describe('parse top-level of script with ZenScript', () => {
     const model = await parseModel('import foo.bar.baz;')
     const refImport = model.parseResult.value.imports[0]
     await assertNoErrors(model)
-    expect(refImport.ref.$refText).toBe('foo.bar.baz')
+    expect(refImport.path.map(p => p.$refText)).toStrictEqual(['foo', 'bar', 'baz'])
   })
 
   it('function declaration', async () => {
@@ -42,7 +42,7 @@ describe('parse top-level of script with ZenScript', () => {
     expect(baz.name).toBe('baz')
     expect(baz.parameters.length).toBe(1)
     expect(baz.parameters[0].name).toBe('c')
-    assertTypeRef('OtherType', baz.parameters[0].typeRef)
+    assertTypeRef(['OtherType'], baz.parameters[0].typeRef)
     assertTypeRef('any', baz.returnTypeRef)
   })
 
@@ -63,14 +63,14 @@ describe('parse top-level of script with ZenScript', () => {
     assertTypeRef('string', string$reverse.typeRef)
     expect(otherType$foo.parameters.length).toBe(1)
     expect(otherType$foo.parameters[0].name).toBe('foo')
-    assertTypeRef('OtherType.ChildType', otherType$foo.parameters[0].typeRef)
+    assertTypeRef(['OtherType', 'ChildType'], otherType$foo.parameters[0].typeRef)
     assertTypeRef('void', otherType$foo.returnTypeRef)
   })
 
   it('class declaration', async () => {
     const model = await parseModel(`
       zenClass Foo {}
-      zenClass Bar extends Foo, Baz {} // zenutils
+      zenClass Bar extends Foo, Baz, Other.Child {} // zenutils
     `)
     await assertNoErrors(model)
 
@@ -79,7 +79,7 @@ describe('parse top-level of script with ZenScript', () => {
     expect(foo.superTypes).toStrictEqual([])
 
     expect(bar.name).toBe('Bar')
-    expect(bar.superTypes.map(subType => subType.$refText)).toStrictEqual(['Foo', 'Baz'])
+    expect(bar.superTypes.map(subType => subType.path.map(p => p.$refText))).toStrictEqual([['Foo'], ['Baz'], ['Other', 'Child']])
   })
 
   it('class with members', async () => {

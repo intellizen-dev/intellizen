@@ -18,7 +18,7 @@ export class ZenScriptNameProvider implements NameProvider {
       }
     }
     else if (isImportDeclaration(node)) {
-      return node.alias || node.ref?.$refText.split('.').at(-1)
+      return node.alias || node.path.at(-1)?.$refText
     }
     else if (isNamed(node)) {
       return node.name

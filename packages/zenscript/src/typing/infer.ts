@@ -63,8 +63,12 @@ export class ZenScriptTypeComputer {
     }
 
     if (isClassType(type)) {
-      const typeDesc = new ClassTypeDescription(type.ref.$refText)
-      typeDesc.ref = type.ref as ResolvedReference<ClassDeclaration>
+      const className = type.path.map(it => it.$refText).join('.')
+      const typeDesc = new ClassTypeDescription(className)
+      const ref = type.path.at(-1)
+      if (isClassDeclaration(ref?.ref)) {
+        typeDesc.ref = ref as ResolvedReference<ClassDeclaration>
+      }
       return typeDesc
     }
   }
@@ -102,7 +106,7 @@ export class ZenScriptTypeComputer {
   }
 
   private inferImportDeclaration(node: ImportDeclaration): TypeDescription | undefined {
-    return new PackageTypeDescription(node.ref.$refText)
+    return new PackageTypeDescription(node.path.at(-1)!.$refText)
   }
   // endregion
 
@@ -155,7 +159,7 @@ export class ZenScriptTypeComputer {
   }
 
   private inferLocalVariable(node: LocalVariable): TypeDescription | undefined {
-    const ref = node.ref.ref
+    const ref = node.refer.ref
     if (!ref) {
       return
     }

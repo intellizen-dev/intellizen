@@ -1,14 +1,16 @@
 import { type Module, inject } from 'langium'
 import { type DefaultSharedModuleContext, type LangiumServices, type LangiumSharedServices, type PartialLangiumServices, createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
 import { IntelliZenGeneratedModule, IntelliZenGeneratedSharedModule } from './generated/module'
-import { ZenScriptScopeProvider } from './scoping/provider'
-import { ZenScriptScopeComputation } from './scoping/computation'
+import { ZenScriptScopeProvider } from './scoping/scope-provider'
+import { ZenScriptScopeComputation } from './scoping/scope-computation'
 import { CustomTokenBuilder } from './lexer/token-builder'
 import { CustomValueConverter } from './lexer/value-converter'
 import { ZenScriptNameProvider } from './name'
 import { ZenScriptTypeComputer } from './typing/infer'
 import { ZenScriptCompletionProvider } from './lsp/completion'
 import { ZenScriptValidator, registerValidationChecks } from './validation/validator'
+import { ZenScriptPackageManager } from './workspace/package-manager'
+import { ZenScriptMemberProvider } from './scoping/member-provider'
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -17,8 +19,14 @@ export interface IntelliZenAddedServices {
   validation: {
     Validator: ZenScriptValidator
   }
+  references: {
+    MemberProvider: ZenScriptMemberProvider
+  }
   typing: {
     TypeComputer: ZenScriptTypeComputer
+  }
+  workspace: {
+    PackageManager: ZenScriptPackageManager
   }
 }
 
@@ -41,6 +49,10 @@ export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices
     NameProvider: () => new ZenScriptNameProvider(),
     ScopeComputation: services => new ZenScriptScopeComputation(services),
     ScopeProvider: services => new ZenScriptScopeProvider(services),
+    MemberProvider: services => new ZenScriptMemberProvider(services),
+  },
+  workspace: {
+    PackageManager: services => new ZenScriptPackageManager(services),
   },
   parser: {
     TokenBuilder: () => new CustomTokenBuilder(),

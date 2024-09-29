@@ -12,13 +12,13 @@ entry Script:
 interface Declaration {}
 
 interface ImportDeclaration extends Declaration {
-    ref: @NamedElement;
+    path: @NamedElement[];
     alias?: string;
 }
 
 interface ClassDeclaration extends Declaration {
     name: string;
-    superTypes: @ClassDeclaration[];
+    superTypes: ClassType[];
     members: ClassMemberDeclaration[];
 }
 
@@ -63,17 +63,13 @@ interface ConstructorDeclaration extends Declaration {
     body: Statement[];
 }
 
-QualifiedName returns string:
-    ID ('.' ID)*
-;
-
 ImportDeclaration returns ImportDeclaration:
-    'import' ref=[NamedElement:QualifiedName] ('as' alias=ID)? ';'?
+    'import' (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID] ('as' alias=ID)? ';'?
 ;
 
 ClassDeclaration returns ClassDeclaration:
     'zenClass' name=ID
-    ('extends' (superTypes+=[ClassDeclaration:QualifiedName] (',' superTypes+=[ClassDeclaration:QualifiedName])*))?
+    ('extends' (superTypes+=ClassType (',' superTypes+=ClassType)*))?
     ('{'
         members+=ClassMemberDeclaration*
     '}')?
@@ -265,7 +261,7 @@ interface ParenthesizedExpression extends Expression {
 
 interface MemberAccess extends Expression {
     receiver: Expression;
-    ref: @NamedElement;
+    refer: @NamedElement;
 }
 
 interface TypeCastExpression extends Expression {
@@ -289,7 +285,7 @@ interface InstanceofExpression extends Expression {
 }
 
 interface LocalVariable extends Expression {
-    ref: @NamedElement;
+    refer: @NamedElement;
 }
 
 interface NumberLiteral extends Expression {
@@ -387,7 +383,7 @@ MemberAccessName returns string:
 
 PostfixExpression returns Expression:
     PrimaryExpression (
-        ({MemberAccess.receiver=current} '.' ref=[NamedElement:MemberAccessName] ) |
+        ({MemberAccess.receiver=current} '.' refer=[NamedElement:MemberAccessName] ) |
         ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
         ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
         ({ArrayAccess.array=current} '[' index=Expression ']') |
@@ -433,7 +429,7 @@ MapEntry returns MapEntry:
 ;
 
 LocalVariable returns LocalVariable:
-    ref=[VariableDeclaration:ID]
+    refer=[NamedElement:ID]
 ;
 
 NumberLiteral returns NumberLiteral:
@@ -519,7 +515,7 @@ interface FunctionType extends TypeReference {
 }
 
 interface ClassType extends TypeReference {
-    ref: @ClassDeclaration;
+    path: @NamedElement[]
 }
 
 interface ParenthesizedType extends TypeReference {
@@ -581,7 +577,7 @@ FunctionType returns FunctionType:
 ;
 
 ClassType returns ClassType:
-    ref=[ClassDeclaration:QualifiedName]
+    (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID]
 ;
 
 //endregion TypeReference
