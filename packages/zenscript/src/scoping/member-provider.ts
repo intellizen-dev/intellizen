@@ -14,18 +14,17 @@ export interface MemberProvider {
   getMember: (source: AstNode | TypeDescription | undefined) => AstNodeDescription[]
 }
 
+type RuleKeys = keyof Rules
 type Rules = IntelliZenAstType & TypeDescConstants
-type RuleKeys = keyof IntelliZenAstType | keyof TypeDescConstants
 
-type Rule = <T extends RuleKeys, S extends Rules[T]>(match: T, produce: Produce<T, S>) => void
 type Produce<T extends RuleKeys, S extends Rules[T]> = (node: S) => AstNodeDescription[]
-type RuleMap<T extends RuleKeys, S extends Rules[T]> = Map<T, Produce<T, S>>
+type Rule = <T extends RuleKeys, S extends Rules[T]>(match: T, produce: Produce<T, S>) => void
 
 export class ZenScriptMemberProvider implements MemberProvider {
   private readonly nameProvider: NameProvider
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
-  private readonly rules: RuleMap<RuleKeys, any>
+  private readonly rules: Map<RuleKeys, Produce<RuleKeys, any>>
 
   getMember(source: AstNode | TypeDescription | undefined): AstNodeDescription[] {
     if (!source || !source.$type) {
