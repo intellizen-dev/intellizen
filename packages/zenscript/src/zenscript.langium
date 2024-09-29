@@ -389,7 +389,7 @@ PostfixExpression returns Expression:
         ({ArrayAccess.array=current} '[' index=Expression ']') |
         ({CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
         ({InstanceofExpression.expr=current} 'instanceof' typeRef=TypeReference)
-    )?
+    )*
 ;
 
 fragment PrimaryExpression returns Expression:
