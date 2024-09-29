@@ -1,1 +1,0 @@
-zenClass Alpha {}
