@@ -108,7 +108,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
           return desc
         })
         .filter(it => !!it)
-      return this.createScope(imports)
+
+      const scriptStatic = script.classes.map(it => this.descriptions.createDescription(it, it.name))
+      let scope = this.createScope(imports)
+      scope = this.createScope(scriptStatic, scope)
+
+      return scope
     }
     else if (context.index !== undefined) {
       const prev = classTypeRef.path[context.index - 1].ref
