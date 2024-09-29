@@ -2,15 +2,39 @@ import type { Reference } from 'langium'
 import type { ClassDeclaration, PrimitiveType } from '../generated/ast'
 
 // region TypeDescription
-export class TypeDescription {
-  $type: string
+export interface TypeDescConstants {
+  any: PrimitiveTypeDescription
+  void: PrimitiveTypeDescription
+  string: PrimitiveTypeDescription
+  bool: PrimitiveTypeDescription
+  byte: PrimitiveTypeDescription
+  short: PrimitiveTypeDescription
+  int: PrimitiveTypeDescription
+  long: PrimitiveTypeDescription
+  float: PrimitiveTypeDescription
+  double: PrimitiveTypeDescription
 
-  constructor($type: string) {
+  function: FunctionTypeDescription
+  class: ClassTypeDescription
+  proper: ProperTypeDescription
+  map: MapTypeDescription
+  array: ArrayTypeDescription
+  list: ListTypeDescription
+  union: UnionTypeDescription
+  intersection: IntersectionTypeDescription
+  int_range: IntRangeTypeDescription
+  package: PackageTypeDescription
+}
+
+export class TypeDescription<T extends keyof TypeDescConstants = keyof TypeDescConstants> {
+  $type: T
+
+  constructor($type: T) {
     this.$type = $type
   }
 }
 
-export class PrimitiveTypeDescription extends TypeDescription {
+export class PrimitiveTypeDescription extends TypeDescription<PrimitiveType['value']> {
   constructor($type: PrimitiveType['value']) {
     super($type)
   }
@@ -27,7 +51,7 @@ export class PrimitiveTypeDescription extends TypeDescription {
   static VOID = new PrimitiveTypeDescription('void')
 }
 
-export class FunctionTypeDescription extends TypeDescription {
+export class FunctionTypeDescription extends TypeDescription<'function'> {
   paramTypes: TypeDescription[]
   returnType: TypeDescription
 
@@ -38,7 +62,7 @@ export class FunctionTypeDescription extends TypeDescription {
   }
 }
 
-export class ClassTypeDescription extends TypeDescription {
+export class ClassTypeDescription extends TypeDescription<'class'> {
   className: string
   ref?: Reference<ClassDeclaration>
 
@@ -48,7 +72,7 @@ export class ClassTypeDescription extends TypeDescription {
   }
 }
 
-export class ProperTypeDescription extends TypeDescription {
+export class ProperTypeDescription extends TypeDescription<'proper'> {
   className: string
   ref?: Reference<ClassDeclaration>
 
@@ -58,7 +82,7 @@ export class ProperTypeDescription extends TypeDescription {
   }
 }
 
-export class MapTypeDescription extends TypeDescription {
+export class MapTypeDescription extends TypeDescription<'map'> {
   keyType: TypeDescription
   valueType: TypeDescription
 
@@ -69,7 +93,7 @@ export class MapTypeDescription extends TypeDescription {
   }
 }
 
-export class ArrayTypeDescription extends TypeDescription {
+export class ArrayTypeDescription extends TypeDescription<'array'> {
   elementType: TypeDescription
   constructor(elementType: TypeDescription) {
     super('array')
@@ -77,7 +101,7 @@ export class ArrayTypeDescription extends TypeDescription {
   }
 }
 
-export class ListTypeDescription extends TypeDescription {
+export class ListTypeDescription extends TypeDescription<'list'> {
   elementType: TypeDescription
   constructor(elementType: TypeDescription) {
     super('list')
@@ -85,7 +109,7 @@ export class ListTypeDescription extends TypeDescription {
   }
 }
 
-export class UnionTypeDescription extends TypeDescription {
+export class UnionTypeDescription extends TypeDescription<'union'> {
   elementTypes: TypeDescription[]
   constructor(elementTypes: TypeDescription[]) {
     super('union')
@@ -93,7 +117,7 @@ export class UnionTypeDescription extends TypeDescription {
   }
 }
 
-export class IntersectionTypeDescription extends TypeDescription {
+export class IntersectionTypeDescription extends TypeDescription<'intersection'> {
   elementTypes: TypeDescription[]
   constructor(elementTypes: TypeDescription[]) {
     super('intersection')
@@ -101,13 +125,13 @@ export class IntersectionTypeDescription extends TypeDescription {
   }
 }
 
-export class IntRangeTypeDescription extends TypeDescription {
+export class IntRangeTypeDescription extends TypeDescription<'int_range'> {
   constructor() {
     super('int_range')
   }
 }
 
-export class PackageTypeDescription extends TypeDescription {
+export class PackageTypeDescription extends TypeDescription<'package'> {
   packageName: string
   constructor(packageName: string) {
     super('package')

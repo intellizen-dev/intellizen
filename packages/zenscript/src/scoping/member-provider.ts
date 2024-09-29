@@ -1,28 +1,31 @@
-import { type AstNode, type AstNodeDescription, type AstNodeDescriptionProvider, AstUtils, type NameProvider } from 'langium'
-import type { ClassDeclaration, ClassType, ImportDeclaration, Script, VariableDeclaration } from '../generated/ast'
+import { type AstNodeDescription, type AstNodeDescriptionProvider, AstUtils, type AstNode as LangiumAstNode, type NameProvider } from 'langium'
+import type { IntelliZenAstType, Script } from '../generated/ast'
 import { isScript, isVariableDeclaration } from '../generated/ast'
 import type { IntelliZenServices } from '../module'
 import { getClassChain, isStaticMember } from '../utils/ast'
-import type { ClassTypeDescription, TypeDescription } from '../typing/description'
+import type { TypeDescConstants, TypeDescription } from '../typing/description'
 import type { TypeComputer } from '../typing/infer'
+
+interface AstNode extends LangiumAstNode {
+  readonly $type: keyof IntelliZenAstType
+}
 
 export interface MemberProvider {
   getMember: (source: AstNode | TypeDescription | undefined) => AstNodeDescription[]
 }
 
-// type RuleMap<T extends keyof IntelliZenAstType, K extends T> = Map<IntelliZenAstType[K], (node: IntelliZenAstType[K]) => AstNodeDescription[]>
-// type Rule = <T extends keyof IntelliZenAstType, K extends T>(match: T, produce: (source: IntelliZenAstType[K]) => AstNodeDescription[]) => void
-// type Produce = <S extends AstNode | TypeDescription>(source: S) => AstNodeDescription[]
+type Rules = IntelliZenAstType & TypeDescConstants
+type RuleKeys = keyof IntelliZenAstType | keyof TypeDescConstants
 
-type RuleMap = Map<string, Produce>
-type Rule = (match: string, produce: Produce) => void
-type Produce = (source: any) => AstNodeDescription[]
+type Rule = <T extends RuleKeys, S extends Rules[T]>(match: T, produce: Produce<T, S>) => void
+type Produce<T extends RuleKeys, S extends Rules[T]> = (node: S) => AstNodeDescription[]
+type RuleMap<T extends RuleKeys, S extends Rules[T]> = Map<T, Produce<T, S>>
 
 export class ZenScriptMemberProvider implements MemberProvider {
   private readonly nameProvider: NameProvider
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
-  private readonly rules: RuleMap
+  private readonly rules: RuleMap<RuleKeys, any>
 
   getMember(source: AstNode | TypeDescription | undefined): AstNodeDescription[] {
     if (!source || !source.$type) {
@@ -46,7 +49,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       this.rules.set(match, produce)
     }
 
-    rule('Script', (source: Script) => {
+    rule('Script', (source) => {
       const members: AstNode[] = []
       source.classes.forEach(it => members.push(it))
       source.functions.forEach(it => members.push(it))
@@ -56,23 +59,23 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return members.map(it => this.createDescriptionForNode(it))
     })
 
-    rule('ImportDeclaration', (source: ImportDeclaration) => {
+    rule('ImportDeclaration', (source) => {
       return this.getMember(source.path.at(-1)?.ref)
     })
 
-    rule('ClassDeclaration', (source: ClassDeclaration) => {
+    rule('ClassDeclaration', (source) => {
       return getClassChain(source)
         .flatMap(it => it.members)
         .filter(it => isStaticMember(it))
         .map(it => this.createDescriptionForNode(it, undefined))
     })
 
-    rule('VariableDeclaration', (source: VariableDeclaration) => {
+    rule('VariableDeclaration', (source) => {
       const type = this.typeComputer.inferType(source)
       return this.getMember(type)
     })
 
-    rule('ClassType', (source: ClassType) => {
+    rule('ClassType', (source) => {
       const script = AstUtils.findRootNode(source) as Script
       const result: AstNodeDescription[] = []
       script.imports.forEach((importDecl) => {
@@ -96,7 +99,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.getMember(source.refer.ref)
     })
 
-    rule('class', (source: ClassTypeDescription) => {
+    rule('class', (source) => {
       const ref = source.ref?.ref
       return getClassChain(ref)
         .flatMap(it => it.members)
