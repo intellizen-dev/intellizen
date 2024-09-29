@@ -1,5 +1,4 @@
 import type { AstNode, ReferenceInfo } from 'langium'
-import { take } from 'lodash-es'
 import type { ClassDeclaration, ClassMemberDeclaration, ImportDeclaration } from '../generated/ast'
 import { isScript } from '../generated/ast'
 
@@ -31,7 +30,7 @@ export function toQualifiedName(importDecl: ImportDeclaration, context: Referenc
     names.push(importDecl.path.at(-1)!.$refText)
   }
   else if (context.property === 'path' && context.index !== undefined) {
-    names = take(names, context.index + 1)
+    names = names.slice(0, context.index + 1)
   }
   return names.join('.')
 }
@@ -41,6 +40,6 @@ export function getPathAsString(importDecl: ImportDeclaration, context: Referenc
     return ''
   }
   let names = importDecl.path.map(it => it.$refText)
-  names = take(names, context.index)
+  names = names.slice(0, context.index)
   return names.join('.')
 }

@@ -1,6 +1,5 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope } from 'langium'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI } from 'langium'
-import { last } from 'lodash-es'
 import type { ClassDeclaration, ClassType, Declaration, Expression, ImportDeclaration, LocalVariable, Script, TypeReference } from '../generated/ast'
 import { isClassDeclaration, isClassType, isDeclaration, isExpression, isImportDeclaration, isLocalVariable, isScript, isTypeReference, isVariableDeclaration } from '../generated/ast'
 import type { TypeComputer } from '../typing/infer'
@@ -80,7 +79,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       }
       const imports = script.imports
         .map((it) => {
-          const desc = last(it.path)?.$nodeDescription
+          const desc = it.path[it.path.length - 1]?.$nodeDescription
           if (desc && it.alias) {
             desc.name = it.alias
           }
@@ -98,7 +97,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         return this.createScope(this.memberClassDeclaration(prev))
       }
       else if (isImportDeclaration(prev)) {
-        return this.createScope([last(prev.path)!.$nodeDescription!])
+        return this.createScope([prev.path[prev.path.length - 1].$nodeDescription!])
       }
       else {
         return EMPTY_SCOPE
