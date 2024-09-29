@@ -1,7 +1,7 @@
 import type { AstNodeDescription, ReferenceInfo, Scope } from 'langium'
-import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI } from 'langium'
+import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, EMPTY_STREAM, URI, isNamed } from 'langium'
 import type { ClassType, ImportDeclaration } from '../generated/ast'
-import { isClassType, isImportDeclaration, isScript } from '../generated/ast'
+import { isClassType, isImportDeclaration, isLocalVariable, isScript, isStatement } from '../generated/ast'
 import type { IntelliZenServices } from '../module'
 import { getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
@@ -28,6 +28,10 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       return this.scopeClassTypeReference(context)
     }
 
+    if (isLocalVariable(container)) {
+      return this.scopeLocalVariable(context)
+    }
+
     // if (isMemberAccess(container)) {
     //   const members = this.member(container.receiver)
     //   return this.createScope(members)
@@ -38,6 +42,25 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     // }
 
     return super.getScope(context)
+  }
+
+  private scopeLocalVariable(context: ReferenceInfo): Scope {
+    const script = AstUtils.getContainerOfType(context.container, isScript)!
+    const scriptImports = script.imports.map(it => this.descriptions.createDescription(it, undefined))
+    const scriptStatics = this.memberProvider.getMember(script)
+    const block = AstUtils.getContainerOfType(context.container, isStatement)?.$container
+    let locals = EMPTY_STREAM
+    if (block) {
+      locals = AstUtils.streamContents(block)
+        .filter(isStatement)
+        .filter(isNamed)
+        .map(it => this.descriptions.createDescription(it, undefined))
+    }
+
+    let scope = this.createScope(scriptImports)
+    scope = this.createScope(scriptStatics, scope)
+    scope = this.createScope(locals, scope)
+    return scope
   }
 
   /* TODO: WIP, for testing only */
