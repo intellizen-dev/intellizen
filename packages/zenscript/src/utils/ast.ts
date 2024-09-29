@@ -1,18 +1,26 @@
 import type { AstNode, ReferenceInfo } from 'langium'
 import type { ClassDeclaration, ClassMemberDeclaration, ImportDeclaration } from '../generated/ast'
-import { isScript } from '../generated/ast'
+import { isClassDeclaration, isScript } from '../generated/ast'
 
 export function isToplevel(node: AstNode): boolean {
   return isScript(node.$container)
 }
 
 export function getClassChain(clazz?: ClassDeclaration): ClassDeclaration[] {
-  if (!clazz)
+  if (!clazz) {
     return []
+  }
+  if (!clazz.superTypes) {
+    return [clazz]
+  }
 
   const set = new Set<ClassDeclaration>()
   set.add(clazz)
-  clazz.superTypes?.flatMap(t => getClassChain(t.refer.ref)).forEach(c => set.add(c))
+  clazz.superTypes
+    .map(it => it.path.at(-1)?.ref)
+    .filter(it => isClassDeclaration(it))
+    .flatMap(it => getClassChain(it))
+    .forEach(it => set.add(it))
   return Array.from(set)
 }
 

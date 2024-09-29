@@ -33,7 +33,7 @@ export function assertTypeRef(matches: string, type?: TypeReference) {
     expect((type as PrimitiveType).value).toBe(matches)
   }
   else if (type?.$type === 'ClassType') {
-    expect((type as ClassType).refer.$refText).toBe(matches)
+    expect((type as ClassType).path.at(-1)?.$refText).toBe(matches)
   }
 }
 

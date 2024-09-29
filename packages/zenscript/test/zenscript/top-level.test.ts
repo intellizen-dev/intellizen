@@ -16,7 +16,7 @@ describe('parse top-level of script with ZenScript', () => {
     await assertNoErrors(model)
     expect(refImport.path[0].$refText).toBe('foo')
     expect(refImport.path[1].$refText).toBe('bar')
-    expect(refImport.refer.$refText).toBe('baz')
+    expect(refImport.path[2].$refText).toBe('baz')
   })
 
   it('function declaration', async () => {
@@ -81,7 +81,7 @@ describe('parse top-level of script with ZenScript', () => {
     expect(foo.superTypes).toStrictEqual([])
 
     expect(bar.name).toBe('Bar')
-    expect(bar.superTypes.map(subType => subType.refer.$refText)).toStrictEqual(['Foo', 'Baz'])
+    expect(bar.superTypes.map(subType => subType.path[0].$refText)).toStrictEqual(['Foo', 'Baz'])
   })
 
   it('class with members', async () => {
