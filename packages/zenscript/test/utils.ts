@@ -4,12 +4,12 @@ import { NodeFileSystem } from 'langium/node'
 import { parseHelper } from 'langium/test'
 import type { AstNode, LangiumDocument } from 'langium'
 
-import { createIntelliZenServices } from '../src/module'
-import type { ClassType, Expression, LocalVariable, PrimitiveType, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
+import { createZenScriptServices } from '../src/module'
+import type { ClassTypeReference, Expression, LocalVariable, PrimitiveTypeReference, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
 
 export function createParseHelper() {
-  const service = createIntelliZenServices(NodeFileSystem)
-  return parseHelper<Script>(service.intelliZen)
+  const service = createZenScriptServices(NodeFileSystem)
+  return parseHelper<Script>(service.zenscript)
 }
 
 export async function assertNoErrors(model: LangiumDocument<Script>) {
@@ -29,11 +29,11 @@ export async function assertNoErrors(model: LangiumDocument<Script>) {
 }
 
 export function assertTypeRef(matches: string | string[], type?: TypeReference) {
-  if (type?.$type === 'PrimitiveType') {
-    expect((type as PrimitiveType).value).toBe(matches)
+  if (type?.$type === 'PrimitiveTypeReference') {
+    expect((type as PrimitiveTypeReference).value).toBe(matches)
   }
-  else if (type?.$type === 'ClassType') {
-    expect((type as ClassType).path.map(p => p.$refText)).toStrictEqual(matches)
+  else if (type?.$type === 'ClassTypeReference') {
+    expect((type as ClassTypeReference).path.map(p => p.$refText)).toStrictEqual(matches)
   }
 }
 

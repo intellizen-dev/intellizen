@@ -1,6 +1,6 @@
 import type { AstNode, ResolvedReference } from 'langium'
 import type { BracketExpression, ClassDeclaration, ConditionalExpression, Declaration, Expression, FunctionExpression, ImportDeclaration, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference, VariableDeclaration } from '../generated/ast'
-import { isArrayLiteral, isArrayType, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isClassType, isConditionalExpression, isDeclaration, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionType, isImportDeclaration, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionType, isListType, isLiteralExpression, isLocalVariable, isMapLiteral, isMapType, isNullLiteral, isParenthesizedExpression, isParenthesizedType, isPrefixExpression, isPrimitiveType, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionType, isVariableDeclaration } from '../generated/ast'
+import { isArrayLiteral, isArrayTypeReference, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isClassTypeReference, isConditionalExpression, isDeclaration, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionTypeReference, isImportDeclaration, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionTypeReference, isListTypeReference, isLiteralExpression, isLocalVariable, isMapLiteral, isMapTypeReference, isNullLiteral, isParenthesizedExpression, isParenthesizedTypeReference, isPrefixExpression, isPrimitiveTypeReference, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionTypeReference, isVariableDeclaration } from '../generated/ast'
 import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, PackageTypeDescription, PrimitiveTypeDescription, ProperTypeDescription, type TypeDescription, UnionTypeDescription } from './description'
 
 export type TypeComputer = Pick<InstanceType<typeof ZenScriptTypeComputer>, 'inferType'>
@@ -22,47 +22,47 @@ export class ZenScriptTypeComputer {
 
   // region TypeReference
   private inferTypeReference(type: TypeReference): TypeDescription | undefined {
-    if (isPrimitiveType(type)) {
+    if (isPrimitiveTypeReference(type)) {
       return new PrimitiveTypeDescription(type.value)
     }
 
-    if (isListType(type)) {
+    if (isListTypeReference(type)) {
       const elementType = this.inferTypeReference(type.value) || PrimitiveTypeDescription.ANY
       return new ListTypeDescription(elementType)
     }
 
-    if (isArrayType(type)) {
+    if (isArrayTypeReference(type)) {
       const elementType = this.inferTypeReference(type.value) || PrimitiveTypeDescription.ANY
       return new ListTypeDescription(elementType)
     }
 
-    if (isMapType(type)) {
+    if (isMapTypeReference(type)) {
       const keyType = this.inferTypeReference(type.key) || PrimitiveTypeDescription.ANY
       const valueType = this.inferTypeReference(type.value) || PrimitiveTypeDescription.ANY
       return new MapTypeDescription(keyType, valueType)
     }
 
-    if (isUnionType(type)) {
+    if (isUnionTypeReference(type)) {
       const elementTypes = type.values.map(t => this.inferTypeReference(t) || PrimitiveTypeDescription.ANY)
       return new UnionTypeDescription(elementTypes)
     }
 
-    if (isIntersectionType(type)) {
+    if (isIntersectionTypeReference(type)) {
       const elementTypes = type.values.map(t => this.inferTypeReference(t) || PrimitiveTypeDescription.ANY)
       return new IntersectionTypeDescription(elementTypes)
     }
 
-    if (isParenthesizedType(type)) {
+    if (isParenthesizedTypeReference(type)) {
       return this.inferTypeReference(type.value)
     }
 
-    if (isFunctionType(type)) {
+    if (isFunctionTypeReference(type)) {
       const paramTypes = type.params.map(t => this.inferTypeReference(t) || PrimitiveTypeDescription.ANY)
       const returnType = this.inferTypeReference(type.returnType) || PrimitiveTypeDescription.ANY
       return new FunctionTypeDescription(paramTypes, returnType)
     }
 
-    if (isClassType(type)) {
+    if (isClassTypeReference(type)) {
       const className = type.path.map(it => it.$refText).join('.')
       const typeDesc = new ClassTypeDescription(className)
       const ref = type.path.at(-1)

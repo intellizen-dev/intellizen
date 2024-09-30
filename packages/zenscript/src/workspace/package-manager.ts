@@ -2,7 +2,7 @@ import type { AstNode, IndexManager } from 'langium'
 import { DocumentState } from 'langium'
 import type { HierarchyNode } from '@intellizen/shared'
 import { HierarchyTree } from '@intellizen/shared'
-import type { IntelliZenServices } from '../module'
+import type { ZenScriptServices } from '../module'
 
 export interface PackageManager {
   getAstNode: (path: string) => AstNode | undefined
@@ -13,7 +13,7 @@ export class ZenScriptPackageManager implements PackageManager {
   private readonly indexManager: IndexManager
   private readonly packageTree: HierarchyTree<AstNode>
 
-  constructor(services: IntelliZenServices) {
+  constructor(services: ZenScriptServices) {
     this.indexManager = services.shared.workspace.IndexManager
     this.packageTree = new HierarchyTree()
 

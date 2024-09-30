@@ -1,14 +1,14 @@
 import type { ValidationAcceptor, ValidationChecks } from 'langium'
-import type { ClassDeclaration, IntelliZenAstType } from '../generated/ast'
-import type { IntelliZenServices } from '../module'
+import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
+import type { ZenScriptServices } from '../module'
 
 /**
  * Register custom validation checks.
  */
-export function registerValidationChecks(services: IntelliZenServices) {
+export function registerValidationChecks(services: ZenScriptServices) {
   const registry = services.validation.ValidationRegistry
   const validator = services.validation.Validator
-  const checks: ValidationChecks<IntelliZenAstType> = {
+  const checks: ValidationChecks<ZenScriptAstType> = {
     ClassDeclaration: validator.checkClassStartsWithCapital,
   }
   registry.register(checks, validator)

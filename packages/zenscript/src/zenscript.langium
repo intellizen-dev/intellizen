@@ -1,4 +1,4 @@
-grammar IntelliZen
+grammar ZenScript
 
 entry Script:
     ( imports+=ImportDeclaration
@@ -18,7 +18,7 @@ interface ImportDeclaration extends Declaration {
 
 interface ClassDeclaration extends Declaration {
     name: string;
-    superTypes: ClassType[];
+    superTypes: ClassTypeReference[];
     members: ClassMemberDeclaration[];
 }
 
@@ -493,40 +493,40 @@ terminal fragment IN_TEMPLATE_LITERAL:
 
 interface TypeReference {}
 
-interface UnionType extends TypeReference {
+interface UnionTypeReference extends TypeReference {
     values: TypeReference[];
 }
 
-interface IntersectionType extends TypeReference {
+interface IntersectionTypeReference extends TypeReference {
     values: TypeReference[];
 }
 
-interface PrimitiveType extends TypeReference {
+interface PrimitiveTypeReference extends TypeReference {
     value: 'any' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'bool' | 'void' | 'string';
 }
 
-interface ListType extends TypeReference {
+interface ListTypeReference extends TypeReference {
     value: TypeReference;
 }
 
-interface FunctionType extends TypeReference {
+interface FunctionTypeReference extends TypeReference {
     params: TypeReference[];
     returnType: TypeReference;
 }
 
-interface ClassType extends TypeReference {
+interface ClassTypeReference extends TypeReference {
     path: @NamedElement[]
 }
 
-interface ParenthesizedType extends TypeReference {
+interface ParenthesizedTypeReference extends TypeReference {
     value: TypeReference;
 }
 
-interface ArrayType extends TypeReference {
+interface ArrayTypeReference extends TypeReference {
     value: TypeReference;
 }
 
-interface MapType extends TypeReference {
+interface MapTypeReference extends TypeReference {
     key: TypeReference;
     value: TypeReference;
 }
@@ -540,17 +540,17 @@ TypeReference returns TypeReference:
 ;
 
 UnionType returns TypeReference:
-    IntersectionType ({UnionType.values+=current} ('|' values+=IntersectionType)+)?
+    IntersectionType ({UnionTypeReference.values+=current} ('|' values+=IntersectionType)+)?
 ;
 
 IntersectionType returns TypeReference:
-    ComplexType ({IntersectionType.values+=current} ('&' values+=ComplexType)+)?
+    ComplexType ({IntersectionTypeReference.values+=current} ('&' values+=ComplexType)+)?
 ;
 
 ComplexType returns TypeReference:
     PrimaryType ('['(
-        ({MapType.value=current} key=TypeReference) |
-        ({ArrayType.value=current})
+        ({MapTypeReference.value=current} key=TypeReference) |
+        ({ArrayTypeReference.value=current})
     )']')*
 ;
 
@@ -558,25 +558,25 @@ fragment PrimaryType returns TypeReference:
     PrimitiveType | ListType | FunctionType | ParenthesizedType | ClassType
 ;
 
-ParenthesizedType returns ParenthesizedType:
+ParenthesizedType returns ParenthesizedTypeReference:
     '(' value=TypeReference ')'
 ;
 
-PrimitiveType returns PrimitiveType:
+PrimitiveType returns PrimitiveTypeReference:
     value=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
 ;
 
-ListType returns ListType:
+ListType returns ListTypeReference:
     '[' value=TypeReference ']'
 ;
 
-FunctionType returns FunctionType:
+FunctionType returns FunctionTypeReference:
     'function' '('
         (params+=TypeReference (',' params+=TypeReference)*)?
     ')' returnType=TypeReference
 ;
 
-ClassType returns ClassType:
+ClassType returns ClassTypeReference:
     (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID]
 ;
 
