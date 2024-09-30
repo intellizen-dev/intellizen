@@ -397,7 +397,7 @@ fragment PrimaryExpression returns Expression:
 ;
 
 BracketExpression returns BracketExpression:
-    '<' value=(ID | ':')+ '>'
+    value = BRACKETS
 ;
 
 ParenthesizedExpression returns ParenthesizedExpression:
@@ -598,6 +598,7 @@ terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
 terminal FLOATING: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdD]?/;
 terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
+terminal BRACKETS: /<[^<>]+>/;
 
 hidden terminal BLOCK_COMMENT: /\/\*.*?\*\//;
 hidden terminal LINE_COMMENT: /\/\/[^\n\r]*/;
