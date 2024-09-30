@@ -17,7 +17,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly rules: Map<SourceKey, Produce>
 
   override getScope(context: ReferenceInfo): Scope {
-    const match = context.container.$type
+    const match = context.container.$type as SourceKey
     const produce = this.rules.get(match)
     return produce ? produce(context) : super.getScope(context)
   }
