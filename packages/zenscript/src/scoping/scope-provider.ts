@@ -1,7 +1,7 @@
-import type { AstNodeDescription, ReferenceInfo, Scope } from 'langium'
-import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, EMPTY_STREAM, URI, isNamed } from 'langium'
+import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, Stream } from 'langium'
+import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI, stream } from 'langium'
 import type { ClassTypeReference, ImportDeclaration, MemberAccess, ZenScriptAstType } from '../generated/ast'
-import { isScript, isStatement } from '../generated/ast'
+import { isScript } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
@@ -66,22 +66,26 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     })
 
     rule('LocalVariable', (source) => {
-      const script = AstUtils.getContainerOfType(source.container, isScript)!
-      const scriptImports = script.imports.map(it => this.descriptions.createDescription(it, undefined))
-      const scriptStatics = this.memberProvider.getMember(script)
-      const block = AstUtils.getContainerOfType(source.container, isStatement)?.$container
-      let locals = EMPTY_STREAM
-      if (block) {
-        locals = AstUtils.streamContents(block)
-          .filter(isStatement)
-          .filter(isNamed)
-          .map(it => this.descriptions.createDescription(it, undefined))
+      const scopes: Array<Stream<AstNodeDescription>> = []
+      const referenceType = this.reflection.getReferenceType(source)
+      const precomputed = AstUtils.getDocument(source.container).precomputedScopes
+      if (precomputed) {
+        let currentNode: AstNode | undefined = source.container
+        do {
+          const allDescriptions = precomputed.get(currentNode)
+          if (allDescriptions.length > 0) {
+            scopes.push(stream(allDescriptions).filter(
+              desc => this.reflection.isSubtype(desc.type, referenceType),
+            ))
+          }
+          currentNode = currentNode.$container
+        } while (currentNode)
       }
-
-      let scope = this.createScope(scriptImports)
-      scope = this.createScope(scriptStatics, scope)
-      scope = this.createScope(locals, scope)
-      return scope
+      let result: Scope = EMPTY_SCOPE
+      for (let i = scopes.length - 1; i >= 0; i--) {
+        result = this.createScope(scopes[i], result)
+      }
+      return result
     })
 
     rule('MemberAccess', (source) => {
