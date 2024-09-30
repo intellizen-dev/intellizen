@@ -10,11 +10,12 @@ import type { MemberProvider } from './member-provider'
 type SourceKey = keyof ZenScriptAstType
 type Produce = (source: ReferenceInfo) => Scope
 type Rule = <K extends SourceKey>(match: K, produce: Produce) => void
+type RuleMap = Map<SourceKey, Produce>
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
-  private readonly rules: Map<SourceKey, Produce>
+  private readonly rules: RuleMap
 
   override getScope(context: ReferenceInfo): Scope {
     const match = context.container.$type as SourceKey
@@ -26,16 +27,16 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     super(services)
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
-    this.rules = new Map()
-    this.initRules()
+    this.rules = this.initRules()
   }
 
-  private initRules() {
+  private initRules(): RuleMap {
+    const rules = new Map()
     const rule: Rule = (match, produce) => {
       if (this.rules.has(match)) {
         throw new Error(`Rule "${match}" is already defined.`)
       }
-      this.rules.set(match, produce)
+      rules.set(match, produce)
     }
 
     rule('ImportDeclaration', (source) => {
@@ -126,5 +127,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         return EMPTY_SCOPE
       }
     })
+
+    return rules
   }
 }

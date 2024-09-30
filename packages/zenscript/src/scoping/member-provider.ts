@@ -18,12 +18,13 @@ type SourceMap = ZenScriptAstType & TypeDescConstants
 type SourceKey = keyof SourceMap
 type Produce<K extends SourceKey, S extends SourceMap[K]> = (source: S) => AstNodeDescription[]
 type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Produce<K, S>) => void
+type RuleMap = Map<SourceKey, Produce<SourceKey, any>>
 
 export class ZenScriptMemberProvider implements MemberProvider {
   private readonly nameProvider: NameProvider
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
-  private readonly rules: Map<SourceKey, Produce<SourceKey, any>>
+  private readonly rules: RuleMap
 
   getMember(source: AstNode | TypeDescription | undefined): AstNodeDescription[] {
     if (!source || !source.$type) {
@@ -38,16 +39,16 @@ export class ZenScriptMemberProvider implements MemberProvider {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.nameProvider = services.references.NameProvider
     this.typeComputer = services.typing.TypeComputer
-    this.rules = new Map()
-    this.initRules()
+    this.rules = this.initRules()
   }
 
-  private initRules() {
+  private initRules(): RuleMap {
+    const rules: RuleMap = new Map()
     const rule: Rule = (match, produce) => {
       if (this.rules.has(match)) {
         throw new Error(`Rule "${match}" is already defined.`)
       }
-      this.rules.set(match, produce)
+      rules.set(match, produce)
     }
 
     rule('Script', (source) => {
@@ -111,6 +112,8 @@ export class ZenScriptMemberProvider implements MemberProvider {
         .filter(it => !isStaticMember(it))
         .map(it => this.createDescriptionForNode(it))
     })
+
+    return rules
   }
 
   private createDescriptionForNode(node: AstNode, name?: string): AstNodeDescription {

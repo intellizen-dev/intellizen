@@ -11,9 +11,10 @@ type SourceMap = ZenScriptAstType
 type SourceKey = keyof SourceMap
 type Produce<K extends SourceKey, S extends SourceMap[K]> = (source: S) => TypeDescription | undefined
 type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Produce<K, S>) => void
+type RuleMap = Map<SourceKey, Produce<SourceKey, any>>
 
 export class ZenScriptTypeComputer implements TypeComputer {
-  private readonly rules: Map<SourceKey, Produce<SourceKey, any>>
+  private readonly rules: RuleMap
 
   public inferType(node: AstNode | undefined): TypeDescription | undefined {
     const match = node?.$type as SourceKey
@@ -22,16 +23,16 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   constructor() {
-    this.rules = new Map()
-    this.initRules()
+    this.rules = this.initRules()
   }
 
-  private initRules() {
+  private initRules(): RuleMap {
+    const rules: RuleMap = new Map()
     const rule: Rule = (match, produce) => {
       if (this.rules.has(match)) {
         throw new Error(`Rule "${match}" is already defined.`)
       }
-      this.rules.set(match, produce)
+      rules.set(match, produce)
     }
 
     // region TypeReference
@@ -245,5 +246,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return new MapTypeDescription(keyType, valueType)
     })
     // endregion
+
+    return rules
   }
 }
