@@ -6,25 +6,24 @@ import { getClassChain, isStaticMember } from '../utils/ast'
 import type { TypeDescConstants, TypeDescription } from '../typing/description'
 import type { TypeComputer } from '../typing/infer'
 
-interface AstNode extends LangiumAstNode {
-  readonly $type: keyof ZenScriptAstType
-}
-
 export interface MemberProvider {
   getMember: (source: AstNode | TypeDescription | undefined) => AstNodeDescription[]
 }
 
-type RuleKeys = keyof Rules
-type Rules = ZenScriptAstType & TypeDescConstants
+interface AstNode extends LangiumAstNode {
+  readonly $type: keyof ZenScriptAstType
+}
 
-type Produce<T extends RuleKeys, S extends Rules[T]> = (node: S) => AstNodeDescription[]
-type Rule = <T extends RuleKeys, S extends Rules[T]>(match: T, produce: Produce<T, S>) => void
+type SourceMap = ZenScriptAstType & TypeDescConstants
+type SourceKey = keyof SourceMap
+type Produce<K extends SourceKey, S extends SourceMap[K]> = (source: S) => AstNodeDescription[]
+type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Produce<K, S>) => void
 
 export class ZenScriptMemberProvider implements MemberProvider {
   private readonly nameProvider: NameProvider
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
-  private readonly rules: Map<RuleKeys, Produce<RuleKeys, any>>
+  private readonly rules: Map<SourceKey, Produce<SourceKey, any>>
 
   getMember(source: AstNode | TypeDescription | undefined): AstNodeDescription[] {
     if (!source || !source.$type) {
