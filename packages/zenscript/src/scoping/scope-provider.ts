@@ -33,7 +33,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private initRules(): RuleMap {
     const rules: RuleMap = new Map()
     const rule: Rule = (match, produce) => {
-      if (this.rules.has(match)) {
+      if (rules.has(match)) {
         throw new Error(`Rule "${match}" is already defined.`)
       }
       rules.set(match, produce)
