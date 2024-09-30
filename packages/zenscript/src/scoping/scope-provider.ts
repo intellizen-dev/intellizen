@@ -1,20 +1,42 @@
 import type { AstNodeDescription, ReferenceInfo, Scope } from 'langium'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, EMPTY_STREAM, URI, isNamed } from 'langium'
-import type { ClassTypeReference, ImportDeclaration } from '../generated/ast'
+import type { ClassTypeReference, ImportDeclaration, ZenScriptAstType } from '../generated/ast'
 import { isClassTypeReference, isImportDeclaration, isLocalVariable, isMemberAccess, isScript, isStatement } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
 import type { MemberProvider } from './member-provider'
 
+type SourceMap = ZenScriptAstType
+type Product = Scope
+
+type SourceKey = keyof SourceMap
+type Produce<K extends SourceKey, S extends SourceMap[K]> = (source: S) => Product
+type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Produce<K, S>) => void
+
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
+  private readonly rules: Map<SourceKey, Produce<SourceKey, any>>
 
   constructor(services: ZenScriptServices) {
     super(services)
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
+    this.rules = new Map()
+  }
+
+  private initRules() {
+    const rule: Rule = (match, produce) => {
+      if (this.rules.has(match)) {
+        throw new Error(`Rule "${match}" is already defined.`)
+      }
+      this.rules.set(match, produce)
+    }
+
+    rule('LocalVariable', (source) => {
+
+    })
   }
 
   override getScope(context: ReferenceInfo): Scope {
