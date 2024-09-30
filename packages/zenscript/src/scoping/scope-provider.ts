@@ -7,17 +7,14 @@ import { getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
 import type { MemberProvider } from './member-provider'
 
-type SourceMap = ZenScriptAstType
-type Product = Scope
-
-type SourceKey = keyof SourceMap
-type Produce<K extends SourceKey, S extends SourceMap[K]> = (source: S) => Product
-type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Produce<K, S>) => void
+type SourceKey = keyof ZenScriptAstType
+type Produce = (source: ReferenceInfo) => Scope
+type Rule = <K extends SourceKey>(match: K, produce: Produce) => void
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
-  private readonly rules: Map<SourceKey, Produce<SourceKey, any>>
+  private readonly rules: Map<SourceKey, Produce>
 
   constructor(services: ZenScriptServices) {
     super(services)
@@ -35,7 +32,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     }
 
     rule('LocalVariable', (source) => {
-
+      return this.scopeLocalVariable(source)
     })
   }
 
