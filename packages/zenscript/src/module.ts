@@ -1,6 +1,6 @@
 import { type Module, inject } from 'langium'
 import { type DefaultSharedModuleContext, type LangiumServices, type LangiumSharedServices, type PartialLangiumServices, createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
-import { IntelliZenGeneratedModule, IntelliZenGeneratedSharedModule } from './generated/module'
+import { ZenScriptGeneratedModule, ZenScriptGeneratedSharedModule } from './generated/module'
 import { ZenScriptScopeProvider } from './scoping/scope-provider'
 import { ZenScriptScopeComputation } from './scoping/scope-computation'
 import { CustomTokenBuilder } from './lexer/token-builder'
@@ -15,7 +15,7 @@ import { ZenScriptMemberProvider } from './scoping/member-provider'
 /**
  * Declaration of custom services - add your own service classes here.
  */
-export interface IntelliZenAddedServices {
+export interface ZenScriptAddedServices {
   validation: {
     Validator: ZenScriptValidator
   }
@@ -34,14 +34,14 @@ export interface IntelliZenAddedServices {
  * Union of Langium default services and your custom services - use this as constructor parameter
  * of custom service classes.
  */
-export type IntelliZenServices = LangiumServices & IntelliZenAddedServices
+export type ZenScriptServices = LangiumServices & ZenScriptAddedServices
 
 /**
  * Dependency injection module that overrides Langium default services and contributes the
  * declared custom services. The Langium defaults can be partially specified to override only
  * selected services, while the custom services must be fully specified.
  */
-export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices & IntelliZenAddedServices> = {
+export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices & ZenScriptAddedServices> = {
   validation: {
     Validator: () => new ZenScriptValidator(),
   },
@@ -81,25 +81,25 @@ export const IntelliZenModule: Module<IntelliZenServices, PartialLangiumServices
  * @param context Optional module context with the LSP connection
  * @returns An object wrapping the shared services and the language-specific services
  */
-export function createIntelliZenServices(context: DefaultSharedModuleContext): {
+export function createZenScriptServices(context: DefaultSharedModuleContext): {
   shared: LangiumSharedServices
-  intelliZen: IntelliZenServices
+  zenscript: ZenScriptServices
 } {
   const shared = inject(
     createDefaultSharedModule(context),
-    IntelliZenGeneratedSharedModule,
+    ZenScriptGeneratedSharedModule,
   )
-  const intelliZen = inject(
+  const zenscript = inject(
     createDefaultModule({ shared }),
-    IntelliZenGeneratedModule,
-    IntelliZenModule,
+    ZenScriptGeneratedModule,
+    ZenScriptModule,
   )
-  shared.ServiceRegistry.register(intelliZen)
-  registerValidationChecks(intelliZen)
+  shared.ServiceRegistry.register(zenscript)
+  registerValidationChecks(zenscript)
   if (!context.connection) {
     // We don't run inside a language server
     // Therefore, initialize the configuration provider instantly
     shared.workspace.ConfigurationProvider.initialized({})
   }
-  return { shared, intelliZen }
+  return { shared, zenscript }
 }

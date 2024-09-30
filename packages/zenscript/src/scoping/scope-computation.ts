@@ -2,11 +2,11 @@ import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes } 
 import { AstUtils, DefaultScopeComputation } from 'langium'
 import type { ClassDeclaration, ValueParameter } from '../generated/ast'
 import { isClassDeclaration, isFunctionDeclaration, isScript, isValueParameter, isVariableDeclaration } from '../generated/ast'
-import type { IntelliZenServices } from '../module'
+import type { ZenScriptServices } from '../module'
 import { isToplevel } from '../utils/ast'
 
 export class ZenScriptScopeComputation extends DefaultScopeComputation {
-  constructor(services: IntelliZenServices) {
+  constructor(services: ZenScriptServices) {
     super(services)
   }
 

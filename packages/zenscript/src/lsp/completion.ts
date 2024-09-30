@@ -1,13 +1,13 @@
 import type { CompletionProviderOptions } from 'langium/lsp'
 import { DefaultCompletionProvider } from 'langium/lsp'
-import type { IntelliZenServices } from '../module'
+import type { ZenScriptServices } from '../module'
 
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   readonly completionOptions: CompletionProviderOptions = {
     triggerCharacters: ['.'],
   }
 
-  constructor(services: IntelliZenServices) {
+  constructor(services: ZenScriptServices) {
     super(services)
   }
 }

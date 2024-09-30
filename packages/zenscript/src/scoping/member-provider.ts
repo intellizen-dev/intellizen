@@ -1,13 +1,13 @@
 import { type AstNodeDescription, type AstNodeDescriptionProvider, AstUtils, type AstNode as LangiumAstNode, type NameProvider } from 'langium'
-import type { IntelliZenAstType, Script } from '../generated/ast'
+import type { Script, ZenScriptAstType } from '../generated/ast'
 import { isScript, isVariableDeclaration } from '../generated/ast'
-import type { IntelliZenServices } from '../module'
+import type { ZenScriptServices } from '../module'
 import { getClassChain, isStaticMember } from '../utils/ast'
 import type { TypeDescConstants, TypeDescription } from '../typing/description'
 import type { TypeComputer } from '../typing/infer'
 
 interface AstNode extends LangiumAstNode {
-  readonly $type: keyof IntelliZenAstType
+  readonly $type: keyof ZenScriptAstType
 }
 
 export interface MemberProvider {
@@ -15,7 +15,7 @@ export interface MemberProvider {
 }
 
 type RuleKeys = keyof Rules
-type Rules = IntelliZenAstType & TypeDescConstants
+type Rules = ZenScriptAstType & TypeDescConstants
 
 type Produce<T extends RuleKeys, S extends Rules[T]> = (node: S) => AstNodeDescription[]
 type Rule = <T extends RuleKeys, S extends Rules[T]>(match: T, produce: Produce<T, S>) => void
@@ -35,7 +35,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     return produce ? produce(source) : []
   }
 
-  constructor(services: IntelliZenServices) {
+  constructor(services: ZenScriptServices) {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.nameProvider = services.references.NameProvider
     this.typeComputer = services.typing.TypeComputer
@@ -77,7 +77,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.getMember(type)
     })
 
-    rule('ClassType', (source) => {
+    rule('ClassTypeReference', (source) => {
       const script = AstUtils.findRootNode(source) as Script
       const result: AstNodeDescription[] = []
       script.imports.forEach((importDecl) => {

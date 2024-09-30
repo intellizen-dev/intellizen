@@ -1,8 +1,8 @@
 import type { AstNodeDescription, ReferenceInfo, Scope } from 'langium'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, EMPTY_STREAM, URI, isNamed } from 'langium'
-import type { ClassType, ImportDeclaration } from '../generated/ast'
-import { isClassType, isImportDeclaration, isLocalVariable, isMemberAccess, isScript, isStatement } from '../generated/ast'
-import type { IntelliZenServices } from '../module'
+import type { ClassTypeReference, ImportDeclaration } from '../generated/ast'
+import { isClassTypeReference, isImportDeclaration, isLocalVariable, isMemberAccess, isScript, isStatement } from '../generated/ast'
+import type { ZenScriptServices } from '../module'
 import { getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
 import type { MemberProvider } from './member-provider'
@@ -11,7 +11,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
 
-  constructor(services: IntelliZenServices) {
+  constructor(services: ZenScriptServices) {
     super(services)
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
@@ -24,7 +24,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       return this.scopeImportDeclaration(context)
     }
 
-    if (isClassType(container)) {
+    if (isClassTypeReference(container)) {
       return this.scopeClassTypeReference(context)
     }
 
@@ -34,11 +34,6 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     if (isMemberAccess(container)) {
       const members = this.memberProvider.getMember(container.receiver)
-      return this.createScope(members)
-    }
-
-    if (isClassType(container)) {
-      const members = this.memberProvider.getMember(container)
       return this.createScope(members)
     }
 
@@ -92,7 +87,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   private scopeClassTypeReference(context: ReferenceInfo): Scope {
-    const classTypeRef = context.container as ClassType
+    const classTypeRef = context.container as ClassTypeReference
 
     if (context.index === 0) {
       const script = AstUtils.getContainerOfType(classTypeRef, isScript)

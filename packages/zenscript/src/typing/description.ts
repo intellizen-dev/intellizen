@@ -1,5 +1,5 @@
 import type { Reference } from 'langium'
-import type { ClassDeclaration, PrimitiveType } from '../generated/ast'
+import type { ClassDeclaration, PrimitiveTypeReference } from '../generated/ast'
 
 // region TypeDescription
 export interface TypeDescConstants {
@@ -34,8 +34,8 @@ export class TypeDescription<T extends keyof TypeDescConstants = keyof TypeDescC
   }
 }
 
-export class PrimitiveTypeDescription extends TypeDescription<PrimitiveType['value']> {
-  constructor($type: PrimitiveType['value']) {
+export class PrimitiveTypeDescription extends TypeDescription<PrimitiveTypeReference['value']> {
+  constructor($type: PrimitiveTypeReference['value']) {
     super($type)
   }
 
@@ -142,79 +142,79 @@ export class PackageTypeDescription extends TypeDescription<'package'> {
 // endregion
 
 // region Predicates
-export function isStringTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+export function isStringTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
   return typeDesc?.$type === 'string'
 }
 
-export function isAnyTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+export function isAnyTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
   return typeDesc?.$type === 'any'
 }
 
-export function isBoolTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+export function isBoolTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
   return typeDesc?.$type === 'bool'
 }
 
-export function isByteTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+export function isByteTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
   return typeDesc?.$type === 'byte'
 }
 
-export function isDoubleTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+export function isDoubleTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
   return typeDesc?.$type === 'double'
 }
 
-export function isFloatTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+export function isFloatTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
   return typeDesc?.$type === 'float'
 }
 
-export function isIntTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+export function isIntTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
   return typeDesc?.$type === 'int'
 }
 
-export function isLongTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+export function isLongTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
   return typeDesc?.$type === 'long'
 }
 
-export function isShortTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+export function isShortTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
   return typeDesc?.$type === 'short'
 }
 
-export function isVoidTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+export function isVoidTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
   return typeDesc?.$type === 'void'
 }
 
-export function isPrimitiveTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
+export function isPrimitiveTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
   return typeDesc instanceof PrimitiveTypeDescription
 }
 
-export function isClassTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
+export function isClassTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
   return typeDesc instanceof ClassTypeDescription
 }
 
-export function isProperTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is ProperTypeDescription {
+export function isProperTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is ProperTypeDescription {
   return typeDesc instanceof ProperTypeDescription
 }
 
-export function isMapTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is MapTypeDescription {
+export function isMapTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is MapTypeDescription {
   return typeDesc instanceof MapTypeDescription
 }
 
-export function isArrayTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is ArrayTypeDescription {
+export function isArrayTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is ArrayTypeDescription {
   return typeDesc instanceof ArrayTypeDescription
 }
 
-export function isListTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is ListTypeDescription {
+export function isListTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is ListTypeDescription {
   return typeDesc instanceof ListTypeDescription
 }
 
-export function isUnionTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is UnionTypeDescription {
+export function isUnionTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is UnionTypeDescription {
   return typeDesc instanceof UnionTypeDescription
 }
 
-export function isIntersectionTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is IntersectionTypeDescription {
+export function isIntersectionTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is IntersectionTypeDescription {
   return typeDesc instanceof IntersectionTypeDescription
 }
 
-export function isPackageTypeDesc(typeDesc: TypeDescription | undefined): typeDesc is PackageTypeDescription {
+export function isPackageTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PackageTypeDescription {
   return typeDesc instanceof PackageTypeDescription
 }
 // endregion
