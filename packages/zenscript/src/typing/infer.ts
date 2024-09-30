@@ -1,198 +1,207 @@
 import type { AstNode, ResolvedReference } from 'langium'
-import type { BracketExpression, ClassDeclaration, ConditionalExpression, Declaration, Expression, FunctionExpression, ImportDeclaration, InfixExpression, LiteralExpression, LocalVariable, PrefixExpression, TypeReference, VariableDeclaration } from '../generated/ast'
-import { isArrayLiteral, isArrayTypeReference, isAssignment, isBooleanLiteral, isBracketExpression, isClassDeclaration, isClassTypeReference, isConditionalExpression, isDeclaration, isExpression, isFloatingLiteral, isFunctionExpression, isFunctionTypeReference, isImportDeclaration, isInfixExpression, isInstanceofExpression, isIntegerLiteral, isIntersectionTypeReference, isListTypeReference, isLiteralExpression, isLocalVariable, isMapLiteral, isMapTypeReference, isNullLiteral, isParenthesizedExpression, isParenthesizedTypeReference, isPrefixExpression, isPrimitiveTypeReference, isStringLiteral, isStringTemplate, isTypeCastExpression, isTypeReference, isUnionTypeReference, isVariableDeclaration } from '../generated/ast'
-import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, PackageTypeDescription, PrimitiveTypeDescription, ProperTypeDescription, type TypeDescription, UnionTypeDescription } from './description'
+import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
+import { isClassDeclaration } from '../generated/ast'
+import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, PrimitiveTypeDescription, type TypeDescription, UnionTypeDescription } from './description'
 
-export type TypeComputer = Pick<InstanceType<typeof ZenScriptTypeComputer>, 'inferType'>
+export interface TypeComputer {
+  inferType: (node: AstNode | undefined) => TypeDescription | undefined
+}
 
-export class ZenScriptTypeComputer {
-  public inferType(node: AstNode): TypeDescription | undefined {
-    if (isExpression(node)) {
-      return this.inferExpression(node)
-    }
+type SourceMap = ZenScriptAstType
+type SourceKey = keyof SourceMap
+type Produce<K extends SourceKey, S extends SourceMap[K]> = (source: S) => TypeDescription | undefined
+type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Produce<K, S>) => void
 
-    if (isTypeReference(node)) {
-      return this.inferTypeReference(node)
-    }
+export class ZenScriptTypeComputer implements TypeComputer {
+  private readonly rules: Map<SourceKey, Produce<SourceKey, any>>
 
-    if (isDeclaration(node)) {
-      return this.inferDeclaration(node)
-    }
+  public inferType(node: AstNode | undefined): TypeDescription | undefined {
+    const match = node?.$type as SourceKey
+    const produce = this.rules.get(match)
+    return produce ? produce(node) : undefined
   }
 
-  // region TypeReference
-  private inferTypeReference(type: TypeReference): TypeDescription | undefined {
-    if (isPrimitiveTypeReference(type)) {
-      return new PrimitiveTypeDescription(type.value)
+  constructor() {
+    this.rules = new Map()
+    this.initRules()
+  }
+
+  private initRules() {
+    const rule: Rule = (match, produce) => {
+      if (this.rules.has(match)) {
+        throw new Error(`Rule "${match}" is already defined.`)
+      }
+      this.rules.set(match, produce)
     }
 
-    if (isListTypeReference(type)) {
-      const elementType = this.inferTypeReference(type.value) || PrimitiveTypeDescription.ANY
+    // region TypeReference
+    rule('PrimitiveTypeReference', (source) => {
+      return new PrimitiveTypeDescription(source.value)
+    })
+
+    rule('ListTypeReference', (source) => {
+      const elementType = this.inferType(source.value) ?? PrimitiveTypeDescription.ANY
       return new ListTypeDescription(elementType)
-    }
+    })
 
-    if (isArrayTypeReference(type)) {
-      const elementType = this.inferTypeReference(type.value) || PrimitiveTypeDescription.ANY
+    rule('ArrayTypeReference', (source) => {
+      const elementType = this.inferType(source.value) ?? PrimitiveTypeDescription.ANY
       return new ListTypeDescription(elementType)
-    }
+    })
 
-    if (isMapTypeReference(type)) {
-      const keyType = this.inferTypeReference(type.key) || PrimitiveTypeDescription.ANY
-      const valueType = this.inferTypeReference(type.value) || PrimitiveTypeDescription.ANY
+    rule('MapTypeReference', (source) => {
+      const keyType = this.inferType(source.key) ?? PrimitiveTypeDescription.ANY
+      const valueType = this.inferType(source.value) ?? PrimitiveTypeDescription.ANY
       return new MapTypeDescription(keyType, valueType)
-    }
+    })
 
-    if (isUnionTypeReference(type)) {
-      const elementTypes = type.values.map(t => this.inferTypeReference(t) || PrimitiveTypeDescription.ANY)
+    rule('UnionTypeReference', (source) => {
+      const elementTypes = source.values.map(it => this.inferType(it) ?? PrimitiveTypeDescription.ANY)
       return new UnionTypeDescription(elementTypes)
-    }
+    })
 
-    if (isIntersectionTypeReference(type)) {
-      const elementTypes = type.values.map(t => this.inferTypeReference(t) || PrimitiveTypeDescription.ANY)
+    rule('IntersectionTypeReference', (source) => {
+      const elementTypes = source.values.map(it => this.inferType(it) ?? PrimitiveTypeDescription.ANY)
       return new IntersectionTypeDescription(elementTypes)
-    }
+    })
 
-    if (isParenthesizedTypeReference(type)) {
-      return this.inferTypeReference(type.value)
-    }
+    rule('ParenthesizedTypeReference', (source) => {
+      return this.inferType(source.value)
+    })
 
-    if (isFunctionTypeReference(type)) {
-      const paramTypes = type.params.map(t => this.inferTypeReference(t) || PrimitiveTypeDescription.ANY)
-      const returnType = this.inferTypeReference(type.returnType) || PrimitiveTypeDescription.ANY
+    rule('FunctionTypeReference', (source) => {
+      const paramTypes = source.params.map(it => this.inferType(it) ?? PrimitiveTypeDescription.ANY)
+      const returnType = this.inferType(source.returnType) ?? PrimitiveTypeDescription.ANY
       return new FunctionTypeDescription(paramTypes, returnType)
-    }
+    })
 
-    if (isClassTypeReference(type)) {
-      const className = type.path.map(it => it.$refText).join('.')
+    rule('ClassTypeReference', (source) => {
+      const className = source.path.map(it => it.$refText).join('.')
       const typeDesc = new ClassTypeDescription(className)
-      const ref = type.path.at(-1)
+      const ref = source.path.at(-1)
       if (isClassDeclaration(ref?.ref)) {
         typeDesc.ref = ref as ResolvedReference<ClassDeclaration>
       }
       return typeDesc
-    }
-  }
-  // endregion
+    })
+    // endregion
 
-  // region Declaration
-  private inferDeclaration(node: Declaration): TypeDescription | undefined {
-    if (isVariableDeclaration(node)) {
-      return this.inferVariableDeclaration(node)
-    }
-    else if (isClassDeclaration(node)) {
-      return this.inferClassDeclaration(node)
-    }
-    else if (isImportDeclaration(node)) {
-      return this.inferImportDeclaration(node)
-    }
-  }
+    // region Declaration
+    rule('VariableDeclaration', (source) => {
+      if (source.typeRef) {
+        return this.inferType(source.typeRef) ?? PrimitiveTypeDescription.ANY
+      }
+      else if (source.initializer) {
+        return this.inferType(source.initializer) ?? PrimitiveTypeDescription.ANY
+      }
+      else {
+        return PrimitiveTypeDescription.ANY
+      }
+    })
+    // endregion
 
-  private inferVariableDeclaration(node: VariableDeclaration): TypeDescription | undefined {
-    if (node.typeRef) {
-      return this.inferTypeReference(node.typeRef)
-    }
-    else if (node.initializer) {
-      return this.inferExpression(node.initializer)
-    }
-    else {
+    // region Expression
+    rule('Assignment', (source) => {
+      return this.inferType(source.right)
+    })
+
+    rule('ConditionalExpression', (_) => {
+      // TODO: operator overloading
+      return PrimitiveTypeDescription.BOOL
+    })
+
+    rule('PrefixExpression', (source) => {
+      switch (source.op) {
+        case '-':
+          return PrimitiveTypeDescription.INT
+        case '!':
+          return PrimitiveTypeDescription.BOOL
+      }
+    })
+
+    rule('InfixExpression', (source) => {
+      // TODO: operator overloading
+      switch (source.op) {
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+        case '%':
+          return PrimitiveTypeDescription.INT
+        case '<':
+        case '>':
+        case '<=':
+        case '>=':
+          return PrimitiveTypeDescription.BOOL
+        case '==':
+        case '!=':
+          return PrimitiveTypeDescription.BOOL
+        case '&&':
+        case '||':
+          return PrimitiveTypeDescription.BOOL
+        case 'has':
+        case 'in':
+          return PrimitiveTypeDescription.BOOL
+        case '&':
+        case '|':
+        case '^':
+          return PrimitiveTypeDescription.INT
+        case '~':
+          return PrimitiveTypeDescription.STRING
+        case 'to':
+        case '..':
+          return new IntRangeTypeDescription()
+      }
+    })
+
+    rule('TypeCastExpression', (source) => {
+      return this.inferType(source.typeRef)
+    })
+
+    rule('InstanceofExpression', (_) => {
+      return PrimitiveTypeDescription.BOOL
+    })
+
+    rule('ParenthesizedExpression', (source) => {
+      return this.inferType(source.expr)
+    })
+
+    rule('BracketExpression', (_) => {
+      // TODO: infer bracket expression
       return PrimitiveTypeDescription.ANY
-    }
-  }
+    })
 
-  private inferClassDeclaration(node: ClassDeclaration): TypeDescription | undefined {
-    const typeDesc = new ProperTypeDescription(node.name)
-    typeDesc.ref = { ref: node } as ResolvedReference<ClassDeclaration>
-    return typeDesc
-  }
+    rule('FunctionExpression', (source) => {
+      const paramTypes = source.parameters.map((param) => {
+        if (param.typeRef) {
+          return this.inferType(param.typeRef) ?? PrimitiveTypeDescription.ANY
+        }
+        else if (param.defaultValue) {
+          return this.inferType(param.defaultValue) ?? PrimitiveTypeDescription.ANY
+        }
+        else {
+          return PrimitiveTypeDescription.ANY
+        }
+      })
+      const returnType = this.inferType(source.returnTypeRef) ?? PrimitiveTypeDescription.ANY
+      return new FunctionTypeDescription(paramTypes, returnType)
+    })
 
-  private inferImportDeclaration(node: ImportDeclaration): TypeDescription | undefined {
-    return new PackageTypeDescription(node.path.at(-1)!.$refText)
-  }
-  // endregion
+    rule('LocalVariable', (source) => {
+      return this.inferType(source.refer.ref) ?? PrimitiveTypeDescription.ANY
+    })
 
-  // region Expression
-  private inferExpression(node: Expression): TypeDescription | undefined {
-    if (isAssignment(node)) {
-      return this.inferType(node.right)
-    }
-
-    if (isConditionalExpression(node)) {
-      return this.inferConditionalExpression(node)
-    }
-
-    if (isInfixExpression(node)) {
-      return this.inferInfixExpression(node)
-    }
-
-    if (isTypeCastExpression(node)) {
-      const ref = node.typeRef
-      return this.inferTypeReference(ref)
-    }
-
-    if (isInstanceofExpression(node)) {
-      return PrimitiveTypeDescription.BOOL
-    }
-
-    if (isPrefixExpression(node)) {
-      return this.inferPrefixExpression(node)
-    }
-
-    if (isParenthesizedExpression(node)) {
-      return this.inferType(node.expr)
-    }
-
-    if (isBracketExpression(node)) {
-      return this.inferBracketExpression(node)
-    }
-
-    if (isFunctionExpression(node)) {
-      return this.inferFunctionExpression(node)
-    }
-
-    if (isLiteralExpression(node)) {
-      return this.inferLiteralExpression(node)
-    }
-
-    if (isLocalVariable(node)) {
-      return this.inferLocalVariable(node)
-    }
-  }
-
-  private inferLocalVariable(node: LocalVariable): TypeDescription | undefined {
-    const ref = node.refer.ref
-    if (!ref) {
-      return
-    }
-
-    return this.inferType(ref)
-  }
-
-  private inferLiteralExpression(node: LiteralExpression): TypeDescription | undefined {
-    if (isArrayLiteral(node)) {
-      const elementType = (node.values.length > 0 && this.inferExpression(node.values[0]))
-        || PrimitiveTypeDescription.ANY
-      return new ArrayTypeDescription(elementType)
-    }
-
-    if (isBooleanLiteral(node)) {
-      return PrimitiveTypeDescription.BOOL
-    }
-
-    if (isMapLiteral(node)) {
-      const keyType = (node.entries.length > 0 && this.inferExpression(node.entries[0].key))
-        || PrimitiveTypeDescription.ANY
-      const valueType = (node.entries.length > 0 && this.inferExpression(node.entries[0].value))
-        || PrimitiveTypeDescription.ANY
-      return new MapTypeDescription(keyType, valueType)
-    }
-
-    if (isNullLiteral(node)) {
+    rule('NullLiteral', (_) => {
       // TODO: does it make sense?
       return PrimitiveTypeDescription.ANY
-    }
+    })
 
-    if (isIntegerLiteral(node)) {
-      switch (node.value.at(-1)) {
+    rule('BooleanLiteral', (_) => {
+      return PrimitiveTypeDescription.BOOL
+    })
+
+    rule('IntegerLiteral', (source) => {
+      switch (source.value.at(-1)) {
         case 'l':
         case 'L':
           return PrimitiveTypeDescription.LONG
@@ -200,10 +209,10 @@ export class ZenScriptTypeComputer {
         default:
           return PrimitiveTypeDescription.INT
       }
-    }
+    })
 
-    if (isFloatingLiteral(node)) {
-      switch (node.value.at(-1)) {
+    rule('FloatingLiteral', (source) => {
+      switch (source.value.at(-1)) {
         case 'f':
         case 'F':
           return PrimitiveTypeDescription.FLOAT
@@ -215,80 +224,26 @@ export class ZenScriptTypeComputer {
         default:
           return PrimitiveTypeDescription.DOUBLE
       }
-    }
-
-    if (isStringLiteral(node) || isStringTemplate(node)) {
-      return PrimitiveTypeDescription.STRING
-    }
-  }
-
-  private inferFunctionExpression(node: FunctionExpression): TypeDescription | undefined {
-    const paramTypes = node.parameters.map((p) => {
-      const ref = p.typeRef
-      return (ref && this.inferTypeReference(ref)) || PrimitiveTypeDescription.ANY
     })
 
-    const returnType = (node.returnTypeRef && this.inferTypeReference(node.returnTypeRef)) || PrimitiveTypeDescription.ANY
+    rule('StringLiteral', (_) => {
+      return PrimitiveTypeDescription.STRING
+    })
 
-    return new FunctionTypeDescription(paramTypes, returnType)
-  }
+    rule('StringTemplate', (_) => {
+      return PrimitiveTypeDescription.STRING
+    })
 
-  private inferBracketExpression(node: BracketExpression): TypeDescription | undefined {
-    const _ = node.value
-    // TODO: 解析尖括号
-    return new ClassTypeDescription('unknown bracket type')
-  }
+    rule('ArrayLiteral', (source) => {
+      const elementType = this.inferType(source.values[0]) ?? PrimitiveTypeDescription.ANY
+      return new ArrayTypeDescription(elementType)
+    })
 
-  private inferConditionalExpression(node: ConditionalExpression): TypeDescription | undefined {
-    // TODO: 运算符重载
-    const _ = node
-    return PrimitiveTypeDescription.BOOL
+    rule('MapLiteral', (source) => {
+      const keyType = this.inferType(source.entries[0]?.key) ?? PrimitiveTypeDescription.ANY
+      const valueType = this.inferType(source.entries[0]?.value) ?? PrimitiveTypeDescription.ANY
+      return new MapTypeDescription(keyType, valueType)
+    })
+    // endregion
   }
-
-  private inferPrefixExpression(node: PrefixExpression): TypeDescription {
-    const op = node.op
-    switch (op) {
-      case '-':
-        return PrimitiveTypeDescription.INT
-      case '!':
-        return PrimitiveTypeDescription.BOOL
-    }
-  }
-
-  private inferInfixExpression(node: InfixExpression): TypeDescription | undefined {
-    // TODO: 运算符重载
-    const op = node.op
-    switch (op) {
-      case '+':
-      case '-':
-      case '*':
-      case '/':
-      case '%':
-        return PrimitiveTypeDescription.INT
-      case '<':
-      case '>':
-      case '<=':
-      case '>=':
-        return PrimitiveTypeDescription.BOOL
-      case '==':
-      case '!=':
-        return PrimitiveTypeDescription.BOOL
-      case '&&':
-      case '||':
-        return PrimitiveTypeDescription.BOOL
-      case 'has':
-      case 'in':
-        return PrimitiveTypeDescription.BOOL
-      case '&':
-      case '|':
-      case '^':
-        return PrimitiveTypeDescription.INT
-      case '~':
-        return PrimitiveTypeDescription.STRING
-      case 'to':
-      case '..':
-        return new IntRangeTypeDescription()
-    }
-  }
-  // endregion
 }
