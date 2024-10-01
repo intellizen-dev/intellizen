@@ -188,7 +188,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return new FunctionTypeDescription(paramTypes, returnType)
     })
 
-    rule('LocalVariable', (source) => {
+    rule('ReferenceExpression', (source) => {
       return this.inferType(source.refer.ref) ?? PrimitiveTypeDescription.ANY
     })
 

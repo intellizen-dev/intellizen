@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { assertLocalVariableText, assertNoErrors, assertTypeRef, createParseHelper } from '../utils'
-import type { ArrayAccess, ArrayLiteral, Assignment, BooleanLiteral, CallExpression, ConditionalExpression, Expression, ExpressionStatement, FunctionExpression, InfixExpression, InstanceofExpression, LocalVariable, MapLiteral, MemberAccess, NullLiteral, NumberLiteral, ParenthesizedExpression, PrefixExpression, StringLiteral, StringTemplate, TypeCastExpression } from '../../src/generated/ast'
+import { assertNoErrors, assertReferenceExpressionText, assertTypeRef, createParseHelper } from '../utils'
+import type { ArrayAccess, ArrayLiteral, Assignment, BooleanLiteral, CallExpression, ConditionalExpression, Expression, ExpressionStatement, FunctionExpression, InfixExpression, InstanceofExpression, MapLiteral, MemberAccess, NullLiteral, NumberLiteral, ParenthesizedExpression, PrefixExpression, ReferenceExpression, StringLiteral, StringTemplate, TypeCastExpression } from '../../src/generated/ast'
 
 const parse = createParseHelper()
 
@@ -117,7 +117,7 @@ describe('parse expression of script with ZenScript ', () => {
     expect(empty.entries).toHaveLength(0)
     expect(withElements.entries).toHaveLength(2)
     withElements.entries.forEach(({ value, key }) => {
-      assertLocalVariableText(key, /\w/)
+      assertReferenceExpressionText(key, /\w/)
       expect(value.$type).toBe('IntegerLiteral')
     })
   })
@@ -134,7 +134,7 @@ describe('parse expression of script with ZenScript ', () => {
     expect(helloWorld.content).toHaveLength(3)
     const [hello, world, tail] = helloWorld.content
     expect(hello).toBe('hello, ')
-    assertLocalVariableText((world as Expression), 'world')
+    assertReferenceExpressionText((world as Expression), 'world')
     expect(tail).toBe('!')
 
     expect(escape.$type).toBe('StringTemplate')
@@ -166,8 +166,8 @@ describe('parse expression of script with ZenScript ', () => {
     `)
     expect(callExprs).toHaveLength(2)
     const [noArgs, withArgs] = callExprs
-    assertLocalVariableText(noArgs.receiver, 'call')
-    assertLocalVariableText(withArgs.receiver, 'call')
+    assertReferenceExpressionText(noArgs.receiver, 'call')
+    assertReferenceExpressionText(withArgs.receiver, 'call')
     expect(withArgs.arguments).toHaveLength(3)
     for (const arg of withArgs.arguments) {
       expect(arg.$type).toBe('IntegerLiteral')
@@ -177,7 +177,7 @@ describe('parse expression of script with ZenScript ', () => {
   it('member access expression', async () => {
     const memberAccessExpr = await parseExpr<MemberAccess>('foo.bar;')
     expect(memberAccessExpr.refer.$refText).toBe('bar')
-    assertLocalVariableText(memberAccessExpr.receiver, 'foo')
+    assertReferenceExpressionText(memberAccessExpr.receiver, 'foo')
   })
 
   it('infix expression', async () => {
@@ -204,21 +204,21 @@ describe('parse expression of script with ZenScript ', () => {
     expect(typeCastExpr).toHaveLength(2)
     const [int, otherType] = typeCastExpr
 
-    assertLocalVariableText(int.expr, 'foo')
+    assertReferenceExpressionText(int.expr, 'foo')
     assertTypeRef('int', int.typeRef)
-    assertLocalVariableText(otherType.expr, 'bar')
+    assertReferenceExpressionText(otherType.expr, 'bar')
     assertTypeRef(['OtherType'], otherType.typeRef)
   })
 
   it('array access', async () => {
     const arrayAccessExpr = await parseExpr<ArrayAccess>('foo[0];')
-    assertLocalVariableText(arrayAccessExpr.array, 'foo')
+    assertReferenceExpressionText(arrayAccessExpr.array, 'foo')
     expect(arrayAccessExpr.index.$type).toBe('IntegerLiteral')
   })
 
   it('instanceof expression', async () => {
     const instanceofExpr = await parseExpr<InstanceofExpression>('foo instanceof int;')
-    assertLocalVariableText(instanceofExpr.expr, 'foo')
+    assertReferenceExpressionText(instanceofExpr.expr, 'foo')
     assertTypeRef('int', instanceofExpr.typeRef)
   })
 
@@ -237,11 +237,11 @@ describe('parse expression of script with ZenScript ', () => {
 
     const second = leftExpr.second as InfixExpression
     expect(second.op).toBe('||')
-    assertLocalVariableText(second.left, 'foo')
-    assertLocalVariableText(second.right, 'bar')
+    assertReferenceExpressionText(second.left, 'foo')
+    assertReferenceExpressionText(second.right, 'bar')
 
-    const third = leftExpr.third as LocalVariable
-    assertLocalVariableText(third, 'foo')
+    const third = leftExpr.third as ReferenceExpression
+    assertReferenceExpressionText(third, 'foo')
 
     expect(expr.right.$type).toBe('IntegerLiteral')
   })
