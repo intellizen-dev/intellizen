@@ -11,6 +11,7 @@ import { ZenScriptCompletionProvider } from './lsp/completion'
 import { ZenScriptValidator, registerValidationChecks } from './validation/validator'
 import { ZenScriptPackageManager } from './workspace/package-manager'
 import { ZenScriptMemberProvider } from './scoping/member-provider'
+import { ZenScriptWorkspaceManager } from './workspace/workspace-manager'
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -26,6 +27,7 @@ export interface ZenScriptAddedServices {
     TypeComputer: ZenScriptTypeComputer
   }
   workspace: {
+    WorkspaceManager: ZenScriptWorkspaceManager
     PackageManager: ZenScriptPackageManager
   }
 }
@@ -52,6 +54,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     MemberProvider: services => new ZenScriptMemberProvider(services),
   },
   workspace: {
+    WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
     PackageManager: services => new ZenScriptPackageManager(services),
   },
   parser: {
