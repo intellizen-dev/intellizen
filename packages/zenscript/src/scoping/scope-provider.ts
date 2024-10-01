@@ -66,7 +66,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       return this.createScope(elements)
     })
 
-    rule('LocalVariable', (source) => {
+    rule('ReferenceExpression', (source) => {
       const scopes: Array<Stream<AstNodeDescription>> = []
       const referenceType = this.reflection.getReferenceType(source)
       const precomputed = AstUtils.getDocument(source.container).precomputedScopes

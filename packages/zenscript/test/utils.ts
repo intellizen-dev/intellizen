@@ -5,7 +5,7 @@ import { parseHelper } from 'langium/test'
 import type { AstNode, LangiumDocument } from 'langium'
 
 import { createZenScriptServices } from '../src/module'
-import type { ClassTypeReference, Expression, LocalVariable, PrimitiveTypeReference, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
+import type { ClassTypeReference, Expression, PrimitiveTypeReference, ReferenceExpression, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
 
 export function createParseHelper() {
   const service = createZenScriptServices(NodeFileSystem)
@@ -52,10 +52,10 @@ export function assertVariableDeclaration(
   }
 }
 
-export function assertLocalVariableText(expr: Expression, matches: string | RegExp) {
-  expect(expr.$type).toBe('LocalVariable')
+export function assertReferenceExpressionText(expr: Expression, matches: string | RegExp) {
+  expect(expr.$type).toBe('ReferenceExpression')
   if (typeof matches === 'string')
-    expect((expr as LocalVariable).refer.$refText).toBe(matches)
+    expect((expr as ReferenceExpression).refer.$refText).toBe(matches)
   else
-    expect((expr as LocalVariable).refer.$refText).toMatch(matches)
+    expect((expr as ReferenceExpression).refer.$refText).toMatch(matches)
 }

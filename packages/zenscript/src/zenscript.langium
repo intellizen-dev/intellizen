@@ -284,7 +284,7 @@ interface InstanceofExpression extends Expression {
     typeRef: TypeReference;
 }
 
-interface LocalVariable extends Expression {
+interface ReferenceExpression extends Expression {
     refer: @NamedElement;
 }
 
@@ -393,7 +393,7 @@ PostfixExpression returns Expression:
 ;
 
 fragment PrimaryExpression returns Expression:
-    ParenthesizedExpression | FunctionExpression | LocalVariable | LiteralExpression | BracketExpression
+    ParenthesizedExpression | FunctionExpression | ReferenceExpression | LiteralExpression | BracketExpression
 ;
 
 BracketExpression returns BracketExpression:
@@ -428,7 +428,7 @@ MapEntry returns MapEntry:
     key=Expression ':' value=Expression
 ;
 
-LocalVariable returns LocalVariable:
+ReferenceExpression returns ReferenceExpression:
     refer=[NamedElement:ID]
 ;
 

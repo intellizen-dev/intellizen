@@ -101,7 +101,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.getMember(source.refer.ref)
     })
 
-    rule('LocalVariable', (source) => {
+    rule('ReferenceExpression', (source) => {
       return this.getMember(source.refer.ref)
     })
 
