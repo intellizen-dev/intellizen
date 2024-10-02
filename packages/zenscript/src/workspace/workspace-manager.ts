@@ -1,16 +1,15 @@
-import type { AstNode, FileSystemNode, LangiumDocument, LangiumDocumentFactory, WorkspaceFolder } from 'langium'
+import path from 'node:path'
+import * as fs from 'node:fs'
+import type { AstNode, LangiumDocument, LangiumDocumentFactory, WorkspaceFolder } from 'langium'
 import { DefaultWorkspaceManager, URI, UriUtils } from 'langium'
-import type { ZenScriptServices } from '../module'
-
-export const ConfigFileName = 'intellizen.json'
-
-export interface Config {
-  scripts: string
-  dzs_scripts: string
-}
+import { findInside, isDirectory, isFile } from '@intellizen/shared'
+import type { ZenScriptSharedServices } from '../module'
+import type { Config } from './configuration-manager'
+import { StringConstants } from './configuration-manager'
 
 declare module 'langium' {
   interface WorkspaceFolder {
+    isLoadedConfig: boolean
     scriptsUri?: URI
     dzsScriptsUri?: URI
     configUri?: URI
@@ -20,12 +19,12 @@ declare module 'langium' {
 export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
   private documentFactory: LangiumDocumentFactory
 
-  constructor(services: ZenScriptServices) {
-    super(services.shared)
-    this.documentFactory = services.shared.workspace.LangiumDocumentFactory
+  constructor(services: ZenScriptSharedServices) {
+    super(services)
+    this.documentFactory = services.workspace.LangiumDocumentFactory
   }
 
-  override async loadAdditionalDocuments(
+  protected override async loadAdditionalDocuments(
     folders: WorkspaceFolder[],
     collector: (document: LangiumDocument<AstNode>) => void,
   ): Promise<void> {
@@ -33,46 +32,81 @@ export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
     collector(this.documentFactory.fromString('hello from builtin', URI.parse('builtin:///library.hello')))
   }
 
-  override getRootFolder(workspaceFolder: WorkspaceFolder): URI {
+  protected override getRootFolder(workspaceFolder: WorkspaceFolder): URI {
+    if (!workspaceFolder.isLoadedConfig) {
+      this.loadConfig(workspaceFolder)
+      this.finalizeLoadingConfig(workspaceFolder)
+      workspaceFolder.isLoadedConfig = true
+    }
+    return workspaceFolder.scriptsUri!
+  }
+
+  private loadConfig(workspaceFolder: WorkspaceFolder) {
+    const configUri = this.findConfig(workspaceFolder)
+    if (configUri) {
+      workspaceFolder.configUri = configUri
+    }
+    else {
+      console.error(new Error(`Config file ${StringConstants.Config.intellizen} does not found.`))
+      return
+    }
+
+    let config: Config
+    try {
+      const json = fs.readFileSync(configUri.fsPath).toString()
+      config = JSON.parse(json)
+    }
+    catch (cause) {
+      console.error(new Error(`An error occurred while parsing ${StringConstants.Config.intellizen}: `, { cause }))
+      return
+    }
+
+    if (config.scripts) {
+      const scriptsPath = path.resolve(configUri.fsPath, '..', config.scripts)
+      if (fs.existsSync(scriptsPath) || fs.statSync(scriptsPath).isDirectory()) {
+        workspaceFolder.scriptsUri = URI.file(scriptsPath)
+      }
+      else {
+        console.error(new Error(`Path ${scriptsPath} does not exist or is not a directory.`))
+      }
+    }
+
+    if (config.dzs_scripts) {
+      const dzsScriptsPath = path.resolve(workspaceFolder.configUri!.fsPath, '..', config.dzs_scripts)
+      if (fs.existsSync(dzsScriptsPath) || fs.statSync(dzsScriptsPath).isDirectory()) {
+        workspaceFolder.dzsScriptsUri = URI.file(dzsScriptsPath)
+      }
+      else {
+        console.error(new Error(`Path ${dzsScriptsPath} does not exist or is not a directory.`))
+      }
+    }
+  }
+
+  private finalizeLoadingConfig(workspaceFolder: WorkspaceFolder) {
     if (!workspaceFolder.scriptsUri) {
-      this.getConfigUri(workspaceFolder)
-        .then(async (configUri) => {
-          const content = await this.fileSystemProvider.readFile(configUri)
-          const config: Config = JSON.parse(content)
-          // TODO
-          configUri + config.scripts
-        })
-    }
-
-    return URI.parse(workspaceFolder.uri)
-  }
-
-  async getConfigUri(workspaceFolder: WorkspaceFolder): Promise<URI> {
-    if (!workspaceFolder.configUri) {
+      // Oops, this means something went wrong. Falling back to find the 'scripts' folder.
       const workspaceUri = URI.parse(workspaceFolder.uri)
-      await this.findFileInside(workspaceUri, ConfigFileName)
-        .then(configUri => workspaceFolder.configUri = configUri)
+      if (StringConstants.Folder.scripts === UriUtils.basename(workspaceUri)) {
+        workspaceFolder.scriptsUri = workspaceUri
+      }
+      else {
+        const scriptsPath = findInside(workspaceUri.fsPath, dirent => isDirectory(dirent, StringConstants.Folder.scripts))
+        if (scriptsPath) {
+          workspaceFolder.scriptsUri = URI.file(scriptsPath)
+        }
+        else {
+          // Sad, the 'scripts' folder is not found either, fallback to use the workspace uri.
+          workspaceFolder.scriptsUri = workspaceUri
+        }
+      }
     }
-    return workspaceFolder.configUri!
   }
 
-  async findFileInside(folder: URI, fileName: string): Promise<URI> {
-    let fileUri: URI | undefined
-    await this.traverseFolderInside(folder, (entry) => {
-      if (entry.isFile && fileName === UriUtils.basename(entry.uri)) {
-        fileUri = entry.uri
-      }
-    })
-    return fileUri ? Promise.resolve(fileUri) : Promise.reject(new Error(`file ${fileName} not found in ${folder}.`))
-  }
-
-  async traverseFolderInside(folder: URI, action: (entry: FileSystemNode) => void) {
-    const entries = await this.fileSystemProvider.readDirectory(folder)
-    for (const entry of entries) {
-      action(entry)
-      if (entry.isDirectory) {
-        entries.push(...await this.fileSystemProvider.readDirectory(entry.uri))
-      }
+  private findConfig(workspaceFolder: WorkspaceFolder) {
+    const workspaceUri = URI.parse(workspaceFolder.uri)
+    const configPath = findInside(workspaceUri.fsPath, dirent => isFile(dirent, StringConstants.Config.intellizen))
+    if (configPath) {
+      return URI.file(configPath)
     }
   }
 }

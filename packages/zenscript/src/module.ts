@@ -1,4 +1,5 @@
-import { type Module, inject } from 'langium'
+import type { DeepPartial, Module } from 'langium'
+import { inject } from 'langium'
 import { type DefaultSharedModuleContext, type LangiumServices, type LangiumSharedServices, type PartialLangiumServices, createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
 import { ZenScriptGeneratedModule, ZenScriptGeneratedSharedModule } from './generated/module'
 import { ZenScriptScopeProvider } from './scoping/scope-provider'
@@ -27,9 +28,20 @@ export interface ZenScriptAddedServices {
     TypeComputer: ZenScriptTypeComputer
   }
   workspace: {
-    WorkspaceManager: ZenScriptWorkspaceManager
     PackageManager: ZenScriptPackageManager
   }
+}
+
+export type ZenScriptSharedServices = LangiumSharedServices & {
+  workspace: {
+    WorkspaceManager: ZenScriptWorkspaceManager
+  }
+}
+
+export const ZenScriptSharedModule: Module<ZenScriptSharedServices, DeepPartial<ZenScriptSharedServices>> = {
+  workspace: {
+    WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
+  },
 }
 
 /**
@@ -54,7 +66,6 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     MemberProvider: services => new ZenScriptMemberProvider(services),
   },
   workspace: {
-    WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
     PackageManager: services => new ZenScriptPackageManager(services),
   },
   parser: {
@@ -91,6 +102,7 @@ export function createZenScriptServices(context: DefaultSharedModuleContext): {
   const shared = inject(
     createDefaultSharedModule(context),
     ZenScriptGeneratedSharedModule,
+    ZenScriptSharedModule,
   )
   const zenscript = inject(
     createDefaultModule({ shared }),
