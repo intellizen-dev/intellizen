@@ -68,8 +68,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
 
     if (config.scripts) {
       const scriptsPath = path.resolve(configUri.fsPath, '..', config.scripts)
-      const scriptsStat = await fs.promises.stat(scriptsPath)
-      if (scriptsStat.isDirectory()) {
+      if (fs.existsSync(scriptsPath) && fs.statSync(scriptsPath).isDirectory()) {
         workspaceFolder.scriptsUri = URI.file(scriptsPath)
       }
       else {
@@ -79,8 +78,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
 
     if (config.dzs_scripts) {
       const dzsScriptsPath = path.resolve(workspaceFolder.configUri!.fsPath, '..', config.dzs_scripts)
-      const dzsScriptsStat = await fs.promises.stat(dzsScriptsPath)
-      if (dzsScriptsStat.isDirectory()) {
+      if (fs.existsSync(dzsScriptsPath) && fs.statSync(dzsScriptsPath).isDirectory()) {
         workspaceFolder.dzsScriptsUri = URI.file(dzsScriptsPath)
       }
       else {
