@@ -41,12 +41,18 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
   }
 
   private async loadConfig(workspaceFolder: WorkspaceFolder) {
+    await this.load(workspaceFolder)
+    await this.finalize(workspaceFolder)
+    workspaceFolder.isLoadedConfig = true
+  }
+
+  private async load(workspaceFolder: WorkspaceFolder) {
     const configUri = await this.findConfig(workspaceFolder)
     if (configUri) {
       workspaceFolder.configUri = configUri
     }
     else {
-      console.error(new ConfigError(workspaceFolder, { cause: new Error(`Config file ${StringConstants.Config.intellizen} not found.`) }))
+      console.error(new ConfigError(workspaceFolder, { cause: new Error(`Config file "${StringConstants.Config.intellizen}" not found.`) }))
       return
     }
 
@@ -67,7 +73,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
         workspaceFolder.scriptsUri = URI.file(scriptsPath)
       }
       else {
-        console.error(new ConfigError(workspaceFolder, { cause: new Error(`Path ${scriptsPath} does not exist or is not a directory.`) }))
+        console.error(new ConfigError(workspaceFolder, { cause: new Error(`Path "${scriptsPath}" does not exist or is not a directory.`) }))
       }
     }
 
@@ -78,14 +84,12 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
         workspaceFolder.dzsScriptsUri = URI.file(dzsScriptsPath)
       }
       else {
-        console.error(new ConfigError(workspaceFolder, { cause: new Error(`Path ${dzsScriptsPath} does not exist or is not a directory.`) }))
+        console.error(new ConfigError(workspaceFolder, { cause: new Error(`Path "${dzsScriptsPath}" does not exist or is not a directory.`) }))
       }
     }
-
-    await this.finalizeLoadingConfig(workspaceFolder)
   }
 
-  private async finalizeLoadingConfig(workspaceFolder: WorkspaceFolder) {
+  private async finalize(workspaceFolder: WorkspaceFolder) {
     if (!workspaceFolder.scriptsUri) {
       // Oops, this means something went wrong. Falling back to find the 'scripts' folder.
       const workspaceUri = URI.parse(workspaceFolder.uri)
@@ -117,6 +121,6 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
 
 class ConfigError extends Error {
   constructor(workspaceFolder: WorkspaceFolder, options?: ErrorOptions) {
-    super(`An error occurred parsing ${StringConstants.Config.intellizen} located in the workspace folder ${workspaceFolder.name}.`, options)
+    super(`An error occurred parsing "${StringConstants.Config.intellizen}" located in the workspace folder "${workspaceFolder.name}".`, options)
   }
 }
