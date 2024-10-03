@@ -13,6 +13,7 @@ import { ZenScriptValidator, registerValidationChecks } from './validation/valid
 import { ZenScriptPackageManager } from './workspace/package-manager'
 import { ZenScriptMemberProvider } from './scoping/member-provider'
 import { ZenScriptWorkspaceManager } from './workspace/workspace-manager'
+import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -35,12 +36,14 @@ export interface ZenScriptAddedServices {
 export type ZenScriptSharedServices = LangiumSharedServices & {
   workspace: {
     WorkspaceManager: ZenScriptWorkspaceManager
+    ConfigurationManager: ZenScriptConfigurationManager
   }
 }
 
 export const ZenScriptSharedModule: Module<ZenScriptSharedServices, DeepPartial<ZenScriptSharedServices>> = {
   workspace: {
     WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
+    ConfigurationManager: () => new ZenScriptConfigurationManager(),
   },
 }
 
