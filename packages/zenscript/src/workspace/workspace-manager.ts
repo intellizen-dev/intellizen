@@ -53,7 +53,7 @@ export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
     const documents: LangiumDocument[] = []
     await traverseInside(this.fileSystemProvider, srcRoot, async (entry) => {
       if (entry.isFile && fileExtensions.includes(UriUtils.extname(entry.uri))) {
-        const document = await this.documentFactory.fromUri(entry.uri)
+        const document = await this.langiumDocuments.getOrCreateDocument(entry.uri)
 
         // @ts-ignore
         document.srcRootUri = srcRoot
