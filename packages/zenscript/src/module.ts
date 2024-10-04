@@ -51,7 +51,7 @@ export const ZenScriptSharedModule: Module<ZenScriptSharedServices, DeepPartial<
  * Union of Langium default services and your custom services - use this as constructor parameter
  * of custom service classes.
  */
-export type ZenScriptServices = LangiumServices & ZenScriptAddedServices
+export type ZenScriptServices = LangiumServices & ZenScriptAddedServices & { shared: ZenScriptSharedServices }
 
 /**
  * Dependency injection module that overrides Langium default services and contributes the
