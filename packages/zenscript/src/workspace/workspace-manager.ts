@@ -40,11 +40,8 @@ export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
 
   protected async collectWorkspaceFolder(folder: WorkspaceFolder, fileExtensions: string[]): Promise<LangiumDocument[]> {
     const documents: LangiumDocument[] = []
-    if (folder.scriptsUri) {
-      documents.push(...await this.collectSrcRoot(folder.scriptsUri, fileExtensions))
-    }
-    if (folder.dzsScriptsUri) {
-      documents.push(...await this.collectSrcRoot(folder.dzsScriptsUri, fileExtensions))
+    for (const srcRoot of folder.srcRoots) {
+      documents.push(...await this.collectSrcRoot(srcRoot, fileExtensions))
     }
     return documents
   }
