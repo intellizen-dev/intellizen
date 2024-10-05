@@ -36,9 +36,9 @@ export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
 
   protected async collect(srcRoot: URI, fileExtensions: string[]): Promise<LangiumDocument[]> {
     const documents: LangiumDocument[] = []
-    await traverseInside(this.fileSystemProvider, srcRoot, async (entry) => {
-      if (entry.isFile && fileExtensions.includes(UriUtils.extname(entry.uri))) {
-        const document = await this.langiumDocuments.getOrCreateDocument(entry.uri)
+    await traverseInside(this.fileSystemProvider, srcRoot, async (node) => {
+      if (node.isFile && fileExtensions.includes(UriUtils.extname(node.uri))) {
+        const document = await this.langiumDocuments.getOrCreateDocument(node.uri)
 
         // @ts-expect-error cause readonly
         document.srcRootUri = srcRoot

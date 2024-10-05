@@ -1,11 +1,9 @@
 import { type FileSystemNode, type FileSystemProvider, type URI, UriUtils } from 'langium'
 
-export type FileSystemAction = (node: FileSystemNode) => Promise<void>
-
 export async function traverseInside(
   fsProvider: FileSystemProvider,
   folder: URI,
-  action: FileSystemAction,
+  action: (node: FileSystemNode) => Promise<void>,
 ) {
   const entries = await fsProvider.readDirectory(folder)
   while (entries.length !== 0) {
@@ -20,7 +18,7 @@ export async function traverseInside(
 export async function findInside(
   fsProvider: FileSystemProvider,
   folder: URI,
-  predicate: (entry: FileSystemNode) => boolean,
+  predicate: (node: FileSystemNode) => boolean,
 ): Promise<URI | undefined> {
   const entries = await fsProvider.readDirectory(folder)
   while (entries.length !== 0) {
@@ -34,10 +32,10 @@ export async function findInside(
   }
 }
 
-export function isFile(entry: FileSystemNode, name: string): boolean {
-  return entry.isFile && UriUtils.basename(entry.uri) === name
+export function isFile(node: FileSystemNode, name: string): boolean {
+  return node.isFile && UriUtils.basename(node.uri) === name
 }
 
-export function isDirectory(entry: FileSystemNode, name: string): boolean {
-  return entry.isDirectory && UriUtils.basename(entry.uri) === name
+export function isDirectory(node: FileSystemNode, name: string): boolean {
+  return node.isDirectory && UriUtils.basename(node.uri) === name
 }

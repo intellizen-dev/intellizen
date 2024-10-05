@@ -18,10 +18,10 @@ export interface ConfigurationManager {
 }
 
 export class ZenScriptConfigurationManager implements ConfigurationManager {
-  private readonly fsProvider: FileSystemProvider
+  private readonly fileSystemProvider: FileSystemProvider
 
   constructor(services: ZenScriptSharedServices) {
-    this.fsProvider = services.workspace.FileSystemProvider
+    this.fileSystemProvider = services.workspace.FileSystemProvider
   }
 
   async initialize(folders: WorkspaceFolder[]) {
@@ -48,7 +48,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
   }
 
   private async load(parsedConfig: ParsedConfig, configUri: URI) {
-    const content = await this.fsProvider.readFile(configUri)
+    const content = await this.fileSystemProvider.readFile(configUri)
     const config = IntelliZenSchema.parse(JSON.parse(content))
 
     for (const srcRoot of config.srcRoots) {
@@ -91,7 +91,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
         parsedConfig.srcRoots = [workspaceUri]
       }
       else {
-        const scriptsUri = await findInside(this.fsProvider, workspaceUri, entry => isDirectory(entry, StringConstants.Folder.scripts))
+        const scriptsUri = await findInside(this.fileSystemProvider, workspaceUri, node => isDirectory(node, StringConstants.Folder.scripts))
         if (scriptsUri) {
           parsedConfig.srcRoots = [scriptsUri]
         }
@@ -105,7 +105,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
 
   private async findConfig(workspaceFolder: WorkspaceFolder): Promise<URI | undefined> {
     const workspaceUri = URI.parse(workspaceFolder.uri)
-    return findInside(this.fsProvider, workspaceUri, entry => isFile(entry, StringConstants.Config.intellizen))
+    return findInside(this.fileSystemProvider, workspaceUri, node => isFile(node, StringConstants.Config.intellizen))
   }
 }
 
