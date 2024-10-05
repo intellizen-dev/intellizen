@@ -22,3 +22,11 @@ export const IntelliZenSchema = z.object({
 })
 
 export type IntelliZenConfig = z.infer<typeof IntelliZenSchema>
+
+export interface ParsedConfig {
+  rootDirs: URI[]
+  extra: {
+    brackets?: URI
+    preprocessors?: URI
+  }
+}

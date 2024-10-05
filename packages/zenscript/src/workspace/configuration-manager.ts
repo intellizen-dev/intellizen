@@ -3,18 +3,12 @@ import path from 'node:path'
 import type { WorkspaceFolder } from 'langium'
 import { URI, UriUtils } from 'langium'
 import { findInside, isDirectory, isFile } from '@intellizen/shared'
-import type { IntelliZenConfig } from './configurations'
+import type { ParsedConfig } from './configurations'
 import { IntelliZenSchema, StringConstants } from './configurations'
 
 declare module 'langium' {
   interface WorkspaceFolder {
-    isLoadedConfig: boolean
-    configUri?: URI
-    srcRoots: URI[]
-    extra?: {
-      brackets?: URI
-      preprocessors?: URI
-    }
+    config: ParsedConfig
   }
 }
 
@@ -28,63 +22,76 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
   }
 
   private async loadConfig(workspaceFolder: WorkspaceFolder) {
-    await this.load(workspaceFolder)
-    await this.finalize(workspaceFolder)
-    workspaceFolder.isLoadedConfig = true
-  }
-
-  private async load(workspaceFolder: WorkspaceFolder) {
+    const workspaceUri = URI.file(workspaceFolder.uri)
     const configUri = await this.findConfig(workspaceFolder)
+    const parsedConfig: ParsedConfig = { rootDirs: [], extra: {} }
     if (configUri) {
-      workspaceFolder.configUri = configUri
+      try {
+        await this.load(parsedConfig, configUri)
+      }
+      catch (cause) {
+        console.error(new ConfigError(workspaceFolder, { cause }))
+      }
     }
     else {
       console.error(new ConfigError(workspaceFolder, { cause: new Error(`Config file "${StringConstants.Config.intellizen}" not found.`) }))
-      return
     }
-
-    let config: IntelliZenConfig
-    try {
-      const json = await fs.promises.readFile(configUri.fsPath)
-      config = IntelliZenSchema.parse(JSON.parse(json.toString()))
-    }
-    catch (cause) {
-      console.error(new ConfigError(workspaceFolder, { cause }))
-      return
-    }
-
-    const srcRoots: URI[] = []
-    for (const rootDir of config.rootDirs) {
-      const rootDirPath = path.resolve(configUri.fsPath, '..', rootDir)
-      if (fs.existsSync(rootDirPath) && fs.statSync(rootDirPath).isDirectory()) {
-        srcRoots.push(URI.file(rootDirPath))
-      }
-      else {
-        console.error(new ConfigError(workspaceFolder, { cause: new Error(`Path "${rootDirPath}" does not exist or is not a directory.`) }))
-      }
-    }
-    workspaceFolder.srcRoots = srcRoots
+    await this.finalize(parsedConfig, workspaceUri)
+    workspaceFolder.config = parsedConfig
   }
 
-  private async finalize(workspaceFolder: WorkspaceFolder) {
-    if (!workspaceFolder.srcRoots || workspaceFolder.srcRoots.length === 0) {
+  private async load(parsedConfig: ParsedConfig, configUri: URI) {
+    const buffer = await fs.promises.readFile(configUri.fsPath)
+    const config = IntelliZenSchema.parse(JSON.parse(buffer.toString()))
+
+    for (const rootDir of config.rootDirs) {
+      const rootDirPath = path.resolve(configUri.fsPath, '..', rootDir)
+      if (existsDirectory(rootDirPath)) {
+        parsedConfig.rootDirs.push(URI.file(rootDirPath))
+      }
+      else {
+        console.error(new Error(`Path "${rootDirPath}" does not exist or is not a directory.`))
+      }
+    }
+
+    if (config.extra?.brackets) {
+      const filePath = path.resolve(configUri.fsPath, '..', config.extra.brackets)
+      if (existsFile(filePath)) {
+        parsedConfig.extra.brackets = URI.file(filePath)
+      }
+      else {
+        console.error(new Error(`Path "${config.extra.brackets}" does not exist or is not a file.`))
+      }
+    }
+
+    if (config.extra?.preprocessors) {
+      const filePath = path.resolve(configUri.fsPath, '..', config.extra.preprocessors)
+      if (existsFile(filePath)) {
+        parsedConfig.extra.preprocessors = URI.file(filePath)
+      }
+      else {
+        console.error(new Error(`Path "${config.extra.brackets}" does not exist or is not a file.`))
+      }
+    }
+  }
+
+  private async finalize(parsedConfig: ParsedConfig, workspaceUri: URI) {
+    if (parsedConfig.rootDirs.length === 0) {
       // Oops, this means something went wrong. Falling back to find the 'scripts' folder.
-      const workspaceUri = URI.parse(workspaceFolder.uri)
       if (StringConstants.Folder.scripts === UriUtils.basename(workspaceUri)) {
-        workspaceFolder.srcRoots = [workspaceUri]
+        parsedConfig.rootDirs = [workspaceUri]
       }
       else {
         const scriptsPath = await findInside(workspaceUri.fsPath, dirent => isDirectory(dirent, StringConstants.Folder.scripts))
         if (scriptsPath) {
-          workspaceFolder.srcRoots = [URI.file(scriptsPath)]
+          parsedConfig.rootDirs = [URI.file(scriptsPath)]
         }
         else {
           // Sad, the 'scripts' folder is not found either, fallback to use the workspace uri.
-          workspaceFolder.srcRoots = [workspaceUri]
+          parsedConfig.rootDirs = [workspaceUri]
         }
       }
     }
-    workspaceFolder.isLoadedConfig = true
   }
 
   private async findConfig(workspaceFolder: WorkspaceFolder) {
@@ -100,4 +107,12 @@ class ConfigError extends Error {
   constructor(workspaceFolder: WorkspaceFolder, options?: ErrorOptions) {
     super(`An error occurred parsing "${StringConstants.Config.intellizen}" located in the workspace folder "${workspaceFolder.name}".`, options)
   }
+}
+
+function existsDirectory(dirPath: string): boolean {
+  return fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()
+}
+
+function existsFile(filePath: string): boolean {
+  return fs.existsSync(filePath) && fs.statSync(filePath).isFile()
 }
