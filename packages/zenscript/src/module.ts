@@ -1,6 +1,7 @@
-import type { DeepPartial, Module } from 'langium'
+import type { Module } from 'langium'
 import { inject } from 'langium'
-import { type DefaultSharedModuleContext, type LangiumServices, type LangiumSharedServices, type PartialLangiumServices, createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
+import type { DefaultSharedModuleContext, LangiumServices, LangiumSharedServices, PartialLangiumServices, PartialLangiumSharedServices } from 'langium/lsp'
+import { createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
 import { ZenScriptGeneratedModule, ZenScriptGeneratedSharedModule } from './generated/module'
 import { ZenScriptScopeProvider } from './scoping/scope-provider'
 import { ZenScriptScopeComputation } from './scoping/scope-computation'
@@ -33,18 +34,11 @@ export interface ZenScriptAddedServices {
   }
 }
 
-export type ZenScriptSharedServices = LangiumSharedServices & {
+export interface ZenScriptAddedSharedServices {
   workspace: {
     WorkspaceManager: ZenScriptWorkspaceManager
     ConfigurationManager: ZenScriptConfigurationManager
   }
-}
-
-export const ZenScriptSharedModule: Module<ZenScriptSharedServices, DeepPartial<ZenScriptSharedServices>> = {
-  workspace: {
-    WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
-    ConfigurationManager: () => new ZenScriptConfigurationManager(),
-  },
 }
 
 /**
@@ -52,6 +46,8 @@ export const ZenScriptSharedModule: Module<ZenScriptSharedServices, DeepPartial<
  * of custom service classes.
  */
 export type ZenScriptServices = LangiumServices & ZenScriptAddedServices & { shared: ZenScriptSharedServices }
+
+export type ZenScriptSharedServices = LangiumSharedServices & ZenScriptAddedSharedServices
 
 /**
  * Dependency injection module that overrides Langium default services and contributes the
@@ -83,6 +79,13 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
   },
 }
 
+export const ZenScriptSharedModule: Module<ZenScriptSharedServices, PartialLangiumSharedServices & ZenScriptAddedSharedServices> = {
+  workspace: {
+    WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
+    ConfigurationManager: () => new ZenScriptConfigurationManager(),
+  },
+}
+
 /**
  * Create the full set of services required by Langium.
  *
@@ -98,10 +101,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
  * @param context Optional module context with the LSP connection
  * @returns An object wrapping the shared services and the language-specific services
  */
-export function createZenScriptServices(context: DefaultSharedModuleContext): {
-  shared: LangiumSharedServices
-  zenscript: ZenScriptServices
-} {
+export function createZenScriptServices(context: DefaultSharedModuleContext): ZenScriptServices {
   const shared = inject(
     createDefaultSharedModule(context),
     ZenScriptGeneratedSharedModule,
@@ -119,5 +119,5 @@ export function createZenScriptServices(context: DefaultSharedModuleContext): {
     // Therefore, initialize the configuration provider instantly
     shared.workspace.ConfigurationProvider.initialized({})
   }
-  return { shared, zenscript }
+  return zenscript
 }
