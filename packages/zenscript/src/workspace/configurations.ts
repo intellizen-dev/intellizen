@@ -14,7 +14,7 @@ export const StringConstants = Object.freeze({
 const zodUriParse = z.string().refine(val => URI.isUri(URI.file(val)))
 
 export const IntelliZenSchema = z.object({
-  rootDirs: zodUriParse.array(),
+  srcRoots: zodUriParse.array(),
   extra: z.object({
     brackets: zodUriParse.optional(),
     preprocessors: zodUriParse.optional(),
@@ -24,7 +24,7 @@ export const IntelliZenSchema = z.object({
 export type IntelliZenConfig = z.infer<typeof IntelliZenSchema>
 
 export interface ParsedConfig {
-  rootDirs: URI[]
+  srcRoots: URI[]
   extra: {
     brackets?: URI
     preprocessors?: URI

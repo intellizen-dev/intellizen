@@ -24,7 +24,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
   private async loadConfig(workspaceFolder: WorkspaceFolder) {
     const workspaceUri = URI.file(workspaceFolder.uri)
     const configUri = await this.findConfig(workspaceFolder)
-    const parsedConfig: ParsedConfig = { rootDirs: [], extra: {} }
+    const parsedConfig: ParsedConfig = { srcRoots: [], extra: {} }
     if (configUri) {
       try {
         await this.load(parsedConfig, configUri)
@@ -44,13 +44,13 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
     const buffer = await fs.promises.readFile(configUri.fsPath)
     const config = IntelliZenSchema.parse(JSON.parse(buffer.toString()))
 
-    for (const rootDir of config.rootDirs) {
-      const rootDirPath = path.resolve(configUri.fsPath, '..', rootDir)
-      if (existsDirectory(rootDirPath)) {
-        parsedConfig.rootDirs.push(URI.file(rootDirPath))
+    for (const srcRoot of config.srcRoots) {
+      const srcRootPath = path.resolve(configUri.fsPath, '..', srcRoot)
+      if (existsDirectory(srcRootPath)) {
+        parsedConfig.srcRoots.push(URI.file(srcRootPath))
       }
       else {
-        console.error(new Error(`Path "${rootDirPath}" does not exist or is not a directory.`))
+        console.error(new Error(`Path "${srcRootPath}" does not exist or is not a directory.`))
       }
     }
 
@@ -76,19 +76,19 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
   }
 
   private async finalize(parsedConfig: ParsedConfig, workspaceUri: URI) {
-    if (parsedConfig.rootDirs.length === 0) {
+    if (parsedConfig.srcRoots.length === 0) {
       // Oops, this means something went wrong. Falling back to find the 'scripts' folder.
       if (StringConstants.Folder.scripts === UriUtils.basename(workspaceUri)) {
-        parsedConfig.rootDirs = [workspaceUri]
+        parsedConfig.srcRoots = [workspaceUri]
       }
       else {
         const scriptsPath = await findInside(workspaceUri.fsPath, dirent => isDirectory(dirent, StringConstants.Folder.scripts))
         if (scriptsPath) {
-          parsedConfig.rootDirs = [URI.file(scriptsPath)]
+          parsedConfig.srcRoots = [URI.file(scriptsPath)]
         }
         else {
           // Sad, the 'scripts' folder is not found either, fallback to use the workspace uri.
-          parsedConfig.rootDirs = [workspaceUri]
+          parsedConfig.srcRoots = [workspaceUri]
         }
       }
     }

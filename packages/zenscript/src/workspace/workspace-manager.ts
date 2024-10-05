@@ -1,4 +1,4 @@
-import type { LangiumDocument, LangiumDocumentFactory, URI, WorkspaceFolder } from 'langium'
+import type { LangiumDocument, URI, WorkspaceFolder } from 'langium'
 import { DefaultWorkspaceManager, UriUtils, interruptAndCheck } from 'langium'
 import { CancellationToken } from 'vscode-languageserver'
 import type { ZenScriptSharedServices } from '../module'
@@ -28,7 +28,7 @@ export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
 
   protected async performStartup(folders: WorkspaceFolder[]): Promise<LangiumDocument[]> {
     const fileExtensions = this.serviceRegistry.all.flatMap(e => e.LanguageMetaData.fileExtensions)
-    const srcRoots = folders.flatMap(folder => folder.config.rootDirs).filter(uri => !!uri)
+    const srcRoots = folders.flatMap(folder => folder.config.srcRoots).filter(uri => !!uri)
     const all = await Promise.all(srcRoots.flatMap(srcRoot => this.collect(srcRoot, fileExtensions)))
     this._ready.resolve()
     return all.flat()
