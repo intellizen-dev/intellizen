@@ -12,15 +12,15 @@ declare module 'langium' {
 }
 
 export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
-  private readonly configManager: ZenScriptConfigurationManager
+  private readonly configurationManager: ZenScriptConfigurationManager
 
   constructor(services: ZenScriptSharedServices) {
     super(services)
-    this.configManager = services.workspace.ConfigurationManager
+    this.configurationManager = services.workspace.ConfigurationManager
   }
 
   async initializeWorkspace(folders: WorkspaceFolder[], cancelToken = CancellationToken.None): Promise<void> {
-    await this.configManager.initialize(folders)
+    await this.configurationManager.initialize(folders)
     const documents = await this.performStartup(folders)
     await interruptAndCheck(cancelToken)
     await this.documentBuilder.build(documents, this.initialBuildOptions, cancelToken)
