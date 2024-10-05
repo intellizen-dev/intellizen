@@ -50,27 +50,29 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
         parsedConfig.srcRoots.push(URI.file(srcRootPath))
       }
       else {
-        console.error(new Error(`Path "${srcRootPath}" does not exist or is not a directory.`))
+        console.error(new DirectoryNotFoundError(srcRootPath))
       }
     }
 
-    if (config.extra?.brackets) {
-      const filePath = path.resolve(configUri.fsPath, '..', config.extra.brackets)
+    const brackets = config.extra?.brackets
+    if (brackets) {
+      const filePath = path.resolve(configUri.fsPath, '..', brackets)
       if (existsFile(filePath)) {
         parsedConfig.extra.brackets = URI.file(filePath)
       }
       else {
-        console.error(new Error(`Path "${config.extra.brackets}" does not exist or is not a file.`))
+        console.error(new EntryError('extra.brackets', { cause: new FileNotFoundError(brackets) }))
       }
     }
 
-    if (config.extra?.preprocessors) {
-      const filePath = path.resolve(configUri.fsPath, '..', config.extra.preprocessors)
+    const preprocessors = config.extra?.preprocessors
+    if (preprocessors) {
+      const filePath = path.resolve(configUri.fsPath, '..', preprocessors)
       if (existsFile(filePath)) {
         parsedConfig.extra.preprocessors = URI.file(filePath)
       }
       else {
-        console.error(new Error(`Path "${config.extra.brackets}" does not exist or is not a file.`))
+        console.error(new EntryError('extra.preprocessors', { cause: new FileNotFoundError(preprocessors) }))
       }
     }
   }
@@ -103,16 +105,34 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
   }
 }
 
-class ConfigError extends Error {
-  constructor(workspaceFolder: WorkspaceFolder, options?: ErrorOptions) {
-    super(`An error occurred parsing "${StringConstants.Config.intellizen}" located in the workspace folder "${workspaceFolder.name}".`, options)
-  }
-}
-
 function existsDirectory(dirPath: string): boolean {
   return fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()
 }
 
 function existsFile(filePath: string): boolean {
   return fs.existsSync(filePath) && fs.statSync(filePath).isFile()
+}
+
+class ConfigError extends Error {
+  constructor(workspaceFolder: WorkspaceFolder, options?: ErrorOptions) {
+    super(`An error occurred parsing "${StringConstants.Config.intellizen}" located in the workspace folder "${workspaceFolder.name}".`, options)
+  }
+}
+
+class EntryError extends Error {
+  constructor(entry: string, options?: ErrorOptions) {
+    super(`An error occurred parsing entry "${entry}".`, options)
+  }
+}
+
+class FileNotFoundError extends Error {
+  constructor(filePath: string, options?: ErrorOptions) {
+    super(`File "${filePath}" does not exist.`, options)
+  }
+}
+
+class DirectoryNotFoundError extends Error {
+  constructor(dirPath: string, options?: ErrorOptions) {
+    super(`Directory "${dirPath}" does not exist.`, options)
+  }
 }
