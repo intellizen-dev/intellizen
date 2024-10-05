@@ -53,15 +53,17 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
       return
     }
 
-    for (const srcRoot of config.rootDirs) {
-      const scriptsPath = path.resolve(configUri.fsPath, '..', srcRoot)
-      if (fs.existsSync(scriptsPath) && fs.statSync(scriptsPath).isDirectory()) {
-        workspaceFolder.srcRoots = [...workspaceFolder.srcRoots, URI.file(scriptsPath)]
+    const srcRoots: URI[] = []
+    for (const rootDir of config.rootDirs) {
+      const rootDirPath = path.resolve(configUri.fsPath, '..', rootDir)
+      if (fs.existsSync(rootDirPath) && fs.statSync(rootDirPath).isDirectory()) {
+        srcRoots.push(URI.file(rootDirPath))
       }
       else {
-        console.error(new ConfigError(workspaceFolder, { cause: new Error(`Path "${scriptsPath}" does not exist or is not a directory.`) }))
+        console.error(new ConfigError(workspaceFolder, { cause: new Error(`Path "${rootDirPath}" does not exist or is not a directory.`) }))
       }
     }
+    workspaceFolder.srcRoots = srcRoots
   }
 
   private async finalize(workspaceFolder: WorkspaceFolder) {
