@@ -3,29 +3,19 @@ import path from 'node:path'
 import type { WorkspaceFolder } from 'langium'
 import { URI, UriUtils } from 'langium'
 import { findInside, isDirectory, isFile } from '@intellizen/shared'
+import type { IntelliZenConfig } from './configurations'
+import { IntelliZenSchema, StringConstants } from './configurations'
 
 declare module 'langium' {
   interface WorkspaceFolder {
     isLoadedConfig: boolean
-    scriptsUri?: URI
-    dzsScriptsUri?: URI
     configUri?: URI
+    srcRoots: URI[]
+    extra?: {
+      brackets?: URI
+      preprocessors?: URI
+    }
   }
-}
-
-export const StringConstants = Object.freeze({
-  Config: {
-    intellizen: 'intellizen.json',
-  },
-  Folder: {
-    scripts: 'scripts',
-    dzs_scripts: 'dzs_scripts',
-  },
-})
-
-export interface Config {
-  scripts?: string
-  dzs_scripts?: string
 }
 
 export interface ConfigurationManager {
@@ -33,10 +23,7 @@ export interface ConfigurationManager {
 }
 
 export class ZenScriptConfigurationManager implements ConfigurationManager {
-  private folders: WorkspaceFolder[] = []
-
   async initialize(folders: WorkspaceFolder[]) {
-    this.folders = folders
     await Promise.all(folders.map(folder => this.loadConfig(folder)))
   }
 
@@ -56,52 +43,42 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
       return
     }
 
-    let config: Config
+    let config: IntelliZenConfig
     try {
       const json = await fs.promises.readFile(configUri.fsPath)
-      config = JSON.parse(json.toString())
+      config = IntelliZenSchema.parse(json)
     }
     catch (cause) {
       console.error(new ConfigError(workspaceFolder, { cause }))
       return
     }
 
-    if (config.scripts) {
-      const scriptsPath = path.resolve(configUri.fsPath, '..', config.scripts)
+    for (const srcRoot of config.rootDirs) {
+      const scriptsPath = path.resolve(configUri.fsPath, '..', srcRoot)
       if (fs.existsSync(scriptsPath) && fs.statSync(scriptsPath).isDirectory()) {
-        workspaceFolder.scriptsUri = URI.file(scriptsPath)
+        workspaceFolder.srcRoots = [...workspaceFolder.srcRoots, URI.file(scriptsPath)]
       }
       else {
         console.error(new ConfigError(workspaceFolder, { cause: new Error(`Path "${scriptsPath}" does not exist or is not a directory.`) }))
       }
     }
-
-    if (config.dzs_scripts) {
-      const dzsScriptsPath = path.resolve(workspaceFolder.configUri!.fsPath, '..', config.dzs_scripts)
-      if (fs.existsSync(dzsScriptsPath) && fs.statSync(dzsScriptsPath).isDirectory()) {
-        workspaceFolder.dzsScriptsUri = URI.file(dzsScriptsPath)
-      }
-      else {
-        console.error(new ConfigError(workspaceFolder, { cause: new Error(`Path "${dzsScriptsPath}" does not exist or is not a directory.`) }))
-      }
-    }
   }
 
   private async finalize(workspaceFolder: WorkspaceFolder) {
-    if (!workspaceFolder.scriptsUri) {
+    if (!workspaceFolder.srcRoots || workspaceFolder.srcRoots.length === 0) {
       // Oops, this means something went wrong. Falling back to find the 'scripts' folder.
       const workspaceUri = URI.parse(workspaceFolder.uri)
       if (StringConstants.Folder.scripts === UriUtils.basename(workspaceUri)) {
-        workspaceFolder.scriptsUri = workspaceUri
+        workspaceFolder.srcRoots = [workspaceUri]
       }
       else {
         const scriptsPath = await findInside(workspaceUri.fsPath, dirent => isDirectory(dirent, StringConstants.Folder.scripts))
         if (scriptsPath) {
-          workspaceFolder.scriptsUri = URI.file(scriptsPath)
+          workspaceFolder.srcRoots = [URI.file(scriptsPath)]
         }
         else {
           // Sad, the 'scripts' folder is not found either, fallback to use the workspace uri.
-          workspaceFolder.scriptsUri = workspaceUri
+          workspaceFolder.srcRoots = [workspaceUri]
         }
       }
     }
