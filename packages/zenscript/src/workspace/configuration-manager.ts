@@ -1,8 +1,9 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import type { WorkspaceFolder } from 'langium'
+import { existsSync, statSync } from 'node:fs'
+import { resolve as resolvePath } from 'node:path'
+import type { FileSystemProvider, WorkspaceFolder } from 'langium'
 import { URI, UriUtils } from 'langium'
-import { findInside, isDirectory, isFile } from '@intellizen/shared'
+import { findInside, isDirectory, isFile } from '../utils/fs'
+import type { ZenScriptSharedServices } from '../module'
 import type { ParsedConfig } from './configurations'
 import { IntelliZenSchema, StringConstants } from './configurations'
 
@@ -17,6 +18,12 @@ export interface ConfigurationManager {
 }
 
 export class ZenScriptConfigurationManager implements ConfigurationManager {
+  private readonly fsProvider: FileSystemProvider
+
+  constructor(services: ZenScriptSharedServices) {
+    this.fsProvider = services.workspace.FileSystemProvider
+  }
+
   async initialize(folders: WorkspaceFolder[]) {
     await Promise.all(folders.map(folder => this.loadConfig(folder)))
   }
@@ -41,11 +48,11 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
   }
 
   private async load(parsedConfig: ParsedConfig, configUri: URI) {
-    const buffer = await fs.promises.readFile(configUri.fsPath)
-    const config = IntelliZenSchema.parse(JSON.parse(buffer.toString()))
+    const content = await this.fsProvider.readFile(configUri)
+    const config = IntelliZenSchema.parse(JSON.parse(content))
 
     for (const srcRoot of config.srcRoots) {
-      const srcRootPath = path.resolve(configUri.fsPath, '..', srcRoot)
+      const srcRootPath = resolvePath(configUri.fsPath, '..', srcRoot)
       if (existsDirectory(srcRootPath)) {
         parsedConfig.srcRoots.push(URI.file(srcRootPath))
       }
@@ -56,7 +63,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
 
     const brackets = config.extra?.brackets
     if (brackets) {
-      const filePath = path.resolve(configUri.fsPath, '..', brackets)
+      const filePath = resolvePath(configUri.fsPath, '..', brackets)
       if (existsFile(filePath)) {
         parsedConfig.extra.brackets = URI.file(filePath)
       }
@@ -67,7 +74,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
 
     const preprocessors = config.extra?.preprocessors
     if (preprocessors) {
-      const filePath = path.resolve(configUri.fsPath, '..', preprocessors)
+      const filePath = resolvePath(configUri.fsPath, '..', preprocessors)
       if (existsFile(filePath)) {
         parsedConfig.extra.preprocessors = URI.file(filePath)
       }
@@ -84,9 +91,9 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
         parsedConfig.srcRoots = [workspaceUri]
       }
       else {
-        const scriptsPath = await findInside(workspaceUri.fsPath, dirent => isDirectory(dirent, StringConstants.Folder.scripts))
-        if (scriptsPath) {
-          parsedConfig.srcRoots = [URI.file(scriptsPath)]
+        const scriptsUri = await findInside(this.fsProvider, workspaceUri, entry => isDirectory(entry, StringConstants.Folder.scripts))
+        if (scriptsUri) {
+          parsedConfig.srcRoots = [scriptsUri]
         }
         else {
           // Sad, the 'scripts' folder is not found either, fallback to use the workspace uri.
@@ -96,21 +103,18 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
     }
   }
 
-  private async findConfig(workspaceFolder: WorkspaceFolder) {
+  private async findConfig(workspaceFolder: WorkspaceFolder): Promise<URI | undefined> {
     const workspaceUri = URI.parse(workspaceFolder.uri)
-    const configPath = await findInside(workspaceUri.fsPath, dirent => isFile(dirent, StringConstants.Config.intellizen))
-    if (configPath) {
-      return URI.file(configPath)
-    }
+    return findInside(this.fsProvider, workspaceUri, entry => isFile(entry, StringConstants.Config.intellizen))
   }
 }
 
 function existsDirectory(dirPath: string): boolean {
-  return fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()
+  return existsSync(dirPath) && statSync(dirPath).isDirectory()
 }
 
 function existsFile(filePath: string): boolean {
-  return fs.existsSync(filePath) && fs.statSync(filePath).isFile()
+  return existsSync(filePath) && statSync(filePath).isFile()
 }
 
 class ConfigError extends Error {

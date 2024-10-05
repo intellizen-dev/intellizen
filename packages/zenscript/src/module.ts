@@ -82,7 +82,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
 export const ZenScriptSharedModule: Module<ZenScriptSharedServices, PartialLangiumSharedServices & ZenScriptAddedSharedServices> = {
   workspace: {
     WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
-    ConfigurationManager: () => new ZenScriptConfigurationManager(),
+    ConfigurationManager: services => new ZenScriptConfigurationManager(services),
   },
 }
 
