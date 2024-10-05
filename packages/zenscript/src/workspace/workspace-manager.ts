@@ -12,12 +12,10 @@ declare module 'langium' {
 }
 
 export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
-  private readonly documentFactory: LangiumDocumentFactory
   private readonly configManager: ZenScriptConfigurationManager
 
   constructor(services: ZenScriptSharedServices) {
     super(services)
-    this.documentFactory = services.workspace.LangiumDocumentFactory
     this.configManager = services.workspace.ConfigurationManager
   }
 
@@ -30,29 +28,19 @@ export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
 
   protected async performStartup(folders: WorkspaceFolder[]): Promise<LangiumDocument[]> {
     const fileExtensions = this.serviceRegistry.all.flatMap(e => e.LanguageMetaData.fileExtensions)
-    const documents: LangiumDocument[] = []
-    for (const folder of folders) {
-      documents.push(...await this.collectWorkspaceFolder(folder, fileExtensions))
-    }
+    const srcRoots = folders.flatMap(folder => folder.srcRoots).filter(uri => !!uri)
+    const all = await Promise.all(srcRoots.flatMap(srcRoot => this.collect(srcRoot, fileExtensions)))
     this._ready.resolve()
-    return documents
+    return all.flat()
   }
 
-  protected async collectWorkspaceFolder(folder: WorkspaceFolder, fileExtensions: string[]): Promise<LangiumDocument[]> {
-    const documents: LangiumDocument[] = []
-    for (const srcRoot of folder.srcRoots) {
-      documents.push(...await this.collectSrcRoot(srcRoot, fileExtensions))
-    }
-    return documents
-  }
-
-  protected async collectSrcRoot(srcRoot: URI, fileExtensions: string[]): Promise<LangiumDocument[]> {
+  protected async collect(srcRoot: URI, fileExtensions: string[]): Promise<LangiumDocument[]> {
     const documents: LangiumDocument[] = []
     await traverseInside(this.fileSystemProvider, srcRoot, async (entry) => {
       if (entry.isFile && fileExtensions.includes(UriUtils.extname(entry.uri))) {
         const document = await this.langiumDocuments.getOrCreateDocument(entry.uri)
 
-        // @ts-ignore
+        // @ts-expect-error cause readonly
         document.srcRootUri = srcRoot
 
         if (!this.langiumDocuments.hasDocument(document.uri)) {
