@@ -46,7 +46,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
     let config: IntelliZenConfig
     try {
       const json = await fs.promises.readFile(configUri.fsPath)
-      config = IntelliZenSchema.parse(json)
+      config = IntelliZenSchema.parse(JSON.parse(json.toString()))
     }
     catch (cause) {
       console.error(new ConfigError(workspaceFolder, { cause }))

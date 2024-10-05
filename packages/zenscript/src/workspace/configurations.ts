@@ -1,4 +1,5 @@
-import zod from 'zod'
+import z from 'zod'
+import { URI } from 'langium'
 
 export const StringConstants = Object.freeze({
   Config: {
@@ -10,12 +11,14 @@ export const StringConstants = Object.freeze({
   },
 })
 
-export const IntelliZenSchema = zod.object({
-  rootDirs: zod.array(zod.string().url()),
-  extra: zod.optional(zod.object({
-    preprocessors: zod.optional(zod.string().url()),
-    brackets: zod.optional(zod.string().url()),
-  })),
+const zodUriParse = z.string().refine(val => URI.isUri(URI.file(val)))
+
+export const IntelliZenSchema = z.object({
+  rootDirs: zodUriParse.array(),
+  extra: z.object({
+    brackets: zodUriParse.optional(),
+    preprocessors: zodUriParse.optional(),
+  }).optional(),
 })
 
-export type IntelliZenConfig = zod.infer<typeof IntelliZenSchema>
+export type IntelliZenConfig = z.infer<typeof IntelliZenSchema>
