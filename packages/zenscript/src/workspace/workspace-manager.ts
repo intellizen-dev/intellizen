@@ -35,21 +35,23 @@ export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
   }
 
   protected async collect(srcRoot: URI, fileExtensions: string[]): Promise<LangiumDocument[]> {
-    const documents: LangiumDocument[] = []
+    const documentPromises: Promise<LangiumDocument | undefined>[] = []
     await traverseInside(this.fileSystemProvider, srcRoot, async (node) => {
       if (node.isFile && fileExtensions.includes(UriUtils.extname(node.uri))) {
-        const document = await this.langiumDocuments.getOrCreateDocument(node.uri)
-
-        // @ts-expect-error cause readonly
-        document.srcRootUri = srcRoot
-
-        if (!this.langiumDocuments.hasDocument(document.uri)) {
-          this.langiumDocuments.addDocument(document)
-        }
-
-        documents.push(document)
+        documentPromises.push(this.processFile(node.uri, srcRoot))
       }
     })
-    return documents
+    const documents = await Promise.all(documentPromises)
+    return documents.filter(doc => !!doc)
+  }
+
+  private async processFile(uri: URI, srcRoot: URI): Promise<LangiumDocument | undefined> {
+    const document = await this.langiumDocuments.getOrCreateDocument(uri)
+    // @ts-expect-error cause readonly
+    document.srcRootUri = srcRoot
+    if (!this.langiumDocuments.hasDocument(document.uri)) {
+      this.langiumDocuments.addDocument(document)
+    }
+    return document
   }
 }

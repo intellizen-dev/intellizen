@@ -62,24 +62,27 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
     }
 
     const brackets = config.extra?.brackets
-    if (brackets) {
-      const filePath = resolvePath(configUri.fsPath, '..', brackets)
-      if (existsFile(filePath)) {
-        parsedConfig.extra.brackets = URI.file(filePath)
-      }
-      else {
-        console.error(new EntryError('extra.brackets', { cause: new FileNotFoundError(brackets) }))
-      }
-    }
-
     const preprocessors = config.extra?.preprocessors
-    if (preprocessors) {
-      const filePath = resolvePath(configUri.fsPath, '..', preprocessors)
-      if (existsFile(filePath)) {
-        parsedConfig.extra.preprocessors = URI.file(filePath)
+
+    await Promise.all([
+      this.processExtraFile(brackets, 'brackets', parsedConfig, configUri),
+      this.processExtraFile(preprocessors, 'preprocessors', parsedConfig, configUri),
+    ])
+  }
+
+  private async processExtraFile(
+    filePath: string | undefined,
+    key: keyof ParsedConfig['extra'],
+    parsedConfig: ParsedConfig,
+    configUri: URI,
+  ) {
+    if (filePath) {
+      const resolvedPath = resolvePath(configUri.fsPath, '..', filePath)
+      if (existsFile(resolvedPath)) {
+        parsedConfig.extra[key] = URI.file(resolvedPath)
       }
       else {
-        console.error(new EntryError('extra.preprocessors', { cause: new FileNotFoundError(preprocessors) }))
+        console.error(new EntryError(`extra.${key}`, { cause: new FileNotFoundError(filePath) }))
       }
     }
   }
