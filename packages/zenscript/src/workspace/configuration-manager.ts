@@ -1,8 +1,7 @@
-import { existsSync, statSync } from 'node:fs'
 import { resolve as resolvePath } from 'node:path'
 import type { FileSystemProvider, WorkspaceFolder } from 'langium'
 import { URI, UriUtils } from 'langium'
-import { findInside, isDirectory, isFile } from '../utils/fs'
+import { existsDirectory, existsFile, findInside, isDirectory, isFile } from '../utils/fs'
 import type { ZenScriptSharedServices } from '../module'
 import type { ParsedConfig } from './configurations'
 import { IntelliZenSchema, StringConstants } from './configurations'
@@ -111,14 +110,6 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
     const workspaceUri = URI.parse(workspaceFolder.uri)
     return findInside(this.fileSystemProvider, workspaceUri, node => isFile(node, StringConstants.Config.intellizen))
   }
-}
-
-function existsDirectory(dirPath: string): boolean {
-  return existsSync(dirPath) && statSync(dirPath).isDirectory()
-}
-
-function existsFile(filePath: string): boolean {
-  return existsSync(filePath) && statSync(filePath).isFile()
 }
 
 class ConfigError extends Error {

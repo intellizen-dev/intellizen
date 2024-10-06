@@ -1,3 +1,4 @@
+import { existsSync, statSync } from 'node:fs'
 import { type FileSystemNode, type FileSystemProvider, type URI, UriUtils } from 'langium'
 
 export async function traverseInside(
@@ -38,4 +39,12 @@ export function isFile(node: FileSystemNode, name: string): boolean {
 
 export function isDirectory(node: FileSystemNode, name: string): boolean {
   return node.isDirectory && UriUtils.basename(node.uri) === name
+}
+
+export function existsDirectory(dirPath: string): boolean {
+  return existsSync(dirPath) && statSync(dirPath).isDirectory()
+}
+
+export function existsFile(filePath: string): boolean {
+  return existsSync(filePath) && statSync(filePath).isFile()
 }
