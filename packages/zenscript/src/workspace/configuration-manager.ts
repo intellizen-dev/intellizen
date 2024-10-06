@@ -43,7 +43,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
     else {
       console.error(new ConfigError(workspaceFolder, { cause: new Error(`Config file "${StringConstants.Config.intellizen}" not found.`) }))
     }
-    await this.finalize(parsedConfig, workspaceUri)
+    await this.makeSureSrcRootsIsNotEmpty(parsedConfig, workspaceUri)
     workspaceFolder.config = parsedConfig
   }
 
@@ -87,23 +87,24 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
     }
   }
 
-  private async finalize(parsedConfig: ParsedConfig, workspaceUri: URI) {
-    if (parsedConfig.srcRoots.length === 0) {
-      // Oops, this means something went wrong. Falling back to find the 'scripts' folder.
-      if (StringConstants.Folder.scripts === UriUtils.basename(workspaceUri)) {
-        parsedConfig.srcRoots = [workspaceUri]
-      }
-      else {
-        const scriptsUri = await findInside(this.fileSystemProvider, workspaceUri, node => isDirectory(node, StringConstants.Folder.scripts))
-        if (scriptsUri) {
-          parsedConfig.srcRoots = [scriptsUri]
-        }
-        else {
-          // Sad, the 'scripts' folder is not found either, fallback to use the workspace uri.
-          parsedConfig.srcRoots = [workspaceUri]
-        }
-      }
+  private async makeSureSrcRootsIsNotEmpty(parsedConfig: ParsedConfig, workspaceUri: URI) {
+    if (parsedConfig.srcRoots.length > 0) {
+      // looks fine, do nothing.
+      return
     }
+
+    if (StringConstants.Folder.scripts === UriUtils.basename(workspaceUri)) {
+      parsedConfig.srcRoots = [workspaceUri]
+      return
+    }
+
+    const scriptsUri = await findInside(this.fileSystemProvider, workspaceUri, node => isDirectory(node, StringConstants.Folder.scripts))
+    if (scriptsUri) {
+      parsedConfig.srcRoots = [scriptsUri]
+      return
+    }
+
+    parsedConfig.srcRoots = [workspaceUri]
   }
 
   private async findConfig(workspaceFolder: WorkspaceFolder): Promise<URI | undefined> {
