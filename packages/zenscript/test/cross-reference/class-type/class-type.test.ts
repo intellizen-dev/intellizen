@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import type { LangiumDocument } from 'langium'
+import { type LangiumDocument, URI } from 'langium'
 import { assertNoErrors, createParseHelper } from '../../utils'
 import type { ClassDeclaration, ClassTypeReference, ImportDeclaration, Script, VariableDeclaration } from '../../../src/generated/ast'
 
@@ -26,7 +26,9 @@ const var_class_be_imported_as_alias = script_user.statements[3] as VariableDecl
 async function parseFile(filePath: string): Promise<LangiumDocument<Script>> {
   const content = readFileSync(filePath).toString()
   const uri = pathToFileURL(filePath).toString()
-  return parse(content, { documentUri: uri })
+  const document = await parse(content, { documentUri: uri })
+  document.srcRootUri = URI.file(path.resolve(__dirname, 'scripts'))
+  return document
 }
 
 describe('check cross reference of class type', () => {
