@@ -64,7 +64,7 @@ function getQualifiedName(document: LangiumDocument): string | undefined {
 
   const docName = getName(document)
   const relatives = UriUtils.relative(document.srcRootUri, document.uri).split('/')
-  const names = ['scripts', ...relatives.splice(0, -1), docName]
+  const names = ['scripts', ...relatives.slice(0, -1), docName]
   return names.join('.')
 }
 
