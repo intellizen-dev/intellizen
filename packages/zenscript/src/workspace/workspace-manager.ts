@@ -28,25 +28,24 @@ export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
 
   protected async performStartup(folders: WorkspaceFolder[]): Promise<LangiumDocument[]> {
     const fileExtensions = this.serviceRegistry.all.flatMap(e => e.LanguageMetaData.fileExtensions)
-    const srcRoots = folders.flatMap(folder => folder.config.srcRoots).filter(uri => !!uri)
+    const srcRoots = folders.flatMap(folder => folder.config.srcRoots)
     const all = await Promise.all(srcRoots.flatMap(srcRoot => this.collect(srcRoot, fileExtensions)))
     this._ready.resolve()
     return all.flat()
   }
 
   protected async collect(srcRoot: URI, fileExtensions: string[]): Promise<LangiumDocument[]> {
-    const documentPromises: Promise<LangiumDocument | undefined>[] = []
+    const documents: Promise<LangiumDocument>[] = []
     await traverseInside(this.fileSystemProvider, srcRoot, async (node) => {
       if (node.isFile && fileExtensions.includes(UriUtils.extname(node.uri))) {
-        documentPromises.push(this.processFile(node.uri, srcRoot))
+        documents.push(this.process(node.uri, srcRoot))
       }
     })
-    const documents = await Promise.all(documentPromises)
-    return documents.filter(doc => !!doc)
+    return Promise.all(documents)
   }
 
-  private async processFile(uri: URI, srcRoot: URI): Promise<LangiumDocument | undefined> {
-    const document = await this.langiumDocuments.getOrCreateDocument(uri)
+  private async process(srcFile: URI, srcRoot: URI): Promise<LangiumDocument> {
+    const document = await this.langiumDocuments.getOrCreateDocument(srcFile)
     // @ts-expect-error cause readonly
     document.srcRootUri = srcRoot
     if (!this.langiumDocuments.hasDocument(document.uri)) {
