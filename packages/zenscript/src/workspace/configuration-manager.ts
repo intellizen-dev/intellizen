@@ -88,7 +88,6 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
 
   private async makeSureSrcRootsIsNotEmpty(parsedConfig: ParsedConfig, workspaceUri: URI) {
     if (parsedConfig.srcRoots.length > 0) {
-      // looks fine, do nothing.
       return
     }
 
