@@ -3,6 +3,7 @@ import type { FileSystemProvider, WorkspaceFolder } from 'langium'
 import { URI, UriUtils } from 'langium'
 import { existsDirectory, existsFile, findInside, isDirectory, isFile } from '../utils/fs'
 import type { ZenScriptSharedServices } from '../module'
+import { ConfigError, DirectoryNotFoundError, EntryError, FileNotFoundError } from '../utils/error'
 import type { ParsedConfig } from './configurations'
 import { IntelliZenSchema, StringConstants } from './configurations'
 
@@ -108,29 +109,5 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
   private async findConfig(workspaceFolder: WorkspaceFolder): Promise<URI | undefined> {
     const workspaceUri = URI.parse(workspaceFolder.uri)
     return findInside(this.fileSystemProvider, workspaceUri, node => isFile(node, StringConstants.Config.intellizen))
-  }
-}
-
-class ConfigError extends Error {
-  constructor(workspaceFolder: WorkspaceFolder, options?: ErrorOptions) {
-    super(`An error occurred parsing "${StringConstants.Config.intellizen}" located in the workspace folder "${workspaceFolder.name}".`, options)
-  }
-}
-
-class EntryError extends Error {
-  constructor(entry: string, options?: ErrorOptions) {
-    super(`An error occurred parsing entry "${entry}".`, options)
-  }
-}
-
-class FileNotFoundError extends Error {
-  constructor(filePath: string, options?: ErrorOptions) {
-    super(`File "${filePath}" does not exist.`, options)
-  }
-}
-
-class DirectoryNotFoundError extends Error {
-  constructor(dirPath: string, options?: ErrorOptions) {
-    super(`Directory "${dirPath}" does not exist.`, options)
   }
 }
