@@ -59,6 +59,9 @@
     "test": "pnpm build && vitest --typecheck",
     "test:update": "vitest --typecheck -u"
   },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
   "devDependencies": {
     "@antfu/eslint-config": "^2.26.0",
     "@types/node": "^22.4.1",

@@ -1,14 +1,25 @@
-import { readFileSync } from 'node:fs'
 import * as path from 'node:path'
-import { pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import type { LangiumDocument } from 'langium'
-import { assertNoErrors, createParseHelper } from '../../utils'
+import type { LangiumDocument, WorkspaceFolder } from 'langium'
+import { URI } from 'langium'
+import { NodeFileSystem } from 'langium/node'
+import { assertNoErrors } from '../../utils'
 import type { ClassDeclaration, ClassTypeReference, ImportDeclaration, Script, VariableDeclaration } from '../../../src/generated/ast'
+import { createZenScriptServices } from '../../../src/module'
 
-const parse = createParseHelper()
-const document_provider_zs = await parseFile(path.resolve(__dirname, 'scripts', 'provider.zs'))
-const document_user_zs = await parseFile(path.resolve(__dirname, 'scripts', 'user.zs'))
+const service = createZenScriptServices(NodeFileSystem)
+
+await service.shared.workspace.WorkspaceManager.initializeWorkspace([{
+  uri: URI.file(__dirname).toString(),
+  name: 'class-type-test',
+} as WorkspaceFolder])
+
+function getDocument(docPath: string) {
+  return service.shared.workspace.LangiumDocuments.getDocument(URI.file(docPath)) as LangiumDocument<Script>
+}
+
+const document_provider_zs = getDocument(path.resolve(__dirname, 'scripts', 'provider.zs'))
+const document_user_zs = getDocument(path.resolve(__dirname, 'scripts', 'user.zs'))
 
 const script_provider = document_provider_zs.parseResult.value
 const zenclass_alpha = script_provider.classes[0] as ClassDeclaration
@@ -22,12 +33,6 @@ const var_script_be_imported = script_user.statements[0] as VariableDeclaration
 const var_script_be_imported_as_alias = script_user.statements[1] as VariableDeclaration
 const var_class_be_imported = script_user.statements[2] as VariableDeclaration
 const var_class_be_imported_as_alias = script_user.statements[3] as VariableDeclaration
-
-async function parseFile(filePath: string): Promise<LangiumDocument<Script>> {
-  const content = readFileSync(filePath).toString()
-  const uri = pathToFileURL(filePath).toString()
-  return parse(content, { documentUri: uri })
-}
 
 describe('check cross reference of class type', () => {
   it('should no errors', () => {

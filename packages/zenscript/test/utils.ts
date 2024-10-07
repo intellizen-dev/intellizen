@@ -9,7 +9,7 @@ import type { ClassTypeReference, Expression, PrimitiveTypeReference, ReferenceE
 
 export function createParseHelper() {
   const service = createZenScriptServices(NodeFileSystem)
-  return parseHelper<Script>(service.zenscript)
+  return parseHelper<Script>(service)
 }
 
 export async function assertNoErrors(model: LangiumDocument<Script>) {
