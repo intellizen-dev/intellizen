@@ -29,7 +29,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
   }
 
   private async loadConfig(workspaceFolder: WorkspaceFolder) {
-    const workspaceUri = URI.file(workspaceFolder.uri)
+    const workspaceUri = URI.parse(workspaceFolder.uri)
     const configUri = await this.findConfig(workspaceFolder)
     const parsedConfig: ParsedConfig = { srcRoots: [], extra: {} }
     if (configUri) {
