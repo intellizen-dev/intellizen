@@ -11,7 +11,7 @@ const service = createZenScriptServices(NodeFileSystem)
 
 await service.shared.workspace.WorkspaceManager.initializeWorkspace([{
   uri: URI.file(__dirname).toString(),
-  name: 'test',
+  name: 'class-type-test',
 } as WorkspaceFolder])
 
 function getDocument(docPath: string) {
