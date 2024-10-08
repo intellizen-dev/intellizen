@@ -4,7 +4,7 @@
     {
       "id": "zenscript",
       "grammar": "src/zenscript.langium",
-      "fileExtensions": [".zs"],
+      "fileExtensions": [".zs", ".dzs"],
       "textMate": {
         "out": "../../syntaxes/zenscript.tmLanguage.json"
       }

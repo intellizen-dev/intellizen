@@ -1,6 +1,7 @@
 grammar ZenScript
 
 entry Script:
+    package=PackageDeclaration?
     ( imports+=ImportDeclaration
     | functions+=FunctionDeclaration
     | expands+=ExpandFunctionDeclaration
@@ -10,6 +11,10 @@ entry Script:
 ;
 
 interface Declaration {}
+
+interface PackageDeclaration extends Declaration {
+    path: @NamedElement[];
+}
 
 interface ImportDeclaration extends Declaration {
     path: @NamedElement[];
@@ -24,7 +29,7 @@ interface ClassDeclaration extends Declaration {
 
 type NamedElement = Script | ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | ForVariableDeclaration | MapEntry | ImportDeclaration;
 
-type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
+type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration | OperatorFunctionDeclaration;
 
 type CallableDeclaration = FunctionDeclaration | ExpandFunctionDeclaration | ConstructorDeclaration;
 
@@ -58,10 +63,20 @@ interface ExpandFunctionDeclaration extends Declaration {
     body: Statement[];
 }
 
+interface OperatorFunctionDeclaration extends Declaration {
+    op: string
+    parameters: ValueParameter[];
+    returnTypeRef?: TypeReference;
+}
+
 interface ConstructorDeclaration extends Declaration {
     parameters: ValueParameter[];
     body: Statement[];
 }
+
+PackageDeclaration returns PackageDeclaration:
+    'package' (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID] ';'
+;
 
 ImportDeclaration returns ImportDeclaration:
     'import' (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID] ('as' alias=ID)? ';'?
@@ -76,7 +91,7 @@ ClassDeclaration returns ClassDeclaration:
 ;
 
 ClassMemberDeclaration returns ClassMemberDeclaration:
-    FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
+    FunctionDeclaration | FieldDeclaration | ConstructorDeclaration | OperatorFunctionDeclaration;
 
 FieldDeclaration returns FieldDeclaration:
     prefix=('static'|'var'|'val') name=ID ('as' typeRef=TypeReference)? ('=' initializer=Expression)? ';'
@@ -89,9 +104,9 @@ ValueParameter returns ValueParameter:
 FunctionDeclaration returns FunctionDeclaration:
     prefix=('static' | 'global')? 'function' name=ID '('
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' ('as' returnTypeRef=TypeReference)? '{'
+    ')' ('as' returnTypeRef=TypeReference)? ('{'
         (body+=Statement)*
-    '}'
+    '}')? ';'?
 ;
 
 ExpandFunctionDeclaration returns ExpandFunctionDeclaration:
@@ -100,6 +115,16 @@ ExpandFunctionDeclaration returns ExpandFunctionDeclaration:
     ')' ('as' returnTypeRef=TypeReference)? '{'
         (body+=Statement)*
     '}'
+;
+
+OperatorFunctionDeclaration returns OperatorFunctionDeclaration:
+    'operator' op=Operator '('
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
+    ')' ('as' returnTypeRef=TypeReference)? ';'?
+;
+
+Operator returns string:
+    '+' | '-' | '*' | '/' | '%' | '~' | '|' | '&' | '^' | '!' | '['']' | '['']''=' | '..' | 'has' | '.' | '.''=' | 'for_in' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
 ;
 
 ConstructorDeclaration returns ConstructorDeclaration:
@@ -591,6 +616,16 @@ ID returns string
     | 'operator' // dzs
     | 'for_in'   // dzs
     | 'orderly'  // zenutils
+    | 'any'      // zenclass
+    | 'byte'     // zenclass
+    | 'short'    // zenclass
+    | 'int'      // zenclass
+    | 'long'     // zenclass
+    | 'float'    // zenclass
+    | 'double'   // zenclass
+    | 'bool'     // zenclass
+    | 'void'     // zenclass
+    | 'string'   // zenclass
 ;
 
 hidden terminal WHITE_SPACE: /\s+/;
