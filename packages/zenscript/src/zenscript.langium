@@ -48,7 +48,7 @@ interface ValueParameter extends Declaration {
 }
 
 interface FunctionDeclaration extends Declaration {
-    prefix?: 'static' | 'global';
+    prefix?: 'static' | 'global' | 'lambda';
     name: string;
     parameters: ValueParameter[];
     returnTypeRef?: TypeReference;
@@ -102,7 +102,7 @@ ValueParameter returns ValueParameter:
 ;
 
 FunctionDeclaration returns FunctionDeclaration:
-    prefix=('static' | 'global')? 'function' name=ID? '('
+    prefix=('static' | 'global' | 'lambda')? 'function' name=ID '('
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
     ')' ('as' returnTypeRef=TypeReference)? ('{'
         (body+=Statement)*
