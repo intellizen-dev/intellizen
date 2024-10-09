@@ -102,7 +102,7 @@ ValueParameter returns ValueParameter:
 ;
 
 FunctionDeclaration returns FunctionDeclaration:
-    prefix=('static' | 'global')? 'function' name=ID '('
+    prefix=('static' | 'global')? 'function' name=ID? '('
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
     ')' ('as' returnTypeRef=TypeReference)? ('{'
         (body+=Statement)*
@@ -120,7 +120,7 @@ ExpandFunctionDeclaration returns ExpandFunctionDeclaration:
 OperatorFunctionDeclaration returns OperatorFunctionDeclaration:
     'operator' op=Operator '('
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' ('as' returnTypeRef=TypeReference)? ';'?
+    ')' ('as' returnTypeRef=CompoundType)? ';'?
 ;
 
 Operator returns string:
@@ -526,6 +526,10 @@ interface IntersectionTypeReference extends TypeReference {
     values: TypeReference[];
 }
 
+interface CompoundTypeReference extends TypeReference {
+    values: TypeReference[];
+}
+
 interface PrimitiveTypeReference extends TypeReference {
     value: 'any' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'bool' | 'void' | 'string';
 }
@@ -570,6 +574,10 @@ UnionType returns TypeReference:
 
 IntersectionType returns TypeReference:
     ComplexType ({IntersectionTypeReference.values+=current} ('&' values+=ComplexType)+)?
+;
+
+CompoundType returns TypeReference:
+    ComplexType ({CompoundTypeReference.values+=current} (',' values+=ComplexType)+)?
 ;
 
 ComplexType returns TypeReference:
