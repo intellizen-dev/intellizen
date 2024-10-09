@@ -13,7 +13,7 @@ entry Script:
 interface Declaration {}
 
 interface PackageDeclaration extends Declaration {
-    path: @NamedElement[];
+    path: string[];
 }
 
 interface ImportDeclaration extends Declaration {
@@ -75,7 +75,7 @@ interface ConstructorDeclaration extends Declaration {
 }
 
 PackageDeclaration returns PackageDeclaration:
-    'package' (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID] ';'
+    'package' (path+=ID '.')* path+=ID ';'
 ;
 
 ImportDeclaration returns ImportDeclaration:
@@ -611,7 +611,7 @@ ClassType returns ClassTypeReference:
 // Soft keywords
 ID returns string
     : IDENTIFIER
-    | 'in'
+    | 'to'
     | 'extends'  // dzs
     | 'operator' // dzs
     | 'for_in'   // dzs
@@ -633,7 +633,7 @@ terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
 terminal FLOATING: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdD]?/;
 terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
-terminal BRACKETS: /<[^<>]+>/;
+terminal BRACKETS: /<[^<>\n]+>/;
 
 hidden terminal BLOCK_COMMENT: /\/\*.*?\*\//;
 hidden terminal LINE_COMMENT: /\/\/[^\n\r]*/;
