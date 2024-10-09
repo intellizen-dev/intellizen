@@ -1,6 +1,7 @@
 import { resolve as resolvePath } from 'node:path'
 import type { FileSystemProvider, WorkspaceFolder } from 'langium'
 import { URI, UriUtils } from 'langium'
+import { Resolver } from '@stoplight/json-ref-resolver'
 import { existsDirectory, existsFile, findInside, isDirectory, isFile } from '../utils/fs'
 import type { ZenScriptSharedServices } from '../module'
 import { ConfigError, DirectoryNotFoundError, EntryError, FileNotFoundError } from '../utils/error'
@@ -49,7 +50,9 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
 
   private async load(parsedConfig: ParsedConfig, configUri: URI) {
     const content = await this.fileSystemProvider.readFile(configUri)
-    const config = IntelliZenSchema.parse(JSON.parse(content))
+    const json = JSON.parse(content)
+    const resolved = await new Resolver().resolve(json)
+    const config = IntelliZenSchema.parse(resolved.result)
 
     for (const srcRoot of config.srcRoots) {
       const srcRootPath = resolvePath(configUri.fsPath, '..', srcRoot)
@@ -61,13 +64,13 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
       }
     }
 
-    const brackets = config.extra?.brackets
-    const preprocessors = config.extra?.preprocessors
+    // const brackets = config.extra?.brackets
+    // const preprocessors = config.extra?.preprocessors
 
-    await Promise.all([
-      this.processExtraFile(brackets, 'brackets', parsedConfig, configUri),
-      this.processExtraFile(preprocessors, 'preprocessors', parsedConfig, configUri),
-    ])
+    // await Promise.all([
+    //   this.processExtraFile(brackets, 'brackets', parsedConfig, configUri),
+    //   this.processExtraFile(preprocessors, 'preprocessors', parsedConfig, configUri),
+    // ])
   }
 
   private async processExtraFile(
