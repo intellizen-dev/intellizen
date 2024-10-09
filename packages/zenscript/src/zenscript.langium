@@ -102,7 +102,7 @@ ValueParameter returns ValueParameter:
 ;
 
 FunctionDeclaration returns FunctionDeclaration:
-    prefix=('static' | 'global' | 'lambda')? 'function' name=ID '('
+    prefix=('static' | 'global' | 'lambda')? 'function' name=ID? '('
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
     ')' ('as' returnTypeRef=TypeReference)? ('{'
         (body+=Statement)*
