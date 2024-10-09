@@ -56,4 +56,3 @@ function concat(qualifiedName: string, name: string): string {
   }
   return [...qualifiedName.split('.'), name].join('.')
 }
-
