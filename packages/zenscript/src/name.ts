@@ -1,8 +1,9 @@
-import type { AstNode, CstNode, LangiumDocument, NameProvider } from 'langium'
-import { AstUtils, GrammarUtils, UriUtils, isNamed } from 'langium'
-import { substringBeforeLast } from '@intellizen/shared'
+import type { AstNode, CstNode, NameProvider } from 'langium'
+import { AstUtils, GrammarUtils, isNamed } from 'langium'
+import type { Script } from './generated/ast'
 import { isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isScript, isVariableDeclaration } from './generated/ast'
 import { isToplevel } from './utils/ast'
+import { getName, getQualifiedName } from './utils/document'
 
 declare module 'langium' {
   interface NameProvider {
@@ -28,7 +29,7 @@ export class ZenScriptNameProvider implements NameProvider {
   }
 
   getQualifiedName(node: AstNode): string | undefined {
-    const document = AstUtils.getDocument(node)
+    const document = AstUtils.getDocument<Script>(node)
     if (!document) {
       return undefined
     }
@@ -53,22 +54,6 @@ function concat(qualifiedName: string, name: string): string {
   if (!qualifiedName) {
     return name
   }
-  const names = [...qualifiedName.split('.'), name]
-  return names.join('.')
+  return [...qualifiedName.split('.'), name].join('.')
 }
 
-function getQualifiedName(document: LangiumDocument): string | undefined {
-  if (!document.srcRootUri) {
-    return undefined
-  }
-
-  const docName = getName(document)
-  const relatives = UriUtils.relative(document.srcRootUri, document.uri).split('/')
-  const names = ['scripts', ...relatives.slice(0, -1), docName]
-  return names.join('.')
-}
-
-function getName(document: LangiumDocument): string {
-  const baseName = UriUtils.basename(document.uri)
-  return substringBeforeLast(baseName, '.')
-}
