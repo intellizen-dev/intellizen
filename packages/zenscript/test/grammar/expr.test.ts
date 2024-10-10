@@ -150,7 +150,10 @@ describe('parse expression of script with ZenScript ', () => {
   })
 
   it('function expression', async () => {
-    const functionExpr = await parseExpr<FunctionExpression>('function (foo as int) as void {};')
+    const expr = await parseExpr<ParenthesizedExpression>('(function (foo as int) as void {});')
+    expect(expr.$type).toBe('ParenthesizedExpression')
+
+    const functionExpr = expr.expr as FunctionExpression
     expect(functionExpr.$type).toBe('FunctionExpression')
     expect(functionExpr.parameters.length).toBe(1)
     const foo = functionExpr.parameters[0]

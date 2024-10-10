@@ -29,7 +29,7 @@ export function getClassMembers(clazz?: ClassDeclaration) {
 }
 
 export function isStaticMember(member: ClassMemberDeclaration) {
-  return member.$type !== 'ConstructorDeclaration' && member.prefix === 'static'
+  return 'prefix' in member && member.prefix === 'static'
 }
 
 export function toQualifiedName(importDecl: ImportDeclaration, context: ReferenceInfo): string {

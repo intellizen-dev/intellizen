@@ -2,21 +2,19 @@ import z from 'zod'
 import type { URI } from 'langium'
 
 export const StringConstants = Object.freeze({
-  Config: {
-    intellizen: 'intellizen.json',
-  },
   Folder: {
     scripts: 'scripts',
     dzs_scripts: 'dzs_scripts',
+  },
+  File: {
+    intellizen: 'intellizen.json',
+    brackets: 'brackets.json',
+    preprocessors: 'preprocessors.json',
   },
 })
 
 export const IntelliZenSchema = z.object({
   srcRoots: z.string().array(),
-  extra: z.object({
-    brackets: z.string().optional(),
-    preprocessors: z.string().optional(),
-  }).optional(),
 })
 
 export type IntelliZenConfig = z.infer<typeof IntelliZenSchema>
