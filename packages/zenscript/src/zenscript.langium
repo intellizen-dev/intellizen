@@ -44,7 +44,7 @@ interface ValueParameter extends Declaration {
     varargs?: boolean;
     name: string;
     typeRef?: TypeReference;
-    defaultValue?: Expression;
+    defaultValue?: 'default' | Expression;
 }
 
 interface FunctionDeclaration extends Declaration {
@@ -98,7 +98,7 @@ FieldDeclaration returns FieldDeclaration:
 ;
 
 ValueParameter returns ValueParameter:
-    (varargs?='...')? name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=Expression)?
+    (varargs?='...')? name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=('default' | Expression))?
 ;
 
 FunctionDeclaration returns FunctionDeclaration:
@@ -623,6 +623,7 @@ ID returns string
     | 'extends'  // dzs
     | 'operator' // dzs
     | 'for_in'   // dzs
+    | 'default'  // dzs
     | 'orderly'  // zenutils
     | 'any'      // zenclass
     | 'byte'     // zenclass
