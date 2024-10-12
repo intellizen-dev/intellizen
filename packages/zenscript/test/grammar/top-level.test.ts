@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { assertNoErrors, assertTypeRef, assertVariableDeclaration, createParseHelper } from '../utils'
-import type { ForStatement, IfStatement } from '../../src/generated/ast'
+import { assertClassTypeReference, assertNoErrors, assertVariableDeclaration, createParseHelper } from '../utils'
+import type { ForStatement, IfStatement, VariableDeclaration } from '../../src/generated/ast'
 
 const parse = createParseHelper()
 
@@ -30,20 +30,20 @@ describe('parse top-level of script with ZenScript', () => {
     expect(foo.name).toBe('foo')
     expect(foo.parameters.length).toBe(1)
     expect(foo.parameters[0].name).toBe('a')
-    assertTypeRef('int', foo.parameters[0].typeRef)
-    assertTypeRef('int', foo.returnTypeRef)
+    assertClassTypeReference(foo.parameters[0].typeRef, 'int')
+    assertClassTypeReference(foo.returnTypeRef, 'int')
 
     expect(bar.prefix).toBe('static')
     expect(bar.name).toBe('bar')
     expect(bar.parameters.length).toBe(0)
-    assertTypeRef('void', bar.returnTypeRef)
+    assertClassTypeReference(bar.returnTypeRef, 'void')
 
     expect(baz.prefix).toBe('global')
     expect(baz.name).toBe('baz')
     expect(baz.parameters.length).toBe(1)
     expect(baz.parameters[0].name).toBe('c')
-    assertTypeRef(['OtherType'], baz.parameters[0].typeRef)
-    assertTypeRef('any', baz.returnTypeRef)
+    assertClassTypeReference(baz.parameters[0].typeRef, 'OtherType')
+    assertClassTypeReference(baz.returnTypeRef, 'any')
   })
 
   it('expand function declaration', async () => {
@@ -55,16 +55,16 @@ describe('parse top-level of script with ZenScript', () => {
     const [string$reverse, otherType$foo] = model.parseResult.value.expands
 
     expect(string$reverse.name).toBe('reverse')
-    assertTypeRef('string', string$reverse.typeRef)
+    assertClassTypeReference(string$reverse.typeRef, 'string')
     expect(string$reverse.parameters.length).toBe(0)
-    assertTypeRef('string', string$reverse.returnTypeRef)
+    assertClassTypeReference(string$reverse.returnTypeRef, 'string')
 
     expect(otherType$foo.name).toBe('foo')
-    assertTypeRef('string', string$reverse.typeRef)
+    assertClassTypeReference(string$reverse.typeRef, 'string')
     expect(otherType$foo.parameters.length).toBe(1)
     expect(otherType$foo.parameters[0].name).toBe('foo')
-    assertTypeRef(['OtherType', 'ChildType'], otherType$foo.parameters[0].typeRef)
-    assertTypeRef('void', otherType$foo.returnTypeRef)
+    assertClassTypeReference(otherType$foo.parameters[0].typeRef, 'OtherType.ChildType')
+    assertClassTypeReference(otherType$foo.returnTypeRef, 'void')
   })
 
   it('class declaration', async () => {
@@ -152,9 +152,16 @@ describe('parse top-level of script with ZenScript', () => {
     expect(forStatementEachArray.$type).toBe('ForStatement')
     expect((forStatementEachArray as ForStatement).variables.map(item => item.name)).toStrictEqual(['item'])
 
-    assertVariableDeclaration(global$VariableDeclaration, 'global', 'a', 'int')
-    assertVariableDeclaration(static$VariableDeclaration, 'static', 'b', 'string')
-    assertVariableDeclaration(var$VariableDeclaration, 'var', 'c', 'bool')
-    assertVariableDeclaration(val$VariableDeclaration, 'val', 'd', undefined)
+    assertVariableDeclaration(global$VariableDeclaration, { prefix: 'global', name: 'a' })
+    assertClassTypeReference((global$VariableDeclaration as VariableDeclaration).typeRef, 'int')
+
+    assertVariableDeclaration(static$VariableDeclaration, { prefix: 'static', name: 'b' })
+    assertClassTypeReference((static$VariableDeclaration as VariableDeclaration).typeRef, 'string')
+
+    assertVariableDeclaration(var$VariableDeclaration, { prefix: 'var', name: 'c' })
+    assertClassTypeReference((var$VariableDeclaration as VariableDeclaration).typeRef, 'bool')
+
+    assertVariableDeclaration(val$VariableDeclaration, { prefix: 'val', name: 'd' })
+    expect((val$VariableDeclaration as VariableDeclaration).typeRef).toBeUndefined()
   })
 })

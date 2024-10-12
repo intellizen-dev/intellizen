@@ -3,7 +3,7 @@ import { StringConstants } from '../workspace/configurations'
 
 export class ConfigError extends Error {
   constructor(workspaceFolder: WorkspaceFolder, options?: ErrorOptions) {
-    super(`An error occurred parsing "${StringConstants.Config.intellizen}" located in the workspace folder "${workspaceFolder.name}".`, options)
+    super(`An error occurred parsing "${StringConstants.File.intellizen}" located in the workspace folder "${workspaceFolder.name}".`, options)
   }
 }
 

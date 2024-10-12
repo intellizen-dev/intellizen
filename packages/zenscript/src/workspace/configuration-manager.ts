@@ -1,9 +1,10 @@
 import { resolve as resolvePath } from 'node:path'
 import type { FileSystemProvider, WorkspaceFolder } from 'langium'
 import { URI, UriUtils } from 'langium'
-import { existsDirectory, existsFile, findInside, isDirectory, isFile } from '../utils/fs'
+import { Resolver } from '@stoplight/json-ref-resolver'
+import { existsDirectory, findInside, isDirectory, isFile } from '../utils/fs'
 import type { ZenScriptSharedServices } from '../module'
-import { ConfigError, DirectoryNotFoundError, EntryError, FileNotFoundError } from '../utils/error'
+import { ConfigError, DirectoryNotFoundError } from '../utils/error'
 import type { ParsedConfig } from './configurations'
 import { IntelliZenSchema, StringConstants } from './configurations'
 
@@ -41,7 +42,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
       }
     }
     else {
-      console.error(new ConfigError(workspaceFolder, { cause: new Error(`Config file "${StringConstants.Config.intellizen}" not found.`) }))
+      console.error(new ConfigError(workspaceFolder, { cause: new Error(`Config file "${StringConstants.File.intellizen}" not found.`) }))
     }
     await this.makeSureSrcRootsIsNotEmpty(parsedConfig, workspaceUri)
     workspaceFolder.config = parsedConfig
@@ -49,7 +50,9 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
 
   private async load(parsedConfig: ParsedConfig, configUri: URI) {
     const content = await this.fileSystemProvider.readFile(configUri)
-    const config = IntelliZenSchema.parse(JSON.parse(content))
+    const json = JSON.parse(content)
+    const resolved = await new Resolver().resolve(json)
+    const config = IntelliZenSchema.parse(resolved.result)
 
     for (const srcRoot of config.srcRoots) {
       const srcRootPath = resolvePath(configUri.fsPath, '..', srcRoot)
@@ -61,30 +64,13 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
       }
     }
 
-    const brackets = config.extra?.brackets
-    const preprocessors = config.extra?.preprocessors
-
-    await Promise.all([
-      this.processExtraFile(brackets, 'brackets', parsedConfig, configUri),
-      this.processExtraFile(preprocessors, 'preprocessors', parsedConfig, configUri),
-    ])
+    await this.processExtraFile(parsedConfig)
   }
 
-  private async processExtraFile(
-    filePath: string | undefined,
-    key: keyof ParsedConfig['extra'],
-    parsedConfig: ParsedConfig,
-    configUri: URI,
-  ) {
-    if (filePath) {
-      const resolvedPath = resolvePath(configUri.fsPath, '..', filePath)
-      if (existsFile(resolvedPath)) {
-        parsedConfig.extra[key] = URI.file(resolvedPath)
-      }
-      else {
-        console.error(new EntryError(`extra.${key}`, { cause: new FileNotFoundError(filePath) }))
-      }
-    }
+  private async processExtraFile(parsedConfig: ParsedConfig) {
+    const nodes = (await Promise.all(parsedConfig.srcRoots.map(srcRoot => this.fileSystemProvider.readDirectory(srcRoot)))).flat()
+    parsedConfig.extra.brackets = nodes.find(it => isFile(it, StringConstants.File.brackets))?.uri
+    parsedConfig.extra.preprocessors = nodes.find(it => isFile(it, StringConstants.File.preprocessors))?.uri
   }
 
   private async makeSureSrcRootsIsNotEmpty(parsedConfig: ParsedConfig, workspaceUri: URI) {
@@ -108,6 +94,6 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
 
   private async findConfig(workspaceFolder: WorkspaceFolder): Promise<URI | undefined> {
     const workspaceUri = URI.parse(workspaceFolder.uri)
-    return findInside(this.fileSystemProvider, workspaceUri, node => isFile(node, StringConstants.Config.intellizen))
+    return findInside(this.fileSystemProvider, workspaceUri, node => isFile(node, StringConstants.File.intellizen))
   }
 }

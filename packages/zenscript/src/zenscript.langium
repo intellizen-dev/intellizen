@@ -1,6 +1,7 @@
 grammar ZenScript
 
 entry Script:
+    package=PackageDeclaration?
     ( imports+=ImportDeclaration
     | functions+=FunctionDeclaration
     | expands+=ExpandFunctionDeclaration
@@ -10,6 +11,10 @@ entry Script:
 ;
 
 interface Declaration {}
+
+interface PackageDeclaration extends Declaration {
+    path: string[];
+}
 
 interface ImportDeclaration extends Declaration {
     path: @NamedElement[];
@@ -24,7 +29,7 @@ interface ClassDeclaration extends Declaration {
 
 type NamedElement = Script | ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | ForVariableDeclaration | MapEntry | ImportDeclaration;
 
-type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
+type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration | OperatorFunctionDeclaration;
 
 type CallableDeclaration = FunctionDeclaration | ExpandFunctionDeclaration | ConstructorDeclaration;
 
@@ -39,11 +44,11 @@ interface ValueParameter extends Declaration {
     varargs?: boolean;
     name: string;
     typeRef?: TypeReference;
-    defaultValue?: Expression;
+    defaultValue?: 'default' | Expression;
 }
 
 interface FunctionDeclaration extends Declaration {
-    prefix?: 'static' | 'global';
+    prefix?: 'static' | 'global' | 'lambda';
     name: string;
     parameters: ValueParameter[];
     returnTypeRef?: TypeReference;
@@ -58,10 +63,20 @@ interface ExpandFunctionDeclaration extends Declaration {
     body: Statement[];
 }
 
+interface OperatorFunctionDeclaration extends Declaration {
+    op: string
+    parameters: ValueParameter[];
+    returnTypeRef?: TypeReference;
+}
+
 interface ConstructorDeclaration extends Declaration {
     parameters: ValueParameter[];
     body: Statement[];
 }
+
+PackageDeclaration returns PackageDeclaration:
+    'package' (path+=ID '.')* path+=ID ';'
+;
 
 ImportDeclaration returns ImportDeclaration:
     'import' (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID] ('as' alias=ID)? ';'?
@@ -76,22 +91,22 @@ ClassDeclaration returns ClassDeclaration:
 ;
 
 ClassMemberDeclaration returns ClassMemberDeclaration:
-    FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
+    FunctionDeclaration | FieldDeclaration | ConstructorDeclaration | OperatorFunctionDeclaration;
 
 FieldDeclaration returns FieldDeclaration:
     prefix=('static'|'var'|'val') name=ID ('as' typeRef=TypeReference)? ('=' initializer=Expression)? ';'
 ;
 
 ValueParameter returns ValueParameter:
-    (varargs?='...')? name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=Expression)?
+    (varargs?='...')? name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=('default' | Expression))?
 ;
 
 FunctionDeclaration returns FunctionDeclaration:
-    prefix=('static' | 'global')? 'function' name=ID '('
+    prefix=('static' | 'global' | 'lambda')? 'function' name=ID? '('
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' ('as' returnTypeRef=TypeReference)? '{'
+    ')' ('as' returnTypeRef=TypeReference)? ('{'
         (body+=Statement)*
-    '}'
+    '}')? ';'?
 ;
 
 ExpandFunctionDeclaration returns ExpandFunctionDeclaration:
@@ -100,6 +115,16 @@ ExpandFunctionDeclaration returns ExpandFunctionDeclaration:
     ')' ('as' returnTypeRef=TypeReference)? '{'
         (body+=Statement)*
     '}'
+;
+
+OperatorFunctionDeclaration returns OperatorFunctionDeclaration:
+    'operator' op=Operator '('
+        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
+    ')' ('as' returnTypeRef=CompoundType)? ';'?
+;
+
+Operator returns string:
+    '+' | '-' | '*' | '/' | '%' | '~' | '|' | '&' | '^' | '!' | '['']' | '['']''=' | '..' | 'has' | '.' | '.''=' | 'for_in' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
 ;
 
 ConstructorDeclaration returns ConstructorDeclaration:
@@ -501,8 +526,8 @@ interface IntersectionTypeReference extends TypeReference {
     values: TypeReference[];
 }
 
-interface PrimitiveTypeReference extends TypeReference {
-    value: 'any' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'bool' | 'void' | 'string';
+interface CompoundTypeReference extends TypeReference {
+    values: TypeReference[];
 }
 
 interface ListTypeReference extends TypeReference {
@@ -547,6 +572,10 @@ IntersectionType returns TypeReference:
     ComplexType ({IntersectionTypeReference.values+=current} ('&' values+=ComplexType)+)?
 ;
 
+CompoundType returns TypeReference:
+    ComplexType ({CompoundTypeReference.values+=current} (',' values+=ComplexType)+)?
+;
+
 ComplexType returns TypeReference:
     PrimaryType ('['(
         ({MapTypeReference.value=current} key=TypeReference) |
@@ -555,15 +584,11 @@ ComplexType returns TypeReference:
 ;
 
 fragment PrimaryType returns TypeReference:
-    PrimitiveType | ListType | FunctionType | ParenthesizedType | ClassType
+    ListType | FunctionType | ParenthesizedType | ClassType
 ;
 
 ParenthesizedType returns ParenthesizedTypeReference:
     '(' value=TypeReference ')'
-;
-
-PrimitiveType returns PrimitiveTypeReference:
-    value=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
 ;
 
 ListType returns ListTypeReference:
@@ -586,10 +611,11 @@ ClassType returns ClassTypeReference:
 // Soft keywords
 ID returns string
     : IDENTIFIER
-    | 'in'
+    | 'to'
     | 'extends'  // dzs
     | 'operator' // dzs
     | 'for_in'   // dzs
+    | 'default'  // dzs
     | 'orderly'  // zenutils
 ;
 
@@ -598,7 +624,7 @@ terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
 terminal FLOATING: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdD]?/;
 terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
-terminal BRACKETS: /<[^<>]+>/;
+terminal BRACKETS: /<[^<>\n]+>/;
 
 hidden terminal BLOCK_COMMENT: /\/\*[\s\S]*?\*\//;
 hidden terminal LINE_COMMENT: /\/\/[^\n\r]*/;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { assertNoErrors, assertReferenceExpressionText, assertTypeRef, createParseHelper } from '../utils'
+import { assertClassTypeReference, assertNoErrors, assertReferenceExpressionText, createParseHelper } from '../utils'
 import type { ArrayAccess, ArrayLiteral, Assignment, BooleanLiteral, CallExpression, ConditionalExpression, Expression, ExpressionStatement, FunctionExpression, InfixExpression, InstanceofExpression, MapLiteral, MemberAccess, NullLiteral, NumberLiteral, ParenthesizedExpression, PrefixExpression, ReferenceExpression, StringLiteral, StringTemplate, TypeCastExpression } from '../../src/generated/ast'
 
 const parse = createParseHelper()
@@ -150,13 +150,16 @@ describe('parse expression of script with ZenScript ', () => {
   })
 
   it('function expression', async () => {
-    const functionExpr = await parseExpr<FunctionExpression>('function (foo as int) as void {};')
+    const expr = await parseExpr<ParenthesizedExpression>('(function (foo as int) as void {});')
+    expect(expr.$type).toBe('ParenthesizedExpression')
+
+    const functionExpr = expr.expr as FunctionExpression
     expect(functionExpr.$type).toBe('FunctionExpression')
     expect(functionExpr.parameters.length).toBe(1)
     const foo = functionExpr.parameters[0]
     expect(foo.name).toBe('foo')
-    assertTypeRef('int', foo.typeRef)
-    assertTypeRef('void', functionExpr.returnTypeRef)
+    assertClassTypeReference(foo.typeRef, 'int')
+    assertClassTypeReference(functionExpr.returnTypeRef, 'void')
   })
 
   it('call expression', async () => {
@@ -205,9 +208,9 @@ describe('parse expression of script with ZenScript ', () => {
     const [int, otherType] = typeCastExpr
 
     assertReferenceExpressionText(int.expr, 'foo')
-    assertTypeRef('int', int.typeRef)
+    assertClassTypeReference(int.typeRef, 'int')
     assertReferenceExpressionText(otherType.expr, 'bar')
-    assertTypeRef(['OtherType'], otherType.typeRef)
+    assertClassTypeReference(otherType.typeRef, 'OtherType')
   })
 
   it('array access', async () => {
@@ -219,7 +222,7 @@ describe('parse expression of script with ZenScript ', () => {
   it('instanceof expression', async () => {
     const instanceofExpr = await parseExpr<InstanceofExpression>('foo instanceof int;')
     assertReferenceExpressionText(instanceofExpr.expr, 'foo')
-    assertTypeRef('int', instanceofExpr.typeRef)
+    assertClassTypeReference(instanceofExpr.typeRef, 'int')
   })
 
   it('operator priority', async () => {

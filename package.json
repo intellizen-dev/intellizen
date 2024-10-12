@@ -38,7 +38,8 @@
           "zenscript"
         ],
         "extensions": [
-          ".zs"
+          ".zs",
+          ".dzs"
         ],
         "configuration": "./language-configuration.json"
       }
@@ -60,6 +61,7 @@
     "test:update": "vitest --typecheck -u"
   },
   "dependencies": {
+    "@stoplight/json-ref-resolver": "^3.1.6",
     "zod": "^3.23.8"
   },
   "devDependencies": {
