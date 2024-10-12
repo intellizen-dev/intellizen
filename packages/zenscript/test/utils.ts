@@ -3,9 +3,9 @@ import { expect } from 'vitest'
 import { NodeFileSystem } from 'langium/node'
 import { parseHelper } from 'langium/test'
 import type { AstNode, LangiumDocument } from 'langium'
-
 import { createZenScriptServices } from '../src/module'
-import type { ClassTypeReference, Expression, PrimitiveTypeReference, ReferenceExpression, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
+import type { ClassTypeReference, Expression, ReferenceExpression, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
+import { isClassTypeReference, isVariableDeclaration } from '../src/generated/ast'
 
 export function createParseHelper() {
   const service = createZenScriptServices(NodeFileSystem)
@@ -28,28 +28,19 @@ export async function assertNoErrors(model: LangiumDocument<Script>) {
   }
 }
 
-export function assertTypeRef(matches: string | string[], type?: TypeReference) {
-  if (type?.$type === 'PrimitiveTypeReference') {
-    expect((type as PrimitiveTypeReference).value).toBe(matches)
-  }
-  else if (type?.$type === 'ClassTypeReference') {
-    expect((type as ClassTypeReference).path.map(p => p.$refText)).toStrictEqual(matches)
-  }
+export function assertClassTypeReference(type: TypeReference | undefined, qualifiedName: string) {
+  expect(isClassTypeReference(type))
+  expect((type as ClassTypeReference).path.map(p => p.$refText).join('.')).toBe(qualifiedName)
 }
 
-export function assertVariableDeclaration(
-  astNode: AstNode,
-  prefix: VariableDeclaration['prefix'],
-  name: string,
-  type?: string,
-) {
-  expect(astNode.$type).toBe('VariableDeclaration')
-  const variableDeclaration = astNode as VariableDeclaration
-  expect(variableDeclaration.prefix).toBe(prefix)
-  expect(variableDeclaration.name).toBe(name)
-  if (type) {
-    assertTypeRef(type, variableDeclaration.typeRef)
-  }
+export function assertVariableDeclaration(astNode: AstNode, options: {
+  prefix: VariableDeclaration['prefix']
+  name: string
+}) {
+  const variableDecl = astNode as VariableDeclaration
+  expect(isVariableDeclaration(variableDecl))
+  expect(variableDecl.prefix).toBe(options.prefix)
+  expect(variableDecl.name).toBe(options.name)
 }
 
 export function assertReferenceExpressionText(expr: Expression, matches: string | RegExp) {
