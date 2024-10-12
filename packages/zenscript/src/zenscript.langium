@@ -530,10 +530,6 @@ interface CompoundTypeReference extends TypeReference {
     values: TypeReference[];
 }
 
-interface PrimitiveTypeReference extends TypeReference {
-    value: 'any' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'bool' | 'void' | 'string';
-}
-
 interface ListTypeReference extends TypeReference {
     value: TypeReference;
 }

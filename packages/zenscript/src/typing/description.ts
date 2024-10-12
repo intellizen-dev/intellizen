@@ -1,19 +1,8 @@
 import type { Reference } from 'langium'
-import type { ClassDeclaration, PrimitiveTypeReference } from '../generated/ast'
+import type { ClassDeclaration } from '../generated/ast'
 
 // region TypeDescription
 export interface TypeDescConstants {
-  any: PrimitiveTypeDescription
-  void: PrimitiveTypeDescription
-  string: PrimitiveTypeDescription
-  bool: PrimitiveTypeDescription
-  byte: PrimitiveTypeDescription
-  short: PrimitiveTypeDescription
-  int: PrimitiveTypeDescription
-  long: PrimitiveTypeDescription
-  float: PrimitiveTypeDescription
-  double: PrimitiveTypeDescription
-
   function: FunctionTypeDescription
   class: ClassTypeDescription
   proper: ProperTypeDescription
@@ -32,23 +21,6 @@ export class TypeDescription<T extends keyof TypeDescConstants = keyof TypeDescC
   constructor($type: T) {
     this.$type = $type
   }
-}
-
-export class PrimitiveTypeDescription extends TypeDescription<PrimitiveTypeReference['value']> {
-  constructor($type: PrimitiveTypeReference['value']) {
-    super($type)
-  }
-
-  static ANY = new PrimitiveTypeDescription('any')
-  static BOOL = new PrimitiveTypeDescription('bool')
-  static BYTE = new PrimitiveTypeDescription('byte')
-  static SHORT = new PrimitiveTypeDescription('short')
-  static INT = new PrimitiveTypeDescription('int')
-  static LONG = new PrimitiveTypeDescription('long')
-  static FLOAT = new PrimitiveTypeDescription('float')
-  static DOUBLE = new PrimitiveTypeDescription('double')
-  static STRING = new PrimitiveTypeDescription('string')
-  static VOID = new PrimitiveTypeDescription('void')
 }
 
 export class FunctionTypeDescription extends TypeDescription<'function'> {
@@ -70,6 +42,17 @@ export class ClassTypeDescription extends TypeDescription<'class'> {
     super('class')
     this.className = className
   }
+
+  static ANY = new ClassTypeDescription('any')
+  static BOOL = new ClassTypeDescription('bool')
+  static BYTE = new ClassTypeDescription('byte')
+  static SHORT = new ClassTypeDescription('short')
+  static INT = new ClassTypeDescription('int')
+  static LONG = new ClassTypeDescription('long')
+  static FLOAT = new ClassTypeDescription('float')
+  static DOUBLE = new ClassTypeDescription('double')
+  static STRING = new ClassTypeDescription('string')
+  static VOID = new ClassTypeDescription('void')
 }
 
 export class ProperTypeDescription extends TypeDescription<'proper'> {
@@ -142,48 +125,44 @@ export class PackageTypeDescription extends TypeDescription<'package'> {
 // endregion
 
 // region Predicates
-export function isStringTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
-  return typeDesc?.$type === 'string'
+export function isStringType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
+  return isClassTypeDescription(typeDesc) && typeDesc.className === 'string'
 }
 
-export function isAnyTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
-  return typeDesc?.$type === 'any'
+export function isAnyType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
+  return isClassTypeDescription(typeDesc) && typeDesc.className === 'any'
 }
 
-export function isBoolTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
-  return typeDesc?.$type === 'bool'
+export function isBoolType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
+  return isClassTypeDescription(typeDesc) && typeDesc.className === 'bool'
 }
 
-export function isByteTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
-  return typeDesc?.$type === 'byte'
+export function isByteType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
+  return isClassTypeDescription(typeDesc) && typeDesc.className === 'byte'
 }
 
-export function isDoubleTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
-  return typeDesc?.$type === 'double'
+export function isDoubleType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
+  return isClassTypeDescription(typeDesc) && typeDesc.className === 'double'
 }
 
-export function isFloatTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
-  return typeDesc?.$type === 'float'
+export function isFloatType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
+  return isClassTypeDescription(typeDesc) && typeDesc.className === 'float'
 }
 
-export function isIntTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
-  return typeDesc?.$type === 'int'
+export function isIntType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
+  return isClassTypeDescription(typeDesc) && typeDesc.className === 'int'
 }
 
-export function isLongTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
-  return typeDesc?.$type === 'long'
+export function isLongType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
+  return isClassTypeDescription(typeDesc) && typeDesc.className === 'long'
 }
 
-export function isShortTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
-  return typeDesc?.$type === 'short'
+export function isShortType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
+  return isClassTypeDescription(typeDesc) && typeDesc.className === 'short'
 }
 
-export function isVoidTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
-  return typeDesc?.$type === 'void'
-}
-
-export function isPrimitiveTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PrimitiveTypeDescription {
-  return typeDesc instanceof PrimitiveTypeDescription
+export function isVoidType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
+  return isClassTypeDescription(typeDesc) && typeDesc.className === 'void'
 }
 
 export function isClassTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {

@@ -1,7 +1,7 @@
 import type { AstNode, ResolvedReference } from 'langium'
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
-import { isClassDeclaration } from '../generated/ast'
-import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, PrimitiveTypeDescription, type TypeDescription, UnionTypeDescription } from './description'
+import { isClassDeclaration, isExpression } from '../generated/ast'
+import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, type TypeDescription, UnionTypeDescription } from './description'
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => TypeDescription | undefined
@@ -36,33 +36,29 @@ export class ZenScriptTypeComputer implements TypeComputer {
     }
 
     // region TypeReference
-    rule('PrimitiveTypeReference', (source) => {
-      return new PrimitiveTypeDescription(source.value)
-    })
-
     rule('ListTypeReference', (source) => {
-      const elementType = this.inferType(source.value) ?? PrimitiveTypeDescription.ANY
+      const elementType = this.inferType(source.value) ?? ClassTypeDescription.ANY
       return new ListTypeDescription(elementType)
     })
 
     rule('ArrayTypeReference', (source) => {
-      const elementType = this.inferType(source.value) ?? PrimitiveTypeDescription.ANY
+      const elementType = this.inferType(source.value) ?? ClassTypeDescription.ANY
       return new ListTypeDescription(elementType)
     })
 
     rule('MapTypeReference', (source) => {
-      const keyType = this.inferType(source.key) ?? PrimitiveTypeDescription.ANY
-      const valueType = this.inferType(source.value) ?? PrimitiveTypeDescription.ANY
+      const keyType = this.inferType(source.key) ?? ClassTypeDescription.ANY
+      const valueType = this.inferType(source.value) ?? ClassTypeDescription.ANY
       return new MapTypeDescription(keyType, valueType)
     })
 
     rule('UnionTypeReference', (source) => {
-      const elementTypes = source.values.map(it => this.inferType(it) ?? PrimitiveTypeDescription.ANY)
+      const elementTypes = source.values.map(it => this.inferType(it) ?? ClassTypeDescription.ANY)
       return new UnionTypeDescription(elementTypes)
     })
 
     rule('IntersectionTypeReference', (source) => {
-      const elementTypes = source.values.map(it => this.inferType(it) ?? PrimitiveTypeDescription.ANY)
+      const elementTypes = source.values.map(it => this.inferType(it) ?? ClassTypeDescription.ANY)
       return new IntersectionTypeDescription(elementTypes)
     })
 
@@ -71,8 +67,8 @@ export class ZenScriptTypeComputer implements TypeComputer {
     })
 
     rule('FunctionTypeReference', (source) => {
-      const paramTypes = source.params.map(it => this.inferType(it) ?? PrimitiveTypeDescription.ANY)
-      const returnType = this.inferType(source.returnType) ?? PrimitiveTypeDescription.ANY
+      const paramTypes = source.params.map(it => this.inferType(it) ?? ClassTypeDescription.ANY)
+      const returnType = this.inferType(source.returnType) ?? ClassTypeDescription.ANY
       return new FunctionTypeDescription(paramTypes, returnType)
     })
 
@@ -90,13 +86,13 @@ export class ZenScriptTypeComputer implements TypeComputer {
     // region Declaration
     rule('VariableDeclaration', (source) => {
       if (source.typeRef) {
-        return this.inferType(source.typeRef) ?? PrimitiveTypeDescription.ANY
+        return this.inferType(source.typeRef) ?? ClassTypeDescription.ANY
       }
       else if (source.initializer) {
-        return this.inferType(source.initializer) ?? PrimitiveTypeDescription.ANY
+        return this.inferType(source.initializer) ?? ClassTypeDescription.ANY
       }
       else {
-        return PrimitiveTypeDescription.ANY
+        return ClassTypeDescription.ANY
       }
     })
     // endregion
@@ -108,15 +104,15 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     rule('ConditionalExpression', (_) => {
       // TODO: operator overloading
-      return PrimitiveTypeDescription.BOOL
+      return ClassTypeDescription.BOOL
     })
 
     rule('PrefixExpression', (source) => {
       switch (source.op) {
         case '-':
-          return PrimitiveTypeDescription.INT
+          return ClassTypeDescription.INT
         case '!':
-          return PrimitiveTypeDescription.BOOL
+          return ClassTypeDescription.BOOL
       }
     })
 
@@ -128,27 +124,27 @@ export class ZenScriptTypeComputer implements TypeComputer {
         case '*':
         case '/':
         case '%':
-          return PrimitiveTypeDescription.INT
+          return ClassTypeDescription.INT
         case '<':
         case '>':
         case '<=':
         case '>=':
-          return PrimitiveTypeDescription.BOOL
+          return ClassTypeDescription.BOOL
         case '==':
         case '!=':
-          return PrimitiveTypeDescription.BOOL
+          return ClassTypeDescription.BOOL
         case '&&':
         case '||':
-          return PrimitiveTypeDescription.BOOL
+          return ClassTypeDescription.BOOL
         case 'has':
         case 'in':
-          return PrimitiveTypeDescription.BOOL
+          return ClassTypeDescription.BOOL
         case '&':
         case '|':
         case '^':
-          return PrimitiveTypeDescription.INT
+          return ClassTypeDescription.INT
         case '~':
-          return PrimitiveTypeDescription.STRING
+          return ClassTypeDescription.STRING
         case 'to':
         case '..':
           return new IntRangeTypeDescription()
@@ -160,7 +156,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     })
 
     rule('InstanceofExpression', (_) => {
-      return PrimitiveTypeDescription.BOOL
+      return ClassTypeDescription.BOOL
     })
 
     rule('ParenthesizedExpression', (source) => {
@@ -169,46 +165,46 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     rule('BracketExpression', (_) => {
       // TODO: infer bracket expression
-      return PrimitiveTypeDescription.ANY
+      return ClassTypeDescription.ANY
     })
 
     rule('FunctionExpression', (source) => {
       const paramTypes = source.parameters.map((param) => {
         if (param.typeRef) {
-          return this.inferType(param.typeRef) ?? PrimitiveTypeDescription.ANY
+          return this.inferType(param.typeRef) ?? ClassTypeDescription.ANY
         }
-        else if (param.defaultValue) {
-          return this.inferType(param.defaultValue) ?? PrimitiveTypeDescription.ANY
+        else if (isExpression(param.defaultValue)) {
+          return this.inferType(param.defaultValue) ?? ClassTypeDescription.ANY
         }
         else {
-          return PrimitiveTypeDescription.ANY
+          return ClassTypeDescription.ANY
         }
       })
-      const returnType = this.inferType(source.returnTypeRef) ?? PrimitiveTypeDescription.ANY
+      const returnType = this.inferType(source.returnTypeRef) ?? ClassTypeDescription.ANY
       return new FunctionTypeDescription(paramTypes, returnType)
     })
 
     rule('ReferenceExpression', (source) => {
-      return this.inferType(source.refer.ref) ?? PrimitiveTypeDescription.ANY
+      return this.inferType(source.refer.ref) ?? ClassTypeDescription.ANY
     })
 
     rule('NullLiteral', (_) => {
       // TODO: does it make sense?
-      return PrimitiveTypeDescription.ANY
+      return ClassTypeDescription.ANY
     })
 
     rule('BooleanLiteral', (_) => {
-      return PrimitiveTypeDescription.BOOL
+      return ClassTypeDescription.BOOL
     })
 
     rule('IntegerLiteral', (source) => {
       switch (source.value.at(-1)) {
         case 'l':
         case 'L':
-          return PrimitiveTypeDescription.LONG
+          return ClassTypeDescription.LONG
 
         default:
-          return PrimitiveTypeDescription.INT
+          return ClassTypeDescription.INT
       }
     })
 
@@ -216,33 +212,33 @@ export class ZenScriptTypeComputer implements TypeComputer {
       switch (source.value.at(-1)) {
         case 'f':
         case 'F':
-          return PrimitiveTypeDescription.FLOAT
+          return ClassTypeDescription.FLOAT
 
         case 'd':
         case 'D':
-          return PrimitiveTypeDescription.DOUBLE
+          return ClassTypeDescription.DOUBLE
 
         default:
-          return PrimitiveTypeDescription.DOUBLE
+          return ClassTypeDescription.DOUBLE
       }
     })
 
     rule('StringLiteral', (_) => {
-      return PrimitiveTypeDescription.STRING
+      return ClassTypeDescription.STRING
     })
 
     rule('StringTemplate', (_) => {
-      return PrimitiveTypeDescription.STRING
+      return ClassTypeDescription.STRING
     })
 
     rule('ArrayLiteral', (source) => {
-      const elementType = this.inferType(source.values[0]) ?? PrimitiveTypeDescription.ANY
+      const elementType = this.inferType(source.values[0]) ?? ClassTypeDescription.ANY
       return new ArrayTypeDescription(elementType)
     })
 
     rule('MapLiteral', (source) => {
-      const keyType = this.inferType(source.entries[0]?.key) ?? PrimitiveTypeDescription.ANY
-      const valueType = this.inferType(source.entries[0]?.value) ?? PrimitiveTypeDescription.ANY
+      const keyType = this.inferType(source.entries[0]?.key) ?? ClassTypeDescription.ANY
+      const valueType = this.inferType(source.entries[0]?.value) ?? ClassTypeDescription.ANY
       return new MapTypeDescription(keyType, valueType)
     })
     // endregion
