@@ -1,9 +1,9 @@
 import type { AstNode, ReferenceInfo } from 'langium'
-import type { ClassDeclaration, ClassMemberDeclaration, ImportDeclaration } from '../generated/ast'
+import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import { isClassDeclaration, isScript } from '../generated/ast'
 
-export function isToplevel(node: AstNode): boolean {
-  return isScript(node.$container)
+export function isToplevel(node: AstNode | undefined): boolean {
+  return isScript(node?.$container)
 }
 
 export function getClassChain(clazz?: ClassDeclaration): ClassDeclaration[] {
@@ -28,8 +28,8 @@ export function getClassMembers(clazz?: ClassDeclaration) {
   return getClassChain(clazz).flatMap(c => c.members)
 }
 
-export function isStaticMember(member: ClassMemberDeclaration) {
-  return 'prefix' in member && member.prefix === 'static'
+export function isStatic(node: AstNode | undefined) {
+  return node && 'prefix' in node && node.prefix === 'static'
 }
 
 export function toQualifiedName(importDecl: ImportDeclaration, context: ReferenceInfo): string {

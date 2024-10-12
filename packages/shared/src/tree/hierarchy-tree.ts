@@ -7,23 +7,27 @@ export class HierarchyTree<V> {
     this.separator = separator
   }
 
-  getNode(path: string): HierarchyNode<V> | undefined {
+  getNode(path: string | undefined): HierarchyNode<V> | undefined {
+    if (path === undefined) {
+      return
+    }
     if (path === this.root.name) {
       return this.root
     }
-    else {
-      const names = path.split(this.separator)
-      return names.reduce<HierarchyNode<V> | undefined>((node, name) => {
-        return node?.children.get(name)
-      }, this.root)
-    }
+    const names = path.split(this.separator)
+    return names.reduce<HierarchyNode<V> | undefined>((node, name) => {
+      return node?.children.get(name)
+    }, this.root)
   }
 
   getValue(path: string): V | undefined {
     return this.getNode(path)?.value
   }
 
-  setValue(path: string, value: V | undefined): void {
+  setValue(path: string | undefined, value: V | undefined): void {
+    if (!path) {
+      return
+    }
     const names = path.split(this.separator)
     const target = names.reduce((node, name) => {
       return node.children.get(name) || node.createChild(name)
@@ -50,5 +54,12 @@ export class HierarchyNode<V> {
     const child = new HierarchyNode(name, this)
     this.children.set(name, child)
     return child
+  }
+
+  free() {
+    this.parent?.children.delete(this.name)
+    if (this.parent?.children.size === 0) {
+      this.parent.free()
+    }
   }
 }

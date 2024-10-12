@@ -1,8 +1,13 @@
-import type { AstNode, IndexManager } from 'langium'
-import { DocumentState } from 'langium'
+import type { AstNode, LangiumDocument } from 'langium'
+import { AstUtils, DocumentState, stream } from 'langium'
 import type { HierarchyNode } from '@intellizen/shared'
 import { HierarchyTree } from '@intellizen/shared'
 import type { ZenScriptServices } from '../module'
+import type { Script } from '../generated/ast'
+import { isClassDeclaration } from '../generated/ast'
+import { isStatic } from '../utils/ast'
+import { getQualifiedName, isZs } from '../utils/document'
+import type { ZenScriptNameProvider } from '../name'
 
 export interface PackageManager {
   getAstNode: (path: string) => AstNode | undefined
@@ -10,16 +15,24 @@ export interface PackageManager {
 }
 
 export class ZenScriptPackageManager implements PackageManager {
-  private readonly indexManager: IndexManager
+  private readonly nameProvider: ZenScriptNameProvider
   private readonly packageTree: HierarchyTree<AstNode>
 
   constructor(services: ZenScriptServices) {
-    this.indexManager = services.shared.workspace.IndexManager
+    this.nameProvider = services.references.NameProvider
     this.packageTree = new HierarchyTree()
 
-    // Update data once documents are indexed
-    services.shared.workspace.DocumentBuilder.onBuildPhase(DocumentState.IndexedContent, () => {
-      this.indexManager.allElements().forEach(it => this.packageTree.setValue(it.name, it.node))
+    // insert data once document is computed
+    services.shared.workspace.DocumentBuilder.onDocumentPhase(DocumentState.ComputedScopes, (document) => {
+      this.insert(document as LangiumDocument<Script>)
+    })
+
+    // remove data once document is changed or deleted
+    services.shared.workspace.DocumentBuilder.onUpdate((changed, deleted) => {
+      stream(changed, deleted)
+        .map(it => services.shared.workspace.LangiumDocuments.getDocument(it))
+        .filter(it => !!it)
+        .forEach(it => this.remove(it))
     })
   }
 
@@ -29,5 +42,37 @@ export class ZenScriptPackageManager implements PackageManager {
 
   getHierarchyNode(path: string): HierarchyNode<AstNode> | undefined {
     return this.packageTree.getNode(path)
+  }
+
+  private insert(document: LangiumDocument<Script>) {
+    const script = document.parseResult.value
+    if (isZs(document)) {
+      const name = getQualifiedName(document)
+      this.packageTree.setValue(name, script)
+    }
+    AstUtils.streamContents(document.parseResult.value)
+      .forEach((toplevel) => {
+        const name = this.nameProvider.getQualifiedName(toplevel)
+        if (isStatic(toplevel)) {
+          this.packageTree.setValue(name, toplevel)
+        }
+        else if (isClassDeclaration(toplevel)) {
+          this.packageTree.setValue(name, toplevel)
+          AstUtils.streamContents(toplevel)
+            .forEach((classMember) => {
+              if (isStatic(classMember)) {
+                const name = this.nameProvider.getQualifiedName(classMember)
+                this.packageTree.setValue(name, classMember)
+              }
+            })
+        }
+      })
+  }
+
+  private remove(document: LangiumDocument) {
+    const name = getQualifiedName(document as LangiumDocument<Script>)
+    if (name) {
+      this.packageTree.getNode(name)?.free()
+    }
   }
 }
