@@ -110,10 +110,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         if (!script) {
           return EMPTY_SCOPE
         }
+
         const globals = stream(this.packageManager.getHierarchyNode('')!.children.values())
           .map(it => it.value)
           .filter(it => isClassDeclaration(it))
           .map(it => this.descriptions.createDescription(it, it.name))
+
         const imports = script.imports
           .map((it) => {
             const desc = it.path.at(-1)?.$nodeDescription ?? this.descriptions.createDescription(it, undefined)
@@ -121,11 +123,14 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             return desc
           })
           .filter(it => !!it)
-        const scriptStatic = script.classes.map(it => this.descriptions.createDescription(it, it.name))
+
+        const locals = script.classes
+          .map(it => this.descriptions.createDescription(it, it.name))
+
         let scope = this.createScope(builtin)
         scope = this.createScope(globals, scope)
         scope = this.createScope(imports, scope)
-        scope = this.createScope(scriptStatic, scope)
+        scope = this.createScope(locals, scope)
         return scope
       }
       else if (source.index !== undefined) {
