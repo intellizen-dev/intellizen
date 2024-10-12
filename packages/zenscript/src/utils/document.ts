@@ -26,15 +26,6 @@ export function getQualifiedName(document: LangiumDocument<Script>): string | un
     }
   }
   else if (isDzs(document)) {
-    const packageDecl = document.parseResult.value.package
-    if (packageDecl) {
-      return packageDecl.path.join('.')
-    }
-
-    const srcRootUri = document.srcRootUri
-    if (srcRootUri) {
-      const relatives = UriUtils.relative(document.srcRootUri, document.uri).split('/')
-      return relatives.slice(0, -1).join('.')
-    }
+    return document.parseResult.value.package?.path.join('.') ?? ''
   }
 }

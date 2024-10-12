@@ -1,18 +1,19 @@
 import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes } from 'langium'
-import { AstUtils, DefaultScopeComputation } from 'langium'
-import type { ClassDeclaration, ValueParameter } from '../generated/ast'
+import { DefaultScopeComputation } from 'langium'
+import type { ClassDeclaration, Script, ValueParameter } from '../generated/ast'
 import { isClassDeclaration, isFunctionDeclaration, isScript, isValueParameter, isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { isToplevel } from '../utils/ast'
+import { getQualifiedName, isZs } from '../utils/document'
 
 export class ZenScriptScopeComputation extends DefaultScopeComputation {
   constructor(services: ZenScriptServices) {
     super(services)
   }
 
-  protected override exportNode(node: AstNode, exports: AstNodeDescription[], document: LangiumDocument): void {
+  protected override exportNode(node: AstNode, exports: AstNodeDescription[], document: LangiumDocument<Script>): void {
     // TODO: workaround, needs rewrite
-    if (isScript(node)) {
+    if (isScript(node) && isZs(document)) {
       const name = this.nameProvider.getQualifiedName(node)
       exports.push(this.descriptions.createDescription(node, name, document))
     }
@@ -23,7 +24,7 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
     }
 
     // script from an unknown package export nothing
-    if (!this.nameProvider.getQualifiedName(AstUtils.findRootNode(node))) {
+    if (getQualifiedName(document) === undefined) {
       return
     }
 

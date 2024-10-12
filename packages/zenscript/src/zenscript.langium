@@ -588,15 +588,11 @@ ComplexType returns TypeReference:
 ;
 
 fragment PrimaryType returns TypeReference:
-    PrimitiveType | ListType | FunctionType | ParenthesizedType | ClassType
+    ListType | FunctionType | ParenthesizedType | ClassType
 ;
 
 ParenthesizedType returns ParenthesizedTypeReference:
     '(' value=TypeReference ')'
-;
-
-PrimitiveType returns PrimitiveTypeReference:
-    value=('any'| 'byte'| 'short'| 'int'| 'long'| 'float'| 'double'| 'bool'| 'void'| 'string')
 ;
 
 ListType returns ListTypeReference:
@@ -625,16 +621,6 @@ ID returns string
     | 'for_in'   // dzs
     | 'default'  // dzs
     | 'orderly'  // zenutils
-    | 'any'      // zenclass
-    | 'byte'     // zenclass
-    | 'short'    // zenclass
-    | 'int'      // zenclass
-    | 'long'     // zenclass
-    | 'float'    // zenclass
-    | 'double'   // zenclass
-    | 'bool'     // zenclass
-    | 'void'     // zenclass
-    | 'string'   // zenclass
 ;
 
 hidden terminal WHITE_SPACE: /\s+/;

@@ -31,20 +31,20 @@ export class ZenScriptNameProvider implements NameProvider {
   getQualifiedName(node: AstNode): string | undefined {
     const document = AstUtils.getDocument<Script>(node)
     if (!document) {
-      return undefined
+      return
     }
 
-    const dqName = getQualifiedName(document)
-    if (!dqName) {
-      return undefined
+    const name = getQualifiedName(document)
+    if (name === undefined) {
+      return
     }
 
     if (isScript(node)) {
-      return dqName
+      return name
     }
     else if (isToplevel(node)) {
       if (isVariableDeclaration(node) || isFunctionDeclaration(node) || isClassDeclaration(node)) {
-        return concat(dqName, node.name)
+        return concat(name, node.name)
       }
     }
   }

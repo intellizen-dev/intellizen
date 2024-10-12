@@ -1,7 +1,7 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, Stream } from 'langium'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI, stream } from 'langium'
 import type { ClassTypeReference, ImportDeclaration, MemberAccess, ZenScriptAstType } from '../generated/ast'
-import { isScript } from '../generated/ast'
+import { ClassDeclaration, isClassDeclaration, isScript } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
@@ -11,6 +11,14 @@ type SourceKey = keyof ZenScriptAstType
 type Produce = (source: ReferenceInfo) => Scope
 type Rule = <K extends SourceKey>(match: K, produce: Produce) => void
 type RuleMap = Map<SourceKey, Produce>
+
+const builtin: AstNodeDescription[] = ['any', 'byte', 'short', 'int', 'long', 'float', 'double', 'bool', 'void', 'string']
+  .map(name => ({
+    type: ClassDeclaration,
+    name,
+    documentUri: URI.parse(`builtin:///${name}`),
+    path: '',
+  }))
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
@@ -102,6 +110,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         if (!script) {
           return EMPTY_SCOPE
         }
+        const globals: AstNodeDescription[] = []
+        for (const global of this.packageManager.getHierarchyNode('')!.children.values()) {
+          if (isClassDeclaration(global.value)) {
+            globals.push(this.descriptions.createDescription(global.value, global.value.name))
+          }
+        }
         const imports = script.imports
           .map((it) => {
             const desc = it.path[it.path.length - 1]?.$nodeDescription
@@ -111,11 +125,11 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             return desc
           })
           .filter(it => !!it)
-
         const scriptStatic = script.classes.map(it => this.descriptions.createDescription(it, it.name))
-        let scope = this.createScope(imports)
+        let scope = this.createScope(builtin)
+        scope = this.createScope(globals, scope)
+        scope = this.createScope(imports, scope)
         scope = this.createScope(scriptStatic, scope)
-
         return scope
       }
       else if (source.index !== undefined) {
