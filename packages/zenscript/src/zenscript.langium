@@ -626,6 +626,6 @@ terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
 terminal BRACKETS: /<[^<>\n]+>/;
 
-hidden terminal BLOCK_COMMENT: /\/\*.*?\*\//;
+hidden terminal BLOCK_COMMENT: /\/\*[\s\S]*?\*\//;
 hidden terminal LINE_COMMENT: /\/\/[^\n\r]*/;
 hidden terminal PREPROCESSOR: /#[^\n\r]*/;
