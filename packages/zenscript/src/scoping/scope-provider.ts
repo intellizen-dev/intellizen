@@ -16,7 +16,7 @@ const builtin: AstNodeDescription[] = ['any', 'byte', 'short', 'int', 'long', 'f
   .map(name => ({
     type: ClassDeclaration,
     name,
-    documentUri: URI.parse(`builtin:///${name}`),
+    documentUri: URI.from({ scheme: 'intellizen', path: `/builtin/${name}` }),
     path: '',
   }))
 
