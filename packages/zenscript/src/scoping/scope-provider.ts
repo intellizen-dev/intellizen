@@ -110,18 +110,14 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         if (!script) {
           return EMPTY_SCOPE
         }
-        const globals: AstNodeDescription[] = []
-        for (const global of this.packageManager.getHierarchyNode('')!.children.values()) {
-          if (isClassDeclaration(global.value)) {
-            globals.push(this.descriptions.createDescription(global.value, global.value.name))
-          }
-        }
+        const globals = stream(this.packageManager.getHierarchyNode('')!.children.values())
+          .map(it => it.value)
+          .filter(it => isClassDeclaration(it))
+          .map(it => this.descriptions.createDescription(it, it.name))
         const imports = script.imports
           .map((it) => {
-            const desc = it.path[it.path.length - 1]?.$nodeDescription
-            if (desc && it.alias) {
-              desc.name = it.alias
-            }
+            const desc = it.path.at(-1)?.$nodeDescription ?? this.descriptions.createDescription(it, undefined)
+            desc.name = this.nameProvider.getName(it) ?? desc.name
             return desc
           })
           .filter(it => !!it)
