@@ -32,6 +32,10 @@ export function isStatic(node: AstNode | undefined) {
   return node && 'prefix' in node && node.prefix === 'static'
 }
 
+export function isGlobal(node: AstNode | undefined) {
+  return node && 'prefix' in node && node.prefix === 'global'
+}
+
 export function toQualifiedName(importDecl: ImportDeclaration, context: ReferenceInfo): string {
   let names = importDecl.path.map(it => it.$refText)
   if (context.property === 'refer') {
