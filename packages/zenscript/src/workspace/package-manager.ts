@@ -3,7 +3,6 @@ import { AstUtils, DocumentState, stream } from 'langium'
 import type { HierarchyNode } from '@intellizen/shared'
 import { HierarchyTree } from '@intellizen/shared'
 import type { ZenScriptServices } from '../module'
-import type { Script } from '../generated/ast'
 import { isClassDeclaration } from '../generated/ast'
 import { isImportable, isStatic } from '../utils/ast'
 import type { ZenScriptNameProvider } from '../name'
@@ -23,7 +22,7 @@ export class ZenScriptPackageManager implements PackageManager {
 
     // insert data once document is computed
     services.shared.workspace.DocumentBuilder.onDocumentPhase(DocumentState.ComputedScopes, (document) => {
-      this.insert(document as LangiumDocument<Script>)
+      this.insert(document)
     })
 
     // remove data once document is changed or deleted
