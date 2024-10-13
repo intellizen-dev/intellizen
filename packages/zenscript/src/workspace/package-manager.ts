@@ -1,5 +1,5 @@
 import type { AstNode, LangiumDocument } from 'langium'
-import { AstUtils, DocumentState, EMPTY_STREAM, stream } from 'langium'
+import { AstUtils, DocumentState, stream } from 'langium'
 import type { HierarchyNode } from '@intellizen/shared'
 import { HierarchyTree } from '@intellizen/shared'
 import type { ZenScriptServices } from '../module'
@@ -77,10 +77,10 @@ export class ZenScriptPackageManager implements PackageManager {
       }
     }
     else if (isDzs(document)) {
-      stream(document.precomputedScopes?.values() ?? EMPTY_STREAM)
+      AstUtils.streamContents(document.parseResult.value)
         .forEach((it) => {
           const name = this.nameProvider.getQualifiedName(it)
-          return this.packageTree.getNode(name)?.free()
+          this.packageTree.getNode(name)?.free()
         })
     }
   }
