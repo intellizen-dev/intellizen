@@ -78,6 +78,7 @@ export class ZenScriptPackageManager implements PackageManager {
     }
     else if (isDzs(document)) {
       AstUtils.streamContents(document.parseResult.value)
+        .filter(it => isClassDeclaration(it))
         .forEach((it) => {
           const name = this.nameProvider.getQualifiedName(it)
           this.packageTree.getNode(name)?.free()
