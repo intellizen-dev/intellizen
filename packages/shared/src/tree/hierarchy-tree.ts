@@ -12,9 +12,7 @@ export class HierarchyTree<V> {
       return
     }
     const names = path.split(this.separator)
-    const target = names.reduce((node, name) => {
-      return node.children.get(name) || node.createChild(name)
-    }, this.root)
+    const target = names.reduce((node, name) => node.children.get(name) || node.createChild(name), this.root)
     target.values.push(value)
   }
 
