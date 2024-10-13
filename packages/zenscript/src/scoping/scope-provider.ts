@@ -57,8 +57,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
       const elements: AstNodeDescription[] = []
       for (const sibling of siblings) {
-        if (sibling.value) {
-          elements.push(this.descriptions.createDescription(sibling.value, sibling.name))
+        if (sibling.values?.length) {
+          sibling.values.forEach(it => elements.push(this.descriptions.createDescription(it, sibling.name)))
         }
         else {
           // TODO: temporary, needs to be reimplemented
@@ -93,7 +93,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         }
 
         const globals = stream(this.packageManager.getHierarchyNode('')!.children.values())
-          .map(it => it.value)
+          .flatMap(it => it.values)
           .filter(it => isClassDeclaration(it))
           .map(it => this.descriptions.createDescription(it, it.name))
 

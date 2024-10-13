@@ -5,12 +5,11 @@ import { HierarchyTree } from '@intellizen/shared'
 import type { ZenScriptServices } from '../module'
 import type { Script } from '../generated/ast'
 import { isClassDeclaration } from '../generated/ast'
-import { isStatic } from '../utils/ast'
-import { getQualifiedName, isDzs, isZs } from '../utils/document'
+import { isImportable, isStatic } from '../utils/ast'
 import type { ZenScriptNameProvider } from '../name'
 
 export interface PackageManager {
-  getAstNode: (path: string) => AstNode | undefined
+  getAstNode: (path: string) => AstNode[] | undefined
   getHierarchyNode: (path: string) => HierarchyNode<AstNode> | undefined
 }
 
@@ -36,53 +35,54 @@ export class ZenScriptPackageManager implements PackageManager {
     })
   }
 
-  getAstNode(path: string): AstNode | undefined {
-    return this.packageTree.getValue(path)
+  getAstNode(path: string): AstNode[] | undefined {
+    return this.packageTree.retrieve(path)
   }
 
   getHierarchyNode(path: string): HierarchyNode<AstNode> | undefined {
     return this.packageTree.getNode(path)
   }
 
-  private insert(document: LangiumDocument<Script>) {
-    const script = document.parseResult.value
-    if (isZs(document)) {
-      const name = getQualifiedName(document)
-      this.packageTree.setValue(name, script)
+  private insert(document: LangiumDocument) {
+    const root = document.parseResult.value
+    if (isImportable(root)) {
+      this.insertNode(root)
     }
-    AstUtils.streamContents(document.parseResult.value)
+    AstUtils.streamContents(root)
+      .filter(toplevel => isImportable(toplevel))
       .forEach((toplevel) => {
-        const name = this.nameProvider.getQualifiedName(toplevel)
-        if (isStatic(toplevel)) {
-          this.packageTree.setValue(name, toplevel)
-        }
-        else if (isClassDeclaration(toplevel)) {
-          this.packageTree.setValue(name, toplevel)
+        this.insertNode(toplevel)
+        if (isClassDeclaration(toplevel)) {
           AstUtils.streamContents(toplevel)
+            .filter(classMember => isStatic(classMember))
             .forEach((classMember) => {
-              if (isStatic(classMember)) {
-                const name = this.nameProvider.getQualifiedName(classMember)
-                this.packageTree.setValue(name, classMember)
-              }
+              this.insertNode(classMember)
             })
         }
       })
   }
 
-  private remove(document: LangiumDocument) {
-    if (isZs(document)) {
-      const name = getQualifiedName(document as LangiumDocument<Script>)
-      if (name) {
-        this.packageTree.getNode(name)?.free()
-      }
+  private insertNode(node: AstNode) {
+    const name = this.nameProvider.getQualifiedName(node)
+    if (name) {
+      this.packageTree.insert(name, node)
     }
-    else if (isDzs(document)) {
-      AstUtils.streamContents(document.parseResult.value)
-        .filter(it => isClassDeclaration(it))
-        .forEach((it) => {
-          const name = this.nameProvider.getQualifiedName(it)
-          this.packageTree.getNode(name)?.free()
-        })
+  }
+
+  private remove(document: LangiumDocument) {
+    const root = document.parseResult.value
+    if (isImportable(root)) {
+      this.removeNode(root)
+    }
+    AstUtils.streamContents(root)
+      .filter(toplevel => isClassDeclaration(toplevel))
+      .forEach(classDecl => this.removeNode(classDecl))
+  }
+
+  private removeNode(node: AstNode) {
+    const name = this.nameProvider.getQualifiedName(node)
+    if (name) {
+      this.packageTree.getNode(name)?.free()
     }
   }
 }

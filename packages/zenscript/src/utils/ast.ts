@@ -1,6 +1,7 @@
-import type { AstNode, ReferenceInfo } from 'langium'
+import { type AstNode, AstUtils, type ReferenceInfo } from 'langium'
 import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import { isClassDeclaration, isScript } from '../generated/ast'
+import { isZs } from './document'
 
 export function isToplevel(node: AstNode | undefined): boolean {
   return isScript(node?.$container)
@@ -34,6 +35,15 @@ export function isStatic(node: AstNode | undefined) {
 
 export function isGlobal(node: AstNode | undefined) {
   return node && 'prefix' in node && node.prefix === 'global'
+}
+
+export function isImportable(node: AstNode | undefined) {
+  if (isScript(node)) {
+    return isZs(AstUtils.getDocument(node))
+  }
+  else {
+    return isStatic(node) || isClassDeclaration(node)
+  }
 }
 
 export function toQualifiedName(importDecl: ImportDeclaration, context: ReferenceInfo): string {
