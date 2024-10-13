@@ -1,12 +1,12 @@
 import type { AstNode, LangiumDocument } from 'langium'
-import { AstUtils, DocumentState, stream } from 'langium'
+import { AstUtils, DocumentState, EMPTY_STREAM, stream } from 'langium'
 import type { HierarchyNode } from '@intellizen/shared'
 import { HierarchyTree } from '@intellizen/shared'
 import type { ZenScriptServices } from '../module'
 import type { Script } from '../generated/ast'
 import { isClassDeclaration } from '../generated/ast'
 import { isStatic } from '../utils/ast'
-import { getQualifiedName, isZs } from '../utils/document'
+import { getQualifiedName, isDzs, isZs } from '../utils/document'
 import type { ZenScriptNameProvider } from '../name'
 
 export interface PackageManager {
@@ -70,9 +70,18 @@ export class ZenScriptPackageManager implements PackageManager {
   }
 
   private remove(document: LangiumDocument) {
-    const name = getQualifiedName(document as LangiumDocument<Script>)
-    if (name) {
-      this.packageTree.getNode(name)?.free()
+    if (isZs(document)) {
+      const name = getQualifiedName(document as LangiumDocument<Script>)
+      if (name) {
+        this.packageTree.getNode(name)?.free()
+      }
+    }
+    else if (isDzs(document)) {
+      stream(document.precomputedScopes?.values() ?? EMPTY_STREAM)
+        .forEach((it) => {
+          const name = this.nameProvider.getQualifiedName(it)
+          return this.packageTree.getNode(name)?.free()
+        })
     }
   }
 }
