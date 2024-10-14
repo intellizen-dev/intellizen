@@ -28,22 +28,18 @@ export class HierarchyTree<V> {
       return this.root
     }
     const names = path.split(this.separator)
-    return names.reduce<HierarchyNode<V> | undefined>((node, name) => {
-      return node?.children.get(name)
-    }, this.root)
+    return names.reduce<HierarchyNode<V> | undefined>((node, name) => node?.children.get(name), this.root)
   }
 }
 
 export class HierarchyNode<V> {
   readonly name: string
-  readonly path: string
   readonly parent?: HierarchyNode<V>
   readonly children: Map<string, HierarchyNode<V>>
   values: V[]
 
   constructor(name: string, parent?: HierarchyNode<V>) {
     this.name = name
-    this.path = parent ? (parent.path ? `${parent.path}.${name}` : name) : ''
     this.parent = parent
     this.children = new Map()
     this.values = []
