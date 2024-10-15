@@ -20,8 +20,8 @@ export class ZenScriptPackageManager implements PackageManager {
     this.nameProvider = services.references.NameProvider
     this.packageTree = new HierarchyTree()
 
-    // insert data once document is computed
-    services.shared.workspace.DocumentBuilder.onDocumentPhase(DocumentState.ComputedScopes, (document) => {
+    // insert data once document is indexed content
+    services.shared.workspace.DocumentBuilder.onDocumentPhase(DocumentState.IndexedContent, (document) => {
       this.insert(document)
     })
 
