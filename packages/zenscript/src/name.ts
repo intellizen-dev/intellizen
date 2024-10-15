@@ -1,8 +1,8 @@
 import type { AstNode, CstNode, NameProvider } from 'langium'
 import { AstUtils, GrammarUtils, isNamed } from 'langium'
 import type { Script } from './generated/ast'
-import { isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isScript, isVariableDeclaration } from './generated/ast'
-import { isToplevel } from './utils/ast'
+import { isClassDeclaration, isImportDeclaration, isScript } from './generated/ast'
+import { isImportable, isStatic, isToplevel } from './utils/ast'
 import { getName, getQualifiedName } from './utils/document'
 
 declare module 'langium' {
@@ -34,24 +34,23 @@ export class ZenScriptNameProvider implements NameProvider {
       return
     }
 
-    const name = getQualifiedName(document)
-    if (name === undefined) {
-      return
-    }
-
     if (isScript(node)) {
-      return name
+      return getQualifiedName(document)
     }
-    else if (isToplevel(node)) {
-      if (isVariableDeclaration(node) || isFunctionDeclaration(node) || isClassDeclaration(node)) {
-        return concat(name, node.name)
-      }
+    else if (isToplevel(node) && isImportable(node)) {
+      return concat(getQualifiedName(document), this.getName(node))
+    }
+    else if (isClassDeclaration(node.$container) && isStatic(node)) {
+      return concat(this.getQualifiedName(node.$container!), this.getName(node))
     }
   }
 }
 
-function concat(qualifiedName: string, name: string): string {
-  if (!qualifiedName) {
+function concat(qualifiedName: string | undefined, name: string | undefined): string | undefined {
+  if (qualifiedName === undefined || name === undefined) {
+    return
+  }
+  if (qualifiedName === '') {
     return name
   }
   return [...qualifiedName.split('.'), name].join('.')

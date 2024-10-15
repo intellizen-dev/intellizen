@@ -1,33 +1,87 @@
-import type { AstNode, IndexManager } from 'langium'
-import { DocumentState } from 'langium'
+import type { AstNode, LangiumDocument } from 'langium'
+import { AstUtils, DocumentState, stream } from 'langium'
 import type { HierarchyNode } from '@intellizen/shared'
 import { HierarchyTree } from '@intellizen/shared'
 import type { ZenScriptServices } from '../module'
+import { isClassDeclaration } from '../generated/ast'
+import { isImportable, isStatic } from '../utils/ast'
+import type { ZenScriptNameProvider } from '../name'
 
 export interface PackageManager {
-  getAstNode: (path: string) => AstNode | undefined
+  getAstNode: (path: string) => AstNode[] | undefined
   getHierarchyNode: (path: string) => HierarchyNode<AstNode> | undefined
 }
 
 export class ZenScriptPackageManager implements PackageManager {
-  private readonly indexManager: IndexManager
+  private readonly nameProvider: ZenScriptNameProvider
   private readonly packageTree: HierarchyTree<AstNode>
 
   constructor(services: ZenScriptServices) {
-    this.indexManager = services.shared.workspace.IndexManager
+    this.nameProvider = services.references.NameProvider
     this.packageTree = new HierarchyTree()
 
-    // Update data once documents are indexed
-    services.shared.workspace.DocumentBuilder.onBuildPhase(DocumentState.IndexedContent, () => {
-      this.indexManager.allElements().forEach(it => this.packageTree.setValue(it.name, it.node))
+    // insert data once document is indexed content
+    services.shared.workspace.DocumentBuilder.onDocumentPhase(DocumentState.IndexedContent, (document) => {
+      this.insert(document)
+    })
+
+    // remove data once document is changed or deleted
+    services.shared.workspace.DocumentBuilder.onUpdate((changed, deleted) => {
+      stream(changed, deleted)
+        .map(it => services.shared.workspace.LangiumDocuments.getDocument(it))
+        .filter(it => !!it)
+        .forEach(it => this.remove(it))
     })
   }
 
-  getAstNode(path: string): AstNode | undefined {
-    return this.packageTree.getValue(path)
+  getAstNode(path: string): AstNode[] | undefined {
+    return this.packageTree.retrieve(path)
   }
 
   getHierarchyNode(path: string): HierarchyNode<AstNode> | undefined {
     return this.packageTree.getNode(path)
+  }
+
+  private insert(document: LangiumDocument) {
+    const root = document.parseResult.value
+    if (isImportable(root)) {
+      this.insertNode(root)
+    }
+    AstUtils.streamContents(root)
+      .filter(toplevel => isImportable(toplevel))
+      .forEach((toplevel) => {
+        this.insertNode(toplevel)
+        if (isClassDeclaration(toplevel)) {
+          AstUtils.streamContents(toplevel)
+            .filter(classMember => isStatic(classMember))
+            .forEach((classMember) => {
+              this.insertNode(classMember)
+            })
+        }
+      })
+  }
+
+  private insertNode(node: AstNode) {
+    const name = this.nameProvider.getQualifiedName(node)
+    if (name) {
+      this.packageTree.insert(name, node)
+    }
+  }
+
+  private remove(document: LangiumDocument) {
+    const root = document.parseResult.value
+    if (isImportable(root)) {
+      this.removeNode(root)
+    }
+    AstUtils.streamContents(root)
+      .filter(toplevel => isClassDeclaration(toplevel))
+      .forEach(classDecl => this.removeNode(classDecl))
+  }
+
+  private removeNode(node: AstNode) {
+    const name = this.nameProvider.getQualifiedName(node)
+    if (name) {
+      this.packageTree.getNode(name)?.free()
+    }
   }
 }

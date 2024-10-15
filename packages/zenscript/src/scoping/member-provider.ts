@@ -2,7 +2,7 @@ import { type AstNodeDescription, type AstNodeDescriptionProvider, AstUtils, typ
 import type { Script, ZenScriptAstType } from '../generated/ast'
 import { isScript, isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import { getClassChain, isStaticMember } from '../utils/ast'
+import { getClassChain, isStatic } from '../utils/ast'
 import type { TypeDescConstants, TypeDescription } from '../typing/description'
 import type { TypeComputer } from '../typing/infer'
 
@@ -68,7 +68,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     rule('ClassDeclaration', (source) => {
       return getClassChain(source)
         .flatMap(it => it.members)
-        .filter(it => isStaticMember(it))
+        .filter(it => isStatic(it))
         .map(it => this.createDescriptionForNode(it, undefined))
     })
 
@@ -109,7 +109,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       const ref = source.ref?.ref
       return getClassChain(ref)
         .flatMap(it => it.members)
-        .filter(it => !isStaticMember(it))
+        .filter(it => !isStatic(it))
         .map(it => this.createDescriptionForNode(it))
     })
 
