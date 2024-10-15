@@ -60,11 +60,10 @@ export function toQualifiedName(importDecl: ImportDeclaration, context: Referenc
   return names.join('.')
 }
 
-export function getPathAsString(importDecl: ImportDeclaration, context: ReferenceInfo): string {
-  if (context.index === undefined) {
-    return ''
-  }
+export function getPathAsString(importDecl: ImportDeclaration, index?: number): string {
   let names = importDecl.path.map(it => it.$refText)
-  names = names.slice(0, context.index)
+  if (index !== undefined) {
+    names = names.slice(0, index + 1)
+  }
   return names.join('.')
 }

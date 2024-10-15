@@ -1,7 +1,7 @@
 import type { AstNode, ResolvedReference } from 'langium'
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
 import { isClassDeclaration, isExpression } from '../generated/ast'
-import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, type TypeDescription, UnionTypeDescription } from './description'
+import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, type TypeDescription, UnionTypeDescription, isFunctionTypeDescription } from './description'
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => TypeDescription | undefined
@@ -18,8 +18,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
   public inferType(node: AstNode | undefined): TypeDescription | undefined {
     const match = node?.$type as SourceKey
-    const produce = this.rules.get(match)
-    return produce ? produce(node) : undefined
+    return this.rules.get(match)?.call(this, node)
   }
 
   constructor() {
@@ -75,9 +74,9 @@ export class ZenScriptTypeComputer implements TypeComputer {
     rule('ClassTypeReference', (source) => {
       const className = source.path.map(it => it.$refText).join('.')
       const typeDesc = new ClassTypeDescription(className)
-      const ref = source.path.at(-1)
-      if (isClassDeclaration(ref?.ref)) {
-        typeDesc.ref = ref as ResolvedReference<ClassDeclaration>
+      const refer = source.path.at(-1)
+      if (isClassDeclaration(refer?.ref)) {
+        typeDesc.ref = refer as ResolvedReference<ClassDeclaration>
       }
       return typeDesc
     })
@@ -85,6 +84,24 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     // region Declaration
     rule('VariableDeclaration', (source) => {
+      if (source.typeRef) {
+        return this.inferType(source.typeRef) ?? ClassTypeDescription.ANY
+      }
+      else if (source.initializer) {
+        return this.inferType(source.initializer) ?? ClassTypeDescription.ANY
+      }
+      else {
+        return ClassTypeDescription.ANY
+      }
+    })
+
+    rule('FunctionDeclaration', (source) => {
+      const paramTypes = source.parameters.map(it => this.inferType(it) ?? ClassTypeDescription.ANY)
+      const returnType = this.inferType(source.returnTypeRef) ?? ClassTypeDescription.ANY
+      return new FunctionTypeDescription(paramTypes, returnType)
+    })
+
+    rule('FieldDeclaration', (source) => {
       if (source.typeRef) {
         return this.inferType(source.typeRef) ?? ClassTypeDescription.ANY
       }
@@ -186,6 +203,17 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     rule('ReferenceExpression', (source) => {
       return this.inferType(source.refer.ref) ?? ClassTypeDescription.ANY
+    })
+
+    rule('MemberAccess', (source) => {
+      return this.inferType(source.refer.ref)
+    })
+
+    rule('CallExpression', (source) => {
+      const receiverType = this.inferType(source.receiver)
+      if (isFunctionTypeDescription(receiverType)) {
+        return receiverType.returnType
+      }
     })
 
     rule('NullLiteral', (_) => {

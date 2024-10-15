@@ -1,5 +1,6 @@
 import type { AstNodeDescription, ReferenceInfo, Scope } from 'langium'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI, stream } from 'langium'
+import { substringBeforeLast } from '@intellizen/shared'
 import type { ClassTypeReference, ImportDeclaration, MemberAccess, ZenScriptAstType } from '../generated/ast'
 import { ClassDeclaration, isClassDeclaration, isScript } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
@@ -27,8 +28,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
   override getScope(context: ReferenceInfo): Scope {
     const match = context.container.$type as SourceKey
-    const produce = this.rules.get(match)
-    return produce ? produce(context) : super.getScope(context)
+    return this.rules.get(match)?.call(this, context) ?? EMPTY_SCOPE
   }
 
   constructor(services: ZenScriptServices) {
@@ -49,8 +49,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     rule('ImportDeclaration', (source) => {
       const importDecl = source.container as ImportDeclaration
-      const path = getPathAsString(importDecl, source)
-      const siblings = this.packageManager.getHierarchyNode(path)?.children.values()
+      const path = getPathAsString(importDecl, source.index)
+      const parentPath = substringBeforeLast(path, '.')
+      const siblings = this.packageManager.getHierarchyNode(parentPath)?.children.values()
       if (!siblings) {
         return EMPTY_SCOPE
       }
@@ -86,7 +87,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     rule('ClassTypeReference', (source) => {
       const container = source.container as ClassTypeReference
-      if (source.index === 0) {
+      if (source.index === 0 || source.index === undefined) {
         const script = AstUtils.getContainerOfType(container, isScript)
         if (!script) {
           return EMPTY_SCOPE
@@ -98,10 +99,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
           .map(it => this.descriptions.createDescription(it, it.name))
 
         const imports = script.imports
-          .map((it) => {
-            const desc = it.path.at(-1)?.$nodeDescription ?? this.descriptions.createDescription(it, undefined)
-            desc.name = this.nameProvider.getName(it) ?? desc.name
-            return desc
+          .map((importDecl) => {
+            const ref = importDecl.path.at(-1)?.ref ?? importDecl
+            return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
           })
           .filter(it => !!it)
 
@@ -114,13 +114,10 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         scope = this.createScope(locals, scope)
         return scope
       }
-      else if (source.index !== undefined) {
+      else {
         const prev = container.path[source.index - 1].ref
         const members = this.memberProvider.getMember(prev)
         return this.createScope(members)
-      }
-      else {
-        return EMPTY_SCOPE
       }
     })
 

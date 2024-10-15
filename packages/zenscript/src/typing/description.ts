@@ -125,6 +125,10 @@ export class PackageTypeDescription extends TypeDescription<'package'> {
 // endregion
 
 // region Predicates
+export function isFunctionTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is FunctionTypeDescription {
+  return typeDesc instanceof FunctionTypeDescription
+}
+
 export function isStringType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
   return isClassTypeDescription(typeDesc) && typeDesc.className === 'string'
 }
