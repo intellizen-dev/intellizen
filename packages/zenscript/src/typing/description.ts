@@ -15,6 +15,8 @@ export interface TypeDescConstants {
   package: PackageTypeDescription
 }
 
+export type BuiltinTypes = 'any' | 'bool' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'string' | 'void'
+
 export class TypeDescription<T extends keyof TypeDescConstants = keyof TypeDescConstants> {
   $type: T
 
@@ -42,17 +44,6 @@ export class ClassTypeDescription extends TypeDescription<'class'> {
     super('class')
     this.className = className
   }
-
-  static ANY = new ClassTypeDescription('any')
-  static BOOL = new ClassTypeDescription('bool')
-  static BYTE = new ClassTypeDescription('byte')
-  static SHORT = new ClassTypeDescription('short')
-  static INT = new ClassTypeDescription('int')
-  static LONG = new ClassTypeDescription('long')
-  static FLOAT = new ClassTypeDescription('float')
-  static DOUBLE = new ClassTypeDescription('double')
-  static STRING = new ClassTypeDescription('string')
-  static VOID = new ClassTypeDescription('void')
 }
 
 export class ProperTypeDescription extends TypeDescription<'proper'> {

@@ -111,6 +111,11 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.getMember(type)
     })
 
+    rule('StringLiteral', (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.getMember(type)
+    })
+
     rule('class', (source) => {
       const ref = source.ref?.ref
       return getClassChain(ref)
