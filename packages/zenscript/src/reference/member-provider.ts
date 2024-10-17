@@ -22,16 +22,16 @@ export class ZenScriptMemberProvider implements MemberProvider {
   private readonly typeComputer: TypeComputer
   private readonly rules: RuleMap
 
+  constructor(services: ZenScriptServices) {
+    this.nameProvider = services.references.NameProvider
+    this.descriptions = services.workspace.AstNodeDescriptionProvider
+    this.typeComputer = services.typing.TypeComputer
+    this.rules = this.initRules()
+  }
+
   getMember(source: AstNode | TypeDescription | undefined): AstNodeDescription[] {
     const match = source?.$type as SourceKey
     return this.rules.get(match)?.call(this, source) ?? []
-  }
-
-  constructor(services: ZenScriptServices) {
-    this.descriptions = services.workspace.AstNodeDescriptionProvider
-    this.nameProvider = services.references.NameProvider
-    this.typeComputer = services.typing.TypeComputer
-    this.rules = this.initRules()
   }
 
   private initRules(): RuleMap {
