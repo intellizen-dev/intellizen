@@ -3,8 +3,8 @@ import type { Script, ZenScriptAstType } from '../generated/ast'
 import { isScript, isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getClassChain, isStatic } from '../utils/ast'
-import { type TypeDescConstants, type TypeDescription, isFunctionTypeDescription } from '../typing/description'
-import type { TypeComputer } from '../typing/infer'
+import { type TypeDescConstants, type TypeDescription, isFunctionTypeDescription } from '../typing/type-description'
+import type { TypeComputer } from '../typing/type-computer'
 
 export interface MemberProvider {
   getMember: (source: AstNode | TypeDescription | undefined) => AstNodeDescription[]
