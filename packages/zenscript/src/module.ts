@@ -72,7 +72,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     ValueConverter: () => new CustomValueConverter(),
   },
   typing: {
-    TypeComputer: () => new ZenScriptTypeComputer(),
+    TypeComputer: services => new ZenScriptTypeComputer(services),
   },
   lsp: {
     CompletionProvider: services => new ZenScriptCompletionProvider(services),

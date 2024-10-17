@@ -1,7 +1,10 @@
 import type { AstNode, ResolvedReference } from 'langium'
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
 import { isClassDeclaration, isExpression } from '../generated/ast'
-import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, type TypeDescription, UnionTypeDescription } from './description'
+import type { PackageManager } from '../workspace/package-manager'
+import type { ZenScriptServices } from '../module'
+import type { BuiltinTypes, TypeDescription } from './description'
+import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, UnionTypeDescription, isFunctionTypeDescription } from './description'
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => TypeDescription | undefined
@@ -14,16 +17,26 @@ type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Pro
 type RuleMap = Map<SourceKey, Produce<SourceKey, any>>
 
 export class ZenScriptTypeComputer implements TypeComputer {
+  private readonly packageManager: PackageManager
   private readonly rules: RuleMap
+
+  constructor(services: ZenScriptServices) {
+    this.packageManager = services.workspace.PackageManager
+    this.rules = this.initRules()
+  }
 
   public inferType(node: AstNode | undefined): TypeDescription | undefined {
     const match = node?.$type as SourceKey
-    const produce = this.rules.get(match)
-    return produce ? produce(node) : undefined
+    return this.rules.get(match)?.call(this, node)
   }
 
-  constructor() {
-    this.rules = this.initRules()
+  private classTypeOf(className: BuiltinTypes): ClassTypeDescription {
+    const desc = new ClassTypeDescription(className)
+    const classDecl = this.packageManager.getAstNode(className)?.filter(it => isClassDeclaration(it))[0]
+    if (classDecl) {
+      desc.ref = { ref: classDecl } as ResolvedReference<ClassDeclaration>
+    }
+    return desc
   }
 
   private initRules(): RuleMap {
@@ -37,28 +50,28 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     // region TypeReference
     rule('ListTypeReference', (source) => {
-      const elementType = this.inferType(source.value) ?? ClassTypeDescription.ANY
+      const elementType = this.inferType(source.value) ?? this.classTypeOf('any')
       return new ListTypeDescription(elementType)
     })
 
     rule('ArrayTypeReference', (source) => {
-      const elementType = this.inferType(source.value) ?? ClassTypeDescription.ANY
+      const elementType = this.inferType(source.value) ?? this.classTypeOf('any')
       return new ListTypeDescription(elementType)
     })
 
     rule('MapTypeReference', (source) => {
-      const keyType = this.inferType(source.key) ?? ClassTypeDescription.ANY
-      const valueType = this.inferType(source.value) ?? ClassTypeDescription.ANY
+      const keyType = this.inferType(source.key) ?? this.classTypeOf('any')
+      const valueType = this.inferType(source.value) ?? this.classTypeOf('any')
       return new MapTypeDescription(keyType, valueType)
     })
 
     rule('UnionTypeReference', (source) => {
-      const elementTypes = source.values.map(it => this.inferType(it) ?? ClassTypeDescription.ANY)
+      const elementTypes = source.values.map(it => this.inferType(it) ?? this.classTypeOf('any'))
       return new UnionTypeDescription(elementTypes)
     })
 
     rule('IntersectionTypeReference', (source) => {
-      const elementTypes = source.values.map(it => this.inferType(it) ?? ClassTypeDescription.ANY)
+      const elementTypes = source.values.map(it => this.inferType(it) ?? this.classTypeOf('any'))
       return new IntersectionTypeDescription(elementTypes)
     })
 
@@ -67,17 +80,17 @@ export class ZenScriptTypeComputer implements TypeComputer {
     })
 
     rule('FunctionTypeReference', (source) => {
-      const paramTypes = source.params.map(it => this.inferType(it) ?? ClassTypeDescription.ANY)
-      const returnType = this.inferType(source.returnType) ?? ClassTypeDescription.ANY
+      const paramTypes = source.params.map(it => this.inferType(it) ?? this.classTypeOf('any'))
+      const returnType = this.inferType(source.returnType) ?? this.classTypeOf('any')
       return new FunctionTypeDescription(paramTypes, returnType)
     })
 
     rule('ClassTypeReference', (source) => {
       const className = source.path.map(it => it.$refText).join('.')
       const typeDesc = new ClassTypeDescription(className)
-      const ref = source.path.at(-1)
-      if (isClassDeclaration(ref?.ref)) {
-        typeDesc.ref = ref as ResolvedReference<ClassDeclaration>
+      const refer = source.path.at(-1)
+      if (isClassDeclaration(refer?.ref)) {
+        typeDesc.ref = refer as ResolvedReference<ClassDeclaration>
       }
       return typeDesc
     })
@@ -86,13 +99,31 @@ export class ZenScriptTypeComputer implements TypeComputer {
     // region Declaration
     rule('VariableDeclaration', (source) => {
       if (source.typeRef) {
-        return this.inferType(source.typeRef) ?? ClassTypeDescription.ANY
+        return this.inferType(source.typeRef) ?? this.classTypeOf('any')
       }
       else if (source.initializer) {
-        return this.inferType(source.initializer) ?? ClassTypeDescription.ANY
+        return this.inferType(source.initializer) ?? this.classTypeOf('any')
       }
       else {
-        return ClassTypeDescription.ANY
+        return this.classTypeOf('any')
+      }
+    })
+
+    rule('FunctionDeclaration', (source) => {
+      const paramTypes = source.parameters.map(it => this.inferType(it) ?? this.classTypeOf('any'))
+      const returnType = this.inferType(source.returnTypeRef) ?? this.classTypeOf('any')
+      return new FunctionTypeDescription(paramTypes, returnType)
+    })
+
+    rule('FieldDeclaration', (source) => {
+      if (source.typeRef) {
+        return this.inferType(source.typeRef) ?? this.classTypeOf('any')
+      }
+      else if (source.initializer) {
+        return this.inferType(source.initializer) ?? this.classTypeOf('any')
+      }
+      else {
+        return this.classTypeOf('any')
       }
     })
     // endregion
@@ -104,15 +135,15 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     rule('ConditionalExpression', (_) => {
       // TODO: operator overloading
-      return ClassTypeDescription.BOOL
+      return this.classTypeOf('bool')
     })
 
     rule('PrefixExpression', (source) => {
       switch (source.op) {
         case '-':
-          return ClassTypeDescription.INT
+          return this.classTypeOf('int')
         case '!':
-          return ClassTypeDescription.BOOL
+          return this.classTypeOf('bool')
       }
     })
 
@@ -124,27 +155,27 @@ export class ZenScriptTypeComputer implements TypeComputer {
         case '*':
         case '/':
         case '%':
-          return ClassTypeDescription.INT
+          return this.classTypeOf('int')
         case '<':
         case '>':
         case '<=':
         case '>=':
-          return ClassTypeDescription.BOOL
+          return this.classTypeOf('bool')
         case '==':
         case '!=':
-          return ClassTypeDescription.BOOL
+          return this.classTypeOf('bool')
         case '&&':
         case '||':
-          return ClassTypeDescription.BOOL
+          return this.classTypeOf('bool')
         case 'has':
         case 'in':
-          return ClassTypeDescription.BOOL
+          return this.classTypeOf('bool')
         case '&':
         case '|':
         case '^':
-          return ClassTypeDescription.INT
+          return this.classTypeOf('int')
         case '~':
-          return ClassTypeDescription.STRING
+          return this.classTypeOf('string')
         case 'to':
         case '..':
           return new IntRangeTypeDescription()
@@ -156,7 +187,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     })
 
     rule('InstanceofExpression', (_) => {
-      return ClassTypeDescription.BOOL
+      return this.classTypeOf('bool')
     })
 
     rule('ParenthesizedExpression', (source) => {
@@ -165,46 +196,57 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     rule('BracketExpression', (_) => {
       // TODO: infer bracket expression
-      return ClassTypeDescription.ANY
+      return this.classTypeOf('any')
     })
 
     rule('FunctionExpression', (source) => {
       const paramTypes = source.parameters.map((param) => {
         if (param.typeRef) {
-          return this.inferType(param.typeRef) ?? ClassTypeDescription.ANY
+          return this.inferType(param.typeRef) ?? this.classTypeOf('any')
         }
         else if (isExpression(param.defaultValue)) {
-          return this.inferType(param.defaultValue) ?? ClassTypeDescription.ANY
+          return this.inferType(param.defaultValue) ?? this.classTypeOf('any')
         }
         else {
-          return ClassTypeDescription.ANY
+          return this.classTypeOf('any')
         }
       })
-      const returnType = this.inferType(source.returnTypeRef) ?? ClassTypeDescription.ANY
+      const returnType = this.inferType(source.returnTypeRef) ?? this.classTypeOf('any')
       return new FunctionTypeDescription(paramTypes, returnType)
     })
 
     rule('ReferenceExpression', (source) => {
-      return this.inferType(source.refer.ref) ?? ClassTypeDescription.ANY
+      return this.inferType(source.refer.ref) ?? this.classTypeOf('any')
+    })
+
+    rule('MemberAccess', (source) => {
+      return this.inferType(source.refer.ref)
+    })
+
+    rule('CallExpression', (source) => {
+      const receiverType = this.inferType(source.receiver)
+      if (isFunctionTypeDescription(receiverType)) {
+        return receiverType.returnType
+      }
     })
 
     rule('NullLiteral', (_) => {
       // TODO: does it make sense?
-      return ClassTypeDescription.ANY
+      return this.classTypeOf('any')
     })
 
     rule('BooleanLiteral', (_) => {
-      return ClassTypeDescription.BOOL
+      return this.classTypeOf('bool')
     })
 
     rule('IntegerLiteral', (source) => {
       switch (source.value.at(-1)) {
         case 'l':
         case 'L':
-          return ClassTypeDescription.LONG
+          return this.classTypeOf('long')
 
         default:
-          return ClassTypeDescription.INT
+          return this.classTypeOf('int')
       }
     })
 
@@ -212,33 +254,33 @@ export class ZenScriptTypeComputer implements TypeComputer {
       switch (source.value.at(-1)) {
         case 'f':
         case 'F':
-          return ClassTypeDescription.FLOAT
+          return this.classTypeOf('float')
 
         case 'd':
         case 'D':
-          return ClassTypeDescription.DOUBLE
+          return this.classTypeOf('double')
 
         default:
-          return ClassTypeDescription.DOUBLE
+          return this.classTypeOf('double')
       }
     })
 
     rule('StringLiteral', (_) => {
-      return ClassTypeDescription.STRING
+      return this.classTypeOf('string')
     })
 
     rule('StringTemplate', (_) => {
-      return ClassTypeDescription.STRING
+      return this.classTypeOf('string')
     })
 
     rule('ArrayLiteral', (source) => {
-      const elementType = this.inferType(source.values[0]) ?? ClassTypeDescription.ANY
+      const elementType = this.inferType(source.values[0]) ?? this.classTypeOf('any')
       return new ArrayTypeDescription(elementType)
     })
 
     rule('MapLiteral', (source) => {
-      const keyType = this.inferType(source.entries[0]?.key) ?? ClassTypeDescription.ANY
-      const valueType = this.inferType(source.entries[0]?.value) ?? ClassTypeDescription.ANY
+      const keyType = this.inferType(source.entries[0]?.key) ?? this.classTypeOf('any')
+      const valueType = this.inferType(source.entries[0]?.value) ?? this.classTypeOf('any')
       return new MapTypeDescription(keyType, valueType)
     })
     // endregion

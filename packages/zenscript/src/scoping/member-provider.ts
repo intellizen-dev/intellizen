@@ -3,7 +3,7 @@ import type { Script, ZenScriptAstType } from '../generated/ast'
 import { isScript, isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getClassChain, isStatic } from '../utils/ast'
-import type { TypeDescConstants, TypeDescription } from '../typing/description'
+import { type TypeDescConstants, type TypeDescription, isFunctionTypeDescription } from '../typing/description'
 import type { TypeComputer } from '../typing/infer'
 
 export interface MemberProvider {
@@ -27,12 +27,8 @@ export class ZenScriptMemberProvider implements MemberProvider {
   private readonly rules: RuleMap
 
   getMember(source: AstNode | TypeDescription | undefined): AstNodeDescription[] {
-    if (!source || !source.$type) {
-      return []
-    }
-
-    const produce = this.rules.get(source.$type)
-    return produce ? produce(source) : []
+    const match = source?.$type as SourceKey
+    return this.rules.get(match)?.call(this, source) ?? []
   }
 
   constructor(services: ZenScriptServices) {
@@ -103,6 +99,41 @@ export class ZenScriptMemberProvider implements MemberProvider {
 
     rule('ReferenceExpression', (source) => {
       return this.getMember(source.refer.ref)
+    })
+
+    rule('CallExpression', (source) => {
+      const receiverType = this.typeComputer.inferType(source.receiver)
+      return isFunctionTypeDescription(receiverType) ? this.getMember(receiverType.returnType) : []
+    })
+
+    rule('FieldDeclaration', (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.getMember(type)
+    })
+
+    rule('StringLiteral', (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.getMember(type)
+    })
+
+    rule('StringTemplate', (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.getMember(type)
+    })
+
+    rule('IntegerLiteral', (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.getMember(type)
+    })
+
+    rule('FloatingLiteral', (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.getMember(type)
+    })
+
+    rule('BooleanLiteral', (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.getMember(type)
     })
 
     rule('class', (source) => {
