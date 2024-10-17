@@ -5,30 +5,26 @@ import type { ClassDeclaration } from '../generated/ast'
 export interface TypeDescConstants {
   function: FunctionTypeDescription
   class: ClassTypeDescription
-  proper: ProperTypeDescription
   map: MapTypeDescription
   array: ArrayTypeDescription
   list: ListTypeDescription
   union: UnionTypeDescription
   intersection: IntersectionTypeDescription
   int_range: IntRangeTypeDescription
-  package: PackageTypeDescription
 }
 
 export type BuiltinTypes = 'any' | 'bool' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'string' | 'void'
 
-export class TypeDescription<T extends keyof TypeDescConstants = keyof TypeDescConstants> {
-  $type: T
-
-  constructor($type: T) {
+export class TypeDescription {
+  $type: string
+  constructor($type: keyof TypeDescConstants) {
     this.$type = $type
   }
 }
 
-export class FunctionTypeDescription extends TypeDescription<'function'> {
+export class FunctionTypeDescription extends TypeDescription {
   paramTypes: TypeDescription[]
   returnType: TypeDescription
-
   constructor(paramTypes: TypeDescription[], returnType: TypeDescription) {
     super('function')
     this.paramTypes = paramTypes
@@ -36,30 +32,18 @@ export class FunctionTypeDescription extends TypeDescription<'function'> {
   }
 }
 
-export class ClassTypeDescription extends TypeDescription<'class'> {
+export class ClassTypeDescription extends TypeDescription {
   className: string
   ref?: Reference<ClassDeclaration>
-
   constructor(className: string) {
     super('class')
     this.className = className
   }
 }
 
-export class ProperTypeDescription extends TypeDescription<'proper'> {
-  className: string
-  ref?: Reference<ClassDeclaration>
-
-  constructor(className: string) {
-    super('proper')
-    this.className = className
-  }
-}
-
-export class MapTypeDescription extends TypeDescription<'map'> {
+export class MapTypeDescription extends TypeDescription {
   keyType: TypeDescription
   valueType: TypeDescription
-
   constructor(keyType: TypeDescription, valueType: TypeDescription) {
     super('map')
     this.keyType = keyType
@@ -67,7 +51,7 @@ export class MapTypeDescription extends TypeDescription<'map'> {
   }
 }
 
-export class ArrayTypeDescription extends TypeDescription<'array'> {
+export class ArrayTypeDescription extends TypeDescription {
   elementType: TypeDescription
   constructor(elementType: TypeDescription) {
     super('array')
@@ -75,7 +59,7 @@ export class ArrayTypeDescription extends TypeDescription<'array'> {
   }
 }
 
-export class ListTypeDescription extends TypeDescription<'list'> {
+export class ListTypeDescription extends TypeDescription {
   elementType: TypeDescription
   constructor(elementType: TypeDescription) {
     super('list')
@@ -83,7 +67,7 @@ export class ListTypeDescription extends TypeDescription<'list'> {
   }
 }
 
-export class UnionTypeDescription extends TypeDescription<'union'> {
+export class UnionTypeDescription extends TypeDescription {
   elementTypes: TypeDescription[]
   constructor(elementTypes: TypeDescription[]) {
     super('union')
@@ -91,7 +75,7 @@ export class UnionTypeDescription extends TypeDescription<'union'> {
   }
 }
 
-export class IntersectionTypeDescription extends TypeDescription<'intersection'> {
+export class IntersectionTypeDescription extends TypeDescription {
   elementTypes: TypeDescription[]
   constructor(elementTypes: TypeDescription[]) {
     super('intersection')
@@ -99,20 +83,11 @@ export class IntersectionTypeDescription extends TypeDescription<'intersection'>
   }
 }
 
-export class IntRangeTypeDescription extends TypeDescription<'int_range'> {
+export class IntRangeTypeDescription extends TypeDescription {
   constructor() {
     super('int_range')
   }
 }
-
-export class PackageTypeDescription extends TypeDescription<'package'> {
-  packageName: string
-  constructor(packageName: string) {
-    super('package')
-    this.packageName = packageName
-  }
-}
-
 // endregion
 
 // region Predicates
@@ -164,10 +139,6 @@ export function isClassTypeDescription(typeDesc: TypeDescription | undefined): t
   return typeDesc instanceof ClassTypeDescription
 }
 
-export function isProperTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is ProperTypeDescription {
-  return typeDesc instanceof ProperTypeDescription
-}
-
 export function isMapTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is MapTypeDescription {
   return typeDesc instanceof MapTypeDescription
 }
@@ -186,9 +157,5 @@ export function isUnionTypeDescription(typeDesc: TypeDescription | undefined): t
 
 export function isIntersectionTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is IntersectionTypeDescription {
   return typeDesc instanceof IntersectionTypeDescription
-}
-
-export function isPackageTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is PackageTypeDescription {
-  return typeDesc instanceof PackageTypeDescription
 }
 // endregion
