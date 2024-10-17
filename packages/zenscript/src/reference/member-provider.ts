@@ -1,4 +1,4 @@
-import { type AstNodeDescription, type AstNodeDescriptionProvider, AstUtils, type AstNode as LangiumAstNode, type NameProvider } from 'langium'
+import { type AstNode, type AstNodeDescription, type AstNodeDescriptionProvider, AstUtils, type NameProvider } from 'langium'
 import type { Script, ZenScriptAstType } from '../generated/ast'
 import { isScript, isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
@@ -8,10 +8,6 @@ import type { TypeComputer } from '../typing/infer'
 
 export interface MemberProvider {
   getMember: (source: AstNode | TypeDescription | undefined) => AstNodeDescription[]
-}
-
-interface AstNode extends LangiumAstNode {
-  readonly $type: keyof ZenScriptAstType
 }
 
 type SourceMap = ZenScriptAstType & TypeDescConstants
