@@ -26,16 +26,16 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly memberProvider: MemberProvider
   private readonly rules: RuleMap
 
-  override getScope(context: ReferenceInfo): Scope {
-    const match = context.container.$type as SourceKey
-    return this.rules.get(match)?.call(this, context) ?? EMPTY_SCOPE
-  }
-
   constructor(services: ZenScriptServices) {
     super(services)
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
     this.rules = this.initRules()
+  }
+
+  override getScope(context: ReferenceInfo): Scope {
+    const match = context.container.$type as SourceKey
+    return this.rules.get(match)?.call(this, context) ?? EMPTY_SCOPE
   }
 
   private initRules(): RuleMap {
