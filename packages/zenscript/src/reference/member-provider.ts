@@ -1,9 +1,9 @@
 import { type AstNode, type AstNodeDescription, type AstNodeDescriptionProvider, AstUtils, type NameProvider } from 'langium'
 import type { Script, ZenScriptAstType } from '../generated/ast'
-import { isScript, isVariableDeclaration } from '../generated/ast'
+import { isClassDeclaration, isScript, isTypeParameter, isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getClassChain, isStatic } from '../utils/ast'
-import { type TypeDescConstants, type TypeDescription, isFunctionTypeDescription } from '../typing/type-description'
+import { type TypeDescConstants, type TypeDescription, isClassTypeDescription, isFunctionTypeDescription } from '../typing/type-description'
 import type { TypeComputer } from '../typing/type-computer'
 
 export interface MemberProvider {
@@ -90,7 +90,27 @@ export class ZenScriptMemberProvider implements MemberProvider {
     })
 
     rule('MemberAccess', (source) => {
-      return this.getMember(source.refer.ref)
+      const member = source.refer.ref
+      if (!member) {
+        return []
+      }
+
+      const receiverType = this.typeComputer.inferType(source.receiver)
+      if (!receiverType) {
+        return this.getMember(member)
+      }
+
+      const memberType = this.typeComputer.inferType(member)
+      if (!memberType) {
+        return this.getMember(member)
+      }
+
+      if (isClassTypeDescription(receiverType) && receiverType.substitutions) {
+        memberType?.substituteTypeParameters(receiverType.substitutions)
+        return this.getMember(memberType)
+      }
+
+      return []
     })
 
     rule('ReferenceExpression', (source) => {
@@ -133,11 +153,20 @@ export class ZenScriptMemberProvider implements MemberProvider {
     })
 
     rule('class', (source) => {
-      const ref = source.ref?.ref
-      return getClassChain(ref)
-        .flatMap(it => it.members)
-        .filter(it => !isStatic(it))
-        .map(it => this.createDescriptionForNode(it))
+      const ref = source.refer?.ref
+      if (isClassDeclaration(ref)) {
+        return getClassChain(ref)
+          .flatMap(it => it.members)
+          .filter(it => !isStatic(it))
+          .map(it => this.createDescriptionForNode(it))
+      }
+      else if (isTypeParameter(ref) && source.substitutions) {
+        const type = source.substitutions.get(ref)
+        return this.getMember(type)
+      }
+      else {
+        return []
+      }
     })
 
     return rules

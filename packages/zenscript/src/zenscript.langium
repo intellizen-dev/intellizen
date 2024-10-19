@@ -23,6 +23,7 @@ interface ImportDeclaration extends Declaration {
 
 interface ClassDeclaration extends Declaration {
     name: string;
+    typeParameters: TypeParameter[]
     superTypes: ClassTypeReference[];
     members: ClassMemberDeclaration[];
 }
@@ -45,6 +46,10 @@ interface ValueParameter extends Declaration {
     name: string;
     typeRef?: TypeReference;
     defaultValue?: 'default' | Expression;
+}
+
+interface TypeParameter extends Declaration {
+    name: string;
 }
 
 interface FunctionDeclaration extends Declaration {
@@ -83,7 +88,7 @@ ImportDeclaration returns ImportDeclaration:
 ;
 
 ClassDeclaration returns ClassDeclaration:
-    'zenClass' name=ID
+    'zenClass' name=ID ('<' typeParameters+=TypeParameter (',' typeParameters+=TypeParameter)* '>')?
     ('extends' (superTypes+=ClassType (',' superTypes+=ClassType)*))?
     ('{'
         members+=ClassMemberDeclaration*
@@ -99,6 +104,10 @@ FieldDeclaration returns FieldDeclaration:
 
 ValueParameter returns ValueParameter:
     (varargs?='...')? name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=('default' | Expression))?
+;
+
+TypeParameter returns TypeParameter:
+    name=ID
 ;
 
 FunctionDeclaration returns FunctionDeclaration:
@@ -422,7 +431,8 @@ fragment PrimaryExpression returns Expression:
 ;
 
 BracketExpression returns BracketExpression:
-    value = BRACKETS
+    // value = BRACKETS
+    value = '<>'
 ;
 
 ParenthesizedExpression returns ParenthesizedExpression:
@@ -624,7 +634,7 @@ terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
 terminal FLOATING: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdD]?/;
 terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
-terminal BRACKETS: /<[^<>\n]+>/;
+// terminal BRACKETS: /<[^<>\n]+>/;
 
 hidden terminal BLOCK_COMMENT: /\/\*[\s\S]*?\*\//;
 hidden terminal LINE_COMMENT: /\/\/[^\n\r]*/;

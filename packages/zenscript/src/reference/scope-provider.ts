@@ -1,8 +1,8 @@
-import type { AstNodeDescription, ReferenceInfo, Scope } from 'langium'
+import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, Stream } from 'langium'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI, stream } from 'langium'
 import { substringBeforeLast } from '@intellizen/shared'
 import type { ClassTypeReference, ImportDeclaration, MemberAccess, ZenScriptAstType } from '../generated/ast'
-import { ClassDeclaration, isClassDeclaration, isScript } from '../generated/ast'
+import { ClassDeclaration, isClassDeclaration, isImportDeclaration, isTypeParameter } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
@@ -86,35 +86,48 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     })
 
     rule('ClassTypeReference', (source) => {
-      const container = source.container as ClassTypeReference
       if (source.index === 0 || source.index === undefined) {
-        const script = AstUtils.getContainerOfType(container, isScript)
-        if (!script) {
-          return EMPTY_SCOPE
-        }
+        const scopes: Array<Stream<AstNodeDescription>> = []
 
         const globals = stream(this.packageManager.getHierarchyNode('')!.children.values())
           .flatMap(it => it.values)
           .filter(it => isClassDeclaration(it))
           .map(it => this.descriptions.createDescription(it, it.name))
+        scopes.push(globals)
 
-        const imports = script.imports
-          .map((importDecl) => {
-            const ref = importDecl.path.at(-1)?.ref ?? importDecl
-            return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
-          })
-          .filter(it => !!it)
+        const lexicalScopes = AstUtils.getDocument(source.container).precomputedScopes
+        if (lexicalScopes) {
+          let currentNode: AstNode | undefined = source.container
+          while (currentNode) {
+            const lexicalDescriptions = lexicalScopes.get(currentNode)
+            if (lexicalDescriptions.length > 0) {
+              scopes.push(
+                stream(lexicalDescriptions).map((it) => {
+                  if (isTypeParameter(it.node)) {
+                    return it
+                  }
+                  else if (isClassDeclaration(it.node)) {
+                    return it
+                  }
+                  else if (isImportDeclaration(it.node)) {
+                    const importDecl = it.node
+                    const ref = importDecl.path.at(-1)?.ref ?? importDecl
+                    return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
+                  }
+                  else {
+                    return undefined
+                  }
+                }).filter(it => !!it),
+              )
+            }
+            currentNode = currentNode.$container
+          }
+        }
 
-        const locals = script.classes
-          .map(it => this.descriptions.createDescription(it, it.name))
-
-        let scope = this.createScope(builtin)
-        scope = this.createScope(globals, scope)
-        scope = this.createScope(imports, scope)
-        scope = this.createScope(locals, scope)
-        return scope
+        return scopes.reduce((outer, current) => this.createScope(current, outer), this.createScope(builtin))
       }
       else {
+        const container = source.container as ClassTypeReference
         const prev = container.path[source.index - 1].ref
         const members = this.memberProvider.getMember(prev)
         return this.createScope(members)

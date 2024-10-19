@@ -1,10 +1,10 @@
 import type { AstNode, ResolvedReference } from 'langium'
-import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
-import { isClassDeclaration, isExpression } from '../generated/ast'
+import type { ClassDeclaration, TypeParameter, ZenScriptAstType } from '../generated/ast'
+import { isClassDeclaration, isExpression, isTypeParameter } from '../generated/ast'
 import type { PackageManager } from '../workspace/package-manager'
 import type { ZenScriptServices } from '../module'
-import type { BuiltinTypes, TypeDescription } from './type-description'
-import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, UnionTypeDescription, isFunctionTypeDescription } from './type-description'
+import type { BuiltinTypes, TypeDescription, TypeParameterSubstitutions } from './type-description'
+import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, UnionTypeDescription, isClassTypeDescription, isFunctionTypeDescription } from './type-description'
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => TypeDescription | undefined
@@ -32,11 +32,15 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
   private classTypeOf(className: BuiltinTypes): ClassTypeDescription {
     const desc = new ClassTypeDescription(className)
-    const classDecl = this.packageManager.getAstNode(className)?.filter(it => isClassDeclaration(it))[0]
+    const classDecl = this.classDeclOf(className)
     if (classDecl) {
-      desc.ref = { ref: classDecl } as ResolvedReference<ClassDeclaration>
+      desc.refer = { ref: classDecl } as ResolvedReference<ClassDeclaration>
     }
     return desc
+  }
+
+  private classDeclOf(className: BuiltinTypes): ClassDeclaration | undefined {
+    return this.packageManager.getAstNode(className)?.filter(it => isClassDeclaration(it))[0]
   }
 
   private initRules(): RuleMap {
@@ -49,20 +53,66 @@ export class ZenScriptTypeComputer implements TypeComputer {
     }
 
     // region TypeReference
-    rule('ListTypeReference', (source) => {
-      const elementType = this.inferType(source.value) ?? this.classTypeOf('any')
-      return new ListTypeDescription(elementType)
+    rule('ArrayTypeReference', (source) => {
+      const desc = new ArrayTypeDescription()
+
+      const classDecl = this.classDeclOf('Array')
+      if (classDecl) {
+        desc.refer = { ref: classDecl, $refText: classDecl.name }
+      }
+
+      const substitutions: TypeParameterSubstitutions = new Map()
+      const T = classDecl?.typeParameters[0]
+      if (T) {
+        const elementType = this.inferType(source.value) ?? this.classTypeOf('any')
+        substitutions.set(T, elementType)
+      }
+      desc.substituteTypeParameters(substitutions)
+
+      return desc
     })
 
-    rule('ArrayTypeReference', (source) => {
-      const elementType = this.inferType(source.value) ?? this.classTypeOf('any')
-      return new ListTypeDescription(elementType)
+    rule('ListTypeReference', (source) => {
+      const desc = new ListTypeDescription()
+
+      const classDecl = this.classDeclOf('List')
+      if (classDecl) {
+        desc.refer = { ref: classDecl, $refText: classDecl.name }
+      }
+
+      const substitutions: TypeParameterSubstitutions = new Map()
+      const T = classDecl?.typeParameters[0]
+      if (T) {
+        const elementType = this.inferType(source.value) ?? this.classTypeOf('any')
+        substitutions.set(T, elementType)
+      }
+      desc.substituteTypeParameters(substitutions)
+
+      return desc
     })
 
     rule('MapTypeReference', (source) => {
-      const keyType = this.inferType(source.key) ?? this.classTypeOf('any')
-      const valueType = this.inferType(source.value) ?? this.classTypeOf('any')
-      return new MapTypeDescription(keyType, valueType)
+      const desc = new MapTypeDescription()
+
+      const classDecl = this.classDeclOf('Map')
+      if (classDecl) {
+        desc.refer = { ref: classDecl, $refText: classDecl.name }
+      }
+
+      const substitutions: TypeParameterSubstitutions = new Map()
+      const K = classDecl?.typeParameters[0]
+      const V = classDecl?.typeParameters[1]
+      if (K) {
+        const keyType = this.inferType(source.key) ?? this.classTypeOf('any')
+        substitutions.set(K, keyType)
+      }
+      if (V) {
+        const valueType = this.inferType(source.value) ?? this.classTypeOf('any')
+        substitutions.set(V, valueType)
+      }
+      desc.substituteTypeParameters(substitutions)
+
+      return desc
     })
 
     rule('UnionTypeReference', (source) => {
@@ -89,8 +139,8 @@ export class ZenScriptTypeComputer implements TypeComputer {
       const className = source.path.map(it => it.$refText).join('.')
       const typeDesc = new ClassTypeDescription(className)
       const refer = source.path.at(-1)
-      if (isClassDeclaration(refer?.ref)) {
-        typeDesc.ref = refer as ResolvedReference<ClassDeclaration>
+      if (isClassDeclaration(refer?.ref) || isTypeParameter(refer?.ref)) {
+        typeDesc.refer = refer as ResolvedReference<ClassDeclaration | TypeParameter>
       }
       return typeDesc
     })
@@ -220,7 +270,12 @@ export class ZenScriptTypeComputer implements TypeComputer {
     })
 
     rule('MemberAccess', (source) => {
-      return this.inferType(source.refer.ref)
+      const receiverType = this.inferType(source.receiver)
+      const memberType = this.inferType(source.refer.ref)
+      if (isClassTypeDescription(receiverType) && receiverType.substitutions) {
+        memberType?.substituteTypeParameters(receiverType.substitutions)
+      }
+      return memberType
     })
 
     rule('CallExpression', (source) => {
@@ -274,14 +329,46 @@ export class ZenScriptTypeComputer implements TypeComputer {
     })
 
     rule('ArrayLiteral', (source) => {
-      const elementType = this.inferType(source.values[0]) ?? this.classTypeOf('any')
-      return new ArrayTypeDescription(elementType)
+      const desc = new ArrayTypeDescription()
+
+      const classDecl = this.classDeclOf('Array')
+      if (classDecl) {
+        desc.refer = { ref: classDecl, $refText: classDecl.name }
+      }
+
+      const substitutions: TypeParameterSubstitutions = new Map()
+      const T = classDecl?.typeParameters[0]
+      if (T) {
+        const elementType = this.inferType(source.values[0]) ?? this.classTypeOf('any')
+        substitutions.set(T, elementType)
+      }
+      desc.substituteTypeParameters(substitutions)
+
+      return desc
     })
 
     rule('MapLiteral', (source) => {
-      const keyType = this.inferType(source.entries[0]?.key) ?? this.classTypeOf('any')
-      const valueType = this.inferType(source.entries[0]?.value) ?? this.classTypeOf('any')
-      return new MapTypeDescription(keyType, valueType)
+      const desc = new MapTypeDescription()
+
+      const classDecl = this.classDeclOf('Map')
+      if (classDecl) {
+        desc.refer = { ref: classDecl, $refText: classDecl.name }
+      }
+
+      const substitutions: TypeParameterSubstitutions = new Map()
+      const K = classDecl?.typeParameters[0]
+      const V = classDecl?.typeParameters[1]
+      if (K) {
+        const keyType = this.inferType(source.entries[0]?.key) ?? this.classTypeOf('any')
+        substitutions.set(K, keyType)
+      }
+      if (V) {
+        const valueType = this.inferType(source.entries[0]?.value) ?? this.classTypeOf('any')
+        substitutions.set(V, valueType)
+      }
+      desc.substituteTypeParameters(substitutions)
+
+      return desc
     })
     // endregion
 

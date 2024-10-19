@@ -1,5 +1,5 @@
 import type { Reference } from 'langium'
-import type { ClassDeclaration } from '../generated/ast'
+import type { ClassDeclaration, TypeParameter } from '../generated/ast'
 
 // region TypeDescription
 export interface TypeDescConstants {
@@ -13,13 +13,17 @@ export interface TypeDescConstants {
   int_range: IntRangeTypeDescription
 }
 
-export type BuiltinTypes = 'any' | 'bool' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'string' | 'void'
+export type BuiltinTypes = 'any' | 'bool' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'string' | 'void' | 'Array' | 'List' | 'Map'
 
-export class TypeDescription {
+export type TypeParameterSubstitutions = Map<TypeParameter, TypeDescription>
+
+export abstract class TypeDescription {
   $type: string
-  constructor($type: keyof TypeDescConstants) {
+  protected constructor($type: keyof TypeDescConstants) {
     this.$type = $type
   }
+
+  abstract substituteTypeParameters(substitutions: TypeParameterSubstitutions): void
 }
 
 export class FunctionTypeDescription extends TypeDescription {
@@ -30,40 +34,45 @@ export class FunctionTypeDescription extends TypeDescription {
     this.paramTypes = paramTypes
     this.returnType = returnType
   }
+
+  substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
+    this.paramTypes.forEach(it => it.substituteTypeParameters(substitutions))
+    this.returnType.substituteTypeParameters(substitutions)
+  }
 }
 
 export class ClassTypeDescription extends TypeDescription {
   className: string
-  ref?: Reference<ClassDeclaration>
+  substitutions?: TypeParameterSubstitutions
+  refer?: Reference<ClassDeclaration | TypeParameter>
   constructor(className: string) {
     super('class')
     this.className = className
   }
-}
 
-export class MapTypeDescription extends TypeDescription {
-  keyType: TypeDescription
-  valueType: TypeDescription
-  constructor(keyType: TypeDescription, valueType: TypeDescription) {
-    super('map')
-    this.keyType = keyType
-    this.valueType = valueType
+  substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
+    if (this.substitutions) {
+      throw new Error(`Type parameters have already been substituted for "${this.className}".`)
+    }
+    this.substitutions = substitutions
   }
 }
 
-export class ArrayTypeDescription extends TypeDescription {
-  elementType: TypeDescription
-  constructor(elementType: TypeDescription) {
-    super('array')
-    this.elementType = elementType
+export class ArrayTypeDescription extends ClassTypeDescription {
+  constructor() {
+    super('Array')
   }
 }
 
-export class ListTypeDescription extends TypeDescription {
-  elementType: TypeDescription
-  constructor(elementType: TypeDescription) {
-    super('list')
-    this.elementType = elementType
+export class ListTypeDescription extends ClassTypeDescription {
+  constructor() {
+    super('List')
+  }
+}
+
+export class MapTypeDescription extends ClassTypeDescription {
+  constructor() {
+    super('Map')
   }
 }
 
@@ -73,6 +82,10 @@ export class UnionTypeDescription extends TypeDescription {
     super('union')
     this.elementTypes = elementTypes
   }
+
+  substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
+    this.elementTypes.forEach(it => it.substituteTypeParameters(substitutions))
+  }
 }
 
 export class IntersectionTypeDescription extends TypeDescription {
@@ -81,12 +94,18 @@ export class IntersectionTypeDescription extends TypeDescription {
     super('intersection')
     this.elementTypes = elementTypes
   }
+
+  substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
+    this.elementTypes.forEach(it => it.substituteTypeParameters(substitutions))
+  }
 }
 
 export class IntRangeTypeDescription extends TypeDescription {
   constructor() {
     super('int_range')
   }
+
+  substituteTypeParameters(_: TypeParameterSubstitutions) {}
 }
 // endregion
 
