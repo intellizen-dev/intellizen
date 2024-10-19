@@ -3,8 +3,8 @@ import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
 import { isClassDeclaration, isExpression } from '../generated/ast'
 import type { PackageManager } from '../workspace/package-manager'
 import type { ZenScriptServices } from '../module'
-import type { BuiltinTypes, TypeDescription } from './description'
-import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, UnionTypeDescription, isFunctionTypeDescription } from './description'
+import type { BuiltinTypes, TypeDescription } from './type-description'
+import { ArrayTypeDescription, ClassTypeDescription, FunctionTypeDescription, IntRangeTypeDescription, IntersectionTypeDescription, ListTypeDescription, MapTypeDescription, UnionTypeDescription, isFunctionTypeDescription } from './type-description'
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => TypeDescription | undefined

@@ -1,17 +1,13 @@
-import { type AstNodeDescription, type AstNodeDescriptionProvider, AstUtils, type AstNode as LangiumAstNode, type NameProvider } from 'langium'
+import { type AstNode, type AstNodeDescription, type AstNodeDescriptionProvider, AstUtils, type NameProvider } from 'langium'
 import type { Script, ZenScriptAstType } from '../generated/ast'
 import { isScript, isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getClassChain, isStatic } from '../utils/ast'
-import { type TypeDescConstants, type TypeDescription, isFunctionTypeDescription } from '../typing/description'
-import type { TypeComputer } from '../typing/infer'
+import { type TypeDescConstants, type TypeDescription, isFunctionTypeDescription } from '../typing/type-description'
+import type { TypeComputer } from '../typing/type-computer'
 
 export interface MemberProvider {
   getMember: (source: AstNode | TypeDescription | undefined) => AstNodeDescription[]
-}
-
-interface AstNode extends LangiumAstNode {
-  readonly $type: keyof ZenScriptAstType
 }
 
 type SourceMap = ZenScriptAstType & TypeDescConstants
@@ -26,16 +22,16 @@ export class ZenScriptMemberProvider implements MemberProvider {
   private readonly typeComputer: TypeComputer
   private readonly rules: RuleMap
 
+  constructor(services: ZenScriptServices) {
+    this.nameProvider = services.references.NameProvider
+    this.descriptions = services.workspace.AstNodeDescriptionProvider
+    this.typeComputer = services.typing.TypeComputer
+    this.rules = this.initRules()
+  }
+
   getMember(source: AstNode | TypeDescription | undefined): AstNodeDescription[] {
     const match = source?.$type as SourceKey
     return this.rules.get(match)?.call(this, source) ?? []
-  }
-
-  constructor(services: ZenScriptServices) {
-    this.descriptions = services.workspace.AstNodeDescriptionProvider
-    this.nameProvider = services.references.NameProvider
-    this.typeComputer = services.typing.TypeComputer
-    this.rules = this.initRules()
   }
 
   private initRules(): RuleMap {

@@ -5,7 +5,7 @@ import { HierarchyTree } from '@intellizen/shared'
 import type { ZenScriptServices } from '../module'
 import { isClassDeclaration } from '../generated/ast'
 import { isImportable, isStatic } from '../utils/ast'
-import type { ZenScriptNameProvider } from '../name'
+import type { ZenScriptNameProvider } from '../reference/name-provider'
 
 export interface PackageManager {
   getAstNode: (path: string) => AstNode[] | undefined
