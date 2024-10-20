@@ -1,16 +1,16 @@
 import { type AstNode, type AstNodeDescription, type AstNodeDescriptionProvider, AstUtils, type NameProvider } from 'langium'
 import type { Script, ZenScriptAstType } from '../generated/ast'
-import { isClassDeclaration, isScript, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { isScript, isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getClassChain, isStatic } from '../utils/ast'
-import { type TypeDescConstants, type TypeDescription, isClassTypeDescription, isFunctionTypeDescription } from '../typing/type-description'
+import { type Type, type ZenScriptType, isClassType, isFunctionType, isTypeVariable } from '../typing/type-description'
 import type { TypeComputer } from '../typing/type-computer'
 
 export interface MemberProvider {
-  getMember: (source: AstNode | TypeDescription | undefined) => AstNodeDescription[]
+  getMember: (source: AstNode | Type | undefined) => AstNodeDescription[]
 }
 
-type SourceMap = ZenScriptAstType & TypeDescConstants
+type SourceMap = ZenScriptAstType & ZenScriptType
 type SourceKey = keyof SourceMap
 type Produce<K extends SourceKey, S extends SourceMap[K]> = (source: S) => AstNodeDescription[]
 type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Produce<K, S>) => void
@@ -29,7 +29,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     this.rules = this.initRules()
   }
 
-  getMember(source: AstNode | TypeDescription | undefined): AstNodeDescription[] {
+  getMember(source: AstNode | Type | undefined): AstNodeDescription[] {
     const match = source?.$type as SourceKey
     return this.rules.get(match)?.call(this, source) ?? []
   }
@@ -105,9 +105,8 @@ export class ZenScriptMemberProvider implements MemberProvider {
         return this.getMember(member)
       }
 
-      if (isClassTypeDescription(receiverType) && receiverType.substitutions) {
-        memberType?.substituteTypeParameters(receiverType.substitutions)
-        return this.getMember(memberType)
+      if (isTypeVariable(memberType) && isClassType(receiverType)) {
+        return this.getMember(memberType.substituteTypeParameters(receiverType.substitutions))
       }
 
       return []
@@ -119,7 +118,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
 
     rule('CallExpression', (source) => {
       const receiverType = this.typeComputer.inferType(source.receiver)
-      return isFunctionTypeDescription(receiverType) ? this.getMember(receiverType.returnType) : []
+      return isFunctionType(receiverType) ? this.getMember(receiverType.returnType) : []
     })
 
     rule('FieldDeclaration', (source) => {
@@ -152,21 +151,11 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.getMember(type)
     })
 
-    rule('class', (source) => {
-      const ref = source.refer?.ref
-      if (isClassDeclaration(ref)) {
-        return getClassChain(ref)
-          .flatMap(it => it.members)
-          .filter(it => !isStatic(it))
-          .map(it => this.createDescriptionForNode(it))
-      }
-      else if (isTypeParameter(ref) && source.substitutions) {
-        const type = source.substitutions.get(ref)
-        return this.getMember(type)
-      }
-      else {
-        return []
-      }
+    rule('ClassType', (source) => {
+      return getClassChain(source.declaration)
+        .flatMap(it => it.members)
+        .filter(it => !isStatic(it))
+        .map(it => this.createDescriptionForNode(it))
     })
 
     return rules

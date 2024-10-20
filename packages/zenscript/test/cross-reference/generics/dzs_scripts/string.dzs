@@ -1,0 +1,7 @@
+zenClass string {
+    function length() as int;
+    
+    function concat(str as string) as string;
+    
+    function split(separator as string, maximum as int = 0) as [string];
+}

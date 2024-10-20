@@ -1,180 +1,220 @@
-import type { Reference } from 'langium'
-import type { ClassDeclaration, TypeParameter } from '../generated/ast'
+import { stream } from 'langium'
+import type { ClassDeclaration, Declaration, TypeParameter } from '../generated/ast'
 
 // region TypeDescription
-export interface TypeDescConstants {
-  function: FunctionTypeDescription
-  class: ClassTypeDescription
-  map: MapTypeDescription
-  array: ArrayTypeDescription
-  list: ListTypeDescription
-  union: UnionTypeDescription
-  intersection: IntersectionTypeDescription
-  int_range: IntRangeTypeDescription
+export interface ZenScriptType {
+  FunctionType: FunctionType
+  ClassType: ClassType
+  UnionType: UnionType
+  IntersectionType: IntersectionType
+  IntRangeType: IntRangeType
+  TypeVariable: TypeVariable
 }
 
 export type BuiltinTypes = 'any' | 'bool' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'string' | 'void' | 'Array' | 'List' | 'Map'
 
-export type TypeParameterSubstitutions = Map<TypeParameter, TypeDescription>
+export type TypeParameterSubstitutions = Map<TypeParameter, Type>
 
-export abstract class TypeDescription {
+export abstract class Type {
   $type: string
-  protected constructor($type: keyof TypeDescConstants) {
+
+  protected constructor($type: keyof ZenScriptType) {
     this.$type = $type
   }
 
-  abstract substituteTypeParameters(substitutions: TypeParameterSubstitutions): void
+  abstract substituteTypeParameters(substitutions: TypeParameterSubstitutions): Type
+  abstract toString(): string
 }
 
-export class FunctionTypeDescription extends TypeDescription {
-  paramTypes: TypeDescription[]
-  returnType: TypeDescription
-  constructor(paramTypes: TypeDescription[], returnType: TypeDescription) {
-    super('function')
+export abstract class NamedType<D extends Declaration> extends Type {
+  declaration: D
+
+  protected constructor($type: keyof ZenScriptType, declaration: D) {
+    super($type)
+    this.declaration = declaration
+  }
+}
+
+export class ClassType extends NamedType<ClassDeclaration> {
+  substitutions: TypeParameterSubstitutions
+  constructor(declaration: ClassDeclaration, substitutions: TypeParameterSubstitutions) {
+    super('ClassType', declaration)
+    this.substitutions = substitutions
+  }
+
+  override substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
+    const newSubstitutions = new Map(stream(this.substitutions).map(([key, value]) => [key, value.substituteTypeParameters(substitutions)]))
+    return new ClassType(this.declaration, newSubstitutions)
+  }
+
+  override toString(): string {
+    let result = this.declaration.name
+    if (this.substitutions.size) {
+      result += '<'
+      result += stream(this.substitutions.values()).map(it => it.toString()).join(', ')
+      result += '>'
+    }
+    return result
+  }
+}
+
+export class TypeVariable extends NamedType<TypeParameter> {
+  constructor(declaration: TypeParameter) {
+    super('TypeVariable', declaration)
+  }
+
+  override substituteTypeParameters(substitutions: TypeParameterSubstitutions): Type {
+    return substitutions.get(this.declaration) ?? this
+  }
+
+  override toString(): string {
+    return this.declaration.name
+  }
+}
+
+export class FunctionType extends Type {
+  paramTypes: Type[]
+  returnType: Type
+  constructor(paramTypes: Type[], returnType: Type) {
+    super('FunctionType')
     this.paramTypes = paramTypes
     this.returnType = returnType
   }
 
-  substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
-    this.paramTypes.forEach(it => it.substituteTypeParameters(substitutions))
-    this.returnType.substituteTypeParameters(substitutions)
-  }
-}
-
-export class ClassTypeDescription extends TypeDescription {
-  className: string
-  substitutions?: TypeParameterSubstitutions
-  refer?: Reference<ClassDeclaration | TypeParameter>
-  constructor(className: string) {
-    super('class')
-    this.className = className
+  override substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
+    const paramTypes = this.paramTypes.map(it => it.substituteTypeParameters(substitutions))
+    const returnType = this.returnType.substituteTypeParameters(substitutions)
+    return new FunctionType(paramTypes, returnType)
   }
 
-  substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
-    if (this.substitutions) {
-      throw new Error(`Type parameters have already been substituted for "${this.className}".`)
+  override toString(): string {
+    let result = 'function('
+    if (this.paramTypes.length) {
+      result += this.paramTypes.map(it => it.toString()).join(',')
     }
-    this.substitutions = substitutions
+    result += ')'
+    result += this.returnType.toString()
+    return result
   }
 }
 
-export class ArrayTypeDescription extends ClassTypeDescription {
-  constructor() {
-    super('Array')
+export class UnionType extends Type {
+  types: Type[]
+  constructor(types: Type[]) {
+    super('UnionType')
+    this.types = types
+  }
+
+  override substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
+    return new UnionType(this.types.map(it => it.substituteTypeParameters(substitutions)))
+  }
+
+  override toString(): string {
+    return this.types.map(it => it.toString()).join(' | ')
   }
 }
 
-export class ListTypeDescription extends ClassTypeDescription {
-  constructor() {
-    super('List')
-  }
-}
-
-export class MapTypeDescription extends ClassTypeDescription {
-  constructor() {
-    super('Map')
-  }
-}
-
-export class UnionTypeDescription extends TypeDescription {
-  elementTypes: TypeDescription[]
-  constructor(elementTypes: TypeDescription[]) {
-    super('union')
-    this.elementTypes = elementTypes
+export class IntersectionType extends Type {
+  types: Type[]
+  constructor(types: Type[]) {
+    super('IntersectionType')
+    this.types = types
   }
 
   substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
-    this.elementTypes.forEach(it => it.substituteTypeParameters(substitutions))
+    return new IntersectionType(this.types.map(it => it.substituteTypeParameters(substitutions)))
+  }
+
+  override toString(): string {
+    return this.types.map(it => it.toString()).join(' & ')
   }
 }
 
-export class IntersectionTypeDescription extends TypeDescription {
-  elementTypes: TypeDescription[]
-  constructor(elementTypes: TypeDescription[]) {
-    super('intersection')
-    this.elementTypes = elementTypes
-  }
-
-  substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
-    this.elementTypes.forEach(it => it.substituteTypeParameters(substitutions))
-  }
-}
-
-export class IntRangeTypeDescription extends TypeDescription {
+export class IntRangeType extends Type {
   constructor() {
-    super('int_range')
+    super('IntRangeType')
   }
 
-  substituteTypeParameters(_: TypeParameterSubstitutions) {}
+  override substituteTypeParameters(_: TypeParameterSubstitutions) {
+    return this
+  }
+
+  override toString(): string {
+    return 'IntRange'
+  }
 }
 // endregion
 
 // region Predicates
-export function isFunctionTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is FunctionTypeDescription {
-  return typeDesc instanceof FunctionTypeDescription
+export function isClassType(type: unknown): type is ClassType {
+  return type instanceof ClassType
 }
 
-export function isStringType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
-  return isClassTypeDescription(typeDesc) && typeDesc.className === 'string'
+export function isStringType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'string'
 }
 
-export function isAnyType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
-  return isClassTypeDescription(typeDesc) && typeDesc.className === 'any'
+export function isAnyType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'any'
 }
 
-export function isBoolType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
-  return isClassTypeDescription(typeDesc) && typeDesc.className === 'bool'
+export function isBoolType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'bool'
 }
 
-export function isByteType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
-  return isClassTypeDescription(typeDesc) && typeDesc.className === 'byte'
+export function isByteType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'byte'
 }
 
-export function isDoubleType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
-  return isClassTypeDescription(typeDesc) && typeDesc.className === 'double'
+export function isShortType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'short'
 }
 
-export function isFloatType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
-  return isClassTypeDescription(typeDesc) && typeDesc.className === 'float'
+export function isIntType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'int'
 }
 
-export function isIntType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
-  return isClassTypeDescription(typeDesc) && typeDesc.className === 'int'
+export function isLongType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'long'
 }
 
-export function isLongType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
-  return isClassTypeDescription(typeDesc) && typeDesc.className === 'long'
+export function isFloatType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'float'
 }
 
-export function isShortType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
-  return isClassTypeDescription(typeDesc) && typeDesc.className === 'short'
+export function isDoubleType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'double'
 }
 
-export function isVoidType(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
-  return isClassTypeDescription(typeDesc) && typeDesc.className === 'void'
+export function isVoidType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'void'
 }
 
-export function isClassTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is ClassTypeDescription {
-  return typeDesc instanceof ClassTypeDescription
+export function isArrayType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'Array'
 }
 
-export function isMapTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is MapTypeDescription {
-  return typeDesc instanceof MapTypeDescription
+export function isListType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'List'
 }
 
-export function isArrayTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is ArrayTypeDescription {
-  return typeDesc instanceof ArrayTypeDescription
+export function isMapType(type: unknown): type is ClassType {
+  return isClassType(type) && type.declaration.name === 'Map'
 }
 
-export function isListTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is ListTypeDescription {
-  return typeDesc instanceof ListTypeDescription
+export function isFunctionType(type: unknown): type is FunctionType {
+  return type instanceof FunctionType
 }
 
-export function isUnionTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is UnionTypeDescription {
-  return typeDesc instanceof UnionTypeDescription
+export function isUnionType(type: unknown): type is UnionType {
+  return type instanceof UnionType
 }
 
-export function isIntersectionTypeDescription(typeDesc: TypeDescription | undefined): typeDesc is IntersectionTypeDescription {
-  return typeDesc instanceof IntersectionTypeDescription
+export function isIntersectionType(type: unknown): type is IntersectionType {
+  return type instanceof IntersectionType
+}
+
+export function isTypeVariable(type: unknown): type is TypeVariable {
+  return type instanceof TypeVariable
 }
 // endregion
