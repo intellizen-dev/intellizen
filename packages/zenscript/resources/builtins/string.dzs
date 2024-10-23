@@ -1,0 +1,87 @@
+zenClass string {
+    function toString() as string;
+    
+    function hashCode() as int;
+    
+    function compareTo(anotherString as string) as int;
+    
+    function indexOf(str as string, fromIndex as int) as int;
+    
+    function indexOf(ch as int) as int;
+    
+    function indexOf(str as string) as int;
+    
+    function indexOf(ch as int, fromIndex as int) as int;
+    
+    function length() as int;
+    
+    function isEmpty() as bool;
+    
+    function codePointAt(index as int) as int;
+    
+    function codePointBefore(index as int) as int;
+    
+    function codePointCount(beginIndex as int, endIndex as int) as int;
+    
+    function offsetByCodePoints(index as int, codePointOffset as int) as int;
+    
+    function contentEquals(arg0 as string) as bool;
+    
+    function equalsIgnoreCase(anotherString as string) as bool;
+    
+    function compareToIgnoreCase(anotherString as string) as int;
+    
+    function regionMatches(toffset as int, other as string, ooffset as int, len as int) as bool;
+    
+    function regionMatches(ignoreCase as bool, toffset as int, other as string, ooffset as int, len as int) as bool;
+    
+    function startsWith(prefix as string) as bool;
+    
+    function startsWith(prefix as string, toffset as int) as bool;
+    
+    function endsWith(suffix as string) as bool;
+    
+    function lastIndexOf(ch as int, fromIndex as int) as int;
+    
+    function lastIndexOf(str as string, fromIndex as int) as int;
+    
+    function lastIndexOf(ch as int) as int;
+    
+    function lastIndexOf(str as string) as int;
+    
+    function substring(beginIndex as int) as string;
+    
+    function substring(beginIndex as int, endIndex as int) as string;
+    
+    function subSequence(beginIndex as int, endIndex as int) as string;
+    
+    function concat(str as string) as string;
+    
+    function replace(target as string, replacement as string) as string;
+    
+    function matches(regex as string) as bool;
+    
+    function contains(s as string) as bool;
+    
+    function replaceFirst(regex as string, replacement as string) as string;
+    
+    function replaceAll(regex as string, replacement as string) as string;
+    
+    function toLowerCase() as string;
+    
+    function toUpperCase() as string;
+    
+    function trim() as string;
+    
+    function intern() as string;
+    
+    function indexOf(needle as string, fromIndex as int) as int;
+    
+    function indexOf(needle as string) as int;
+    
+    function lastIndexOf(needle as string) as int;
+    
+    function lastIndexOf(needle as string, fromIndex as int) as int;
+    
+    function split(separator as string, maximum as int = 0) as [string];
+}
