@@ -3,7 +3,7 @@ import type { Script, ZenScriptAstType } from '../generated/ast'
 import { isScript, isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getClassChain, isStatic } from '../utils/ast'
-import { type Type, type ZenScriptType, isClassType, isFunctionType, isTypeVariable } from '../typing/type-description'
+import { type Type, type ZenScriptType, isFunctionType } from '../typing/type-description'
 import type { TypeComputer } from '../typing/type-computer'
 
 export interface MemberProvider {
@@ -100,16 +100,8 @@ export class ZenScriptMemberProvider implements MemberProvider {
         return this.getMember(member)
       }
 
-      const memberType = this.typeComputer.inferType(member)
-      if (!memberType) {
-        return this.getMember(member)
-      }
-
-      if (isTypeVariable(memberType) && isClassType(receiverType)) {
-        return this.getMember(memberType.substituteTypeParameters(receiverType.substitutions))
-      }
-
-      return []
+      const type = this.typeComputer.inferType(source)
+      return this.getMember(type)
     })
 
     rule('ReferenceExpression', (source) => {
