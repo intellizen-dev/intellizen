@@ -28,7 +28,7 @@ export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
 
   protected async performStartup(folders: WorkspaceFolder[]): Promise<LangiumDocument[]> {
     const fileExtensions = this.serviceRegistry.all.flatMap(e => e.LanguageMetaData.fileExtensions)
-    const srcRoots: URI[] = folders.flatMap(folder => folder.config.srcRoots)
+    const srcRoots = folders.flatMap(folder => folder.config.srcRoots)
     const all = await Promise.all(srcRoots.flatMap(srcRoot => this.collect(srcRoot, fileExtensions)))
     this._ready.resolve()
     return all.flat()
