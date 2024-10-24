@@ -1,5 +1,4 @@
 import type { AstNode } from 'langium'
-import { DocumentCache } from 'langium'
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
 import { isClassDeclaration, isExpression, isTypeParameter } from '../generated/ast'
 import type { PackageManager } from '../workspace/package-manager'
@@ -19,12 +18,10 @@ type RuleMap = Map<SourceKey, Produce<SourceKey, any>>
 
 export class ZenScriptTypeComputer implements TypeComputer {
   private readonly packageManager: PackageManager
-  private readonly typeCache: DocumentCache<AstNode, Type>
   private readonly rules: RuleMap
 
   constructor(services: ZenScriptServices) {
     this.packageManager = services.workspace.PackageManager
-    this.typeCache = new DocumentCache(services.shared)
     this.rules = this.initRules()
   }
 
