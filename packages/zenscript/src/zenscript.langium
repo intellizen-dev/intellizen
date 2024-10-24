@@ -286,7 +286,7 @@ interface FunctionExpression extends Expression {
 }
 
 interface BracketExpression extends Expression {
-    value: string;
+    content: string;
 }
 
 interface ParenthesizedExpression extends Expression {
@@ -431,8 +431,7 @@ fragment PrimaryExpression returns Expression:
 ;
 
 BracketExpression returns BracketExpression:
-    // value = BRACKETS
-    value = '<>'
+    '<' content = (ID | ':' | ',' | '=' | '/')+ '>'
 ;
 
 ParenthesizedExpression returns ParenthesizedExpression:
@@ -634,7 +633,6 @@ terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
 terminal FLOATING: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdD]?/;
 terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
-// terminal BRACKETS: /<[^<>\n]+>/;
 
 hidden terminal BLOCK_COMMENT: /\/\*[\s\S]*?\*\//;
 hidden terminal LINE_COMMENT: /\/\/[^\n\r]*/;
