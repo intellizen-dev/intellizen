@@ -7,11 +7,10 @@ export interface ZenScriptType {
   ClassType: ClassType
   UnionType: UnionType
   IntersectionType: IntersectionType
-  IntRangeType: IntRangeType
   TypeVariable: TypeVariable
 }
 
-export type BuiltinTypes = 'any' | 'bool' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'string' | 'void' | 'Array' | 'List' | 'Map'
+export type BuiltinTypes = 'any' | 'bool' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'string' | 'void' | 'Array' | 'List' | 'Map' | 'IntRange'
 
 export type TypeParameterSubstitutions = Map<TypeParameter, Type>
 
@@ -127,20 +126,6 @@ export class IntersectionType extends Type {
 
   override toString(): string {
     return this.types.map(it => it.toString()).join(' & ')
-  }
-}
-
-export class IntRangeType extends Type {
-  constructor() {
-    super('IntRangeType')
-  }
-
-  override substituteTypeParameters(_: TypeParameterSubstitutions) {
-    return this
-  }
-
-  override toString(): string {
-    return 'IntRange'
   }
 }
 // endregion

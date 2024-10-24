@@ -4,7 +4,7 @@ import { isClassDeclaration, isExpression, isTypeParameter } from '../generated/
 import type { PackageManager } from '../workspace/package-manager'
 import type { ZenScriptServices } from '../module'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
-import { ClassType, FunctionType, IntRangeType, IntersectionType, TypeVariable, UnionType, isClassType, isFunctionType } from './type-description'
+import { ClassType, FunctionType, IntersectionType, TypeVariable, UnionType, isClassType, isFunctionType } from './type-description'
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => Type | undefined
@@ -189,7 +189,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
           return this.classTypeOf('string')
         case 'to':
         case '..':
-          return new IntRangeType()
+          return this.classTypeOf('IntRange')
       }
     })
 
