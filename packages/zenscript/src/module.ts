@@ -15,7 +15,6 @@ import { ZenScriptPackageManager } from './workspace/package-manager'
 import { ZenScriptMemberProvider } from './reference/member-provider'
 import { ZenScriptWorkspaceManager } from './workspace/workspace-manager'
 import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
-import { ZenScriptHoverProvider } from './lsp/hover-provider'
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -77,7 +76,6 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
   },
   lsp: {
     CompletionProvider: services => new ZenScriptCompletionProvider(services),
-    HoverProvider: services => new ZenScriptHoverProvider(services),
   },
 }
 
