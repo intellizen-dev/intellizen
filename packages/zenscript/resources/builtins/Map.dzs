@@ -1,5 +1,0 @@
-zenClass Map<K, V> {
-    val length as int;
-    val keys as [K];
-    val values as [V];
-}
