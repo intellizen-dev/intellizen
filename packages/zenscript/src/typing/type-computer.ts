@@ -60,19 +60,19 @@ export class ZenScriptTypeComputer implements TypeComputer {
     })
 
     rule('ListTypeReference', (source) => {
-      const type = this.classTypeOf('List')
-      const T = type.declaration.typeParameters[0]
-      type.substitutions.set(T, this.inferType(source.value) ?? this.classTypeOf('any'))
-      return type
+      const listType = this.classTypeOf('List')
+      const T = listType.declaration.typeParameters[0]
+      listType.substitutions.set(T, this.inferType(source.value) ?? this.classTypeOf('any'))
+      return listType
     })
 
     rule('MapTypeReference', (source) => {
-      const type = this.classTypeOf('Map')
-      const K = type.declaration.typeParameters[0]
-      const V = type.declaration.typeParameters[1]
-      type.substitutions.set(K, this.inferType(source.key) ?? this.classTypeOf('any'))
-      type.substitutions.set(V, this.inferType(source.value) ?? this.classTypeOf('any'))
-      return type
+      const mapType = this.classTypeOf('Map')
+      const K = mapType.declaration.typeParameters[0]
+      const V = mapType.declaration.typeParameters[1]
+      mapType.substitutions.set(K, this.inferType(source.key) ?? this.classTypeOf('any'))
+      mapType.substitutions.set(V, this.inferType(source.value) ?? this.classTypeOf('any'))
+      return mapType
     })
 
     rule('UnionTypeReference', (source) => {
