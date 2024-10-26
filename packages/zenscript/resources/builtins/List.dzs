@@ -1,0 +1,3 @@
+zenClass List<T> {
+    val length as int;
+}

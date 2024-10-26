@@ -1,0 +1,5 @@
+zenClass IntRange {
+    val from as int;
+
+    val to as int;
+}
