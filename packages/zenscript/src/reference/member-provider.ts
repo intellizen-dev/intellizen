@@ -3,14 +3,14 @@ import type { Script, ZenScriptAstType } from '../generated/ast'
 import { isScript, isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getClassChain, isStatic } from '../utils/ast'
-import { type TypeDescConstants, type TypeDescription, isFunctionTypeDescription } from '../typing/type-description'
+import { type Type, type ZenScriptType, isFunctionType } from '../typing/type-description'
 import type { TypeComputer } from '../typing/type-computer'
 
 export interface MemberProvider {
-  getMember: (source: AstNode | TypeDescription | undefined) => AstNodeDescription[]
+  getMember: (source: AstNode | Type | undefined) => AstNodeDescription[]
 }
 
-type SourceMap = ZenScriptAstType & TypeDescConstants
+type SourceMap = ZenScriptAstType & ZenScriptType
 type SourceKey = keyof SourceMap
 type Produce<K extends SourceKey, S extends SourceMap[K]> = (source: S) => AstNodeDescription[]
 type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Produce<K, S>) => void
@@ -29,7 +29,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     this.rules = this.initRules()
   }
 
-  getMember(source: AstNode | TypeDescription | undefined): AstNodeDescription[] {
+  getMember(source: AstNode | Type | undefined): AstNodeDescription[] {
     const match = source?.$type as SourceKey
     return this.rules.get(match)?.call(this, source) ?? []
   }
@@ -90,7 +90,18 @@ export class ZenScriptMemberProvider implements MemberProvider {
     })
 
     rule('MemberAccess', (source) => {
-      return this.getMember(source.refer.ref)
+      const member = source.refer.ref
+      if (!member) {
+        return []
+      }
+
+      const receiverType = this.typeComputer.inferType(source.receiver)
+      if (!receiverType) {
+        return this.getMember(member)
+      }
+
+      const type = this.typeComputer.inferType(source)
+      return this.getMember(type)
     })
 
     rule('ReferenceExpression', (source) => {
@@ -99,7 +110,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
 
     rule('CallExpression', (source) => {
       const receiverType = this.typeComputer.inferType(source.receiver)
-      return isFunctionTypeDescription(receiverType) ? this.getMember(receiverType.returnType) : []
+      return isFunctionType(receiverType) ? this.getMember(receiverType.returnType) : []
     })
 
     rule('FieldDeclaration', (source) => {
@@ -132,9 +143,8 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.getMember(type)
     })
 
-    rule('class', (source) => {
-      const ref = source.ref?.ref
-      return getClassChain(ref)
+    rule('ClassType', (source) => {
+      return getClassChain(source.declaration)
         .flatMap(it => it.members)
         .filter(it => !isStatic(it))
         .map(it => this.createDescriptionForNode(it))
