@@ -1,7 +1,13 @@
 zenClass Array<T> {
     val length as int;
 
-    operator for_1 as T;
+    operator has(value as any) as bool;
 
-    operator for_2 as int, T;
+    operator [](index as int) as T;
+
+    operator []=(index as int, value as T) as void;
+
+    operator for_1() as T;
+
+    operator for_2() as int, T;
 }
