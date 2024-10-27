@@ -1,3 +1,3 @@
-import path from 'node:path'
+import { resolve } from 'node:path'
 
-export const builtinsPath = path.resolve(__dirname, '..', 'resources', 'builtins')
+export const builtinsPath = resolve(__dirname, 'builtins')

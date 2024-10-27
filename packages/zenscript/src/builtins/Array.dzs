@@ -1,3 +1,4 @@
 zenClass Array<T> {
     val length as int;
+    val first as T;
 }
