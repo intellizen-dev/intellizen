@@ -9,5 +9,9 @@ zenClass Map<K, V> {
 
     val valueSet as [V];
 
-    val entrySet as Entry<K, V>
+    val entrySet as Entry<K, V>;
+
+    operator for_1() as K;
+
+    operator for_2() as K, V;
 }

@@ -133,7 +133,7 @@ OperatorFunctionDeclaration returns OperatorFunctionDeclaration:
 ;
 
 Operator returns string:
-    '+' | '-' | '*' | '/' | '%' | '~' | '|' | '&' | '^' | '!' | '['']' | '['']''=' | '..' | 'has' | '.' | '.''=' | 'for_in' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
+    '+' | '-' | '*' | '/' | '%' | '~' | '|' | '&' | '^' | '!' | '['']' | '['']''=' | '..' | 'has' | '.' | '.''=' | 'for_1' | 'for_2' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
 ;
 
 ConstructorDeclaration returns ConstructorDeclaration:
@@ -549,7 +549,8 @@ interface FunctionTypeReference extends TypeReference {
 }
 
 interface ClassTypeReference extends TypeReference {
-    path: @NamedElement[]
+    path: @NamedElement[];
+    typeArguments: ClassTypeReference[];
 }
 
 interface ParenthesizedTypeReference extends TypeReference {
@@ -611,7 +612,7 @@ FunctionType returns FunctionTypeReference:
 ;
 
 ClassType returns ClassTypeReference:
-    (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID]
+    (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID] ('<' typeArguments+=ClassType (',' typeArguments+=ClassType)* '>')?
 ;
 
 //endregion TypeReference
@@ -623,7 +624,8 @@ ID returns string
     | 'to'
     | 'extends'  // dzs
     | 'operator' // dzs
-    | 'for_in'   // dzs
+    | 'for_1'    // dzs
+    | 'for_2'    // dzs
     | 'default'  // dzs
     | 'orderly'  // zenutils
 ;

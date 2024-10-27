@@ -1,4 +1,7 @@
 zenClass List<T> {
     val length as int;
-    val first as T;
+
+    operator for_1 as T;
+
+    operator for_2 as int, T;
 }

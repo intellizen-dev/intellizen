@@ -4,7 +4,7 @@ import { isClassDeclaration, isExpression, isTypeParameter } from '../generated/
 import type { PackageManager } from '../workspace/package-manager'
 import type { ZenScriptServices } from '../module'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
-import { ClassType, FunctionType, IntersectionType, TypeVariable, UnionType, isClassType, isFunctionType } from './type-description'
+import { ClassType, CompoundType, FunctionType, IntersectionType, TypeVariable, UnionType, isClassType, isFunctionType } from './type-description'
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => Type | undefined
@@ -83,6 +83,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
     rule('IntersectionTypeReference', (source) => {
       const types = source.values.map(it => this.inferType(it) ?? this.classTypeOf('any'))
       return new IntersectionType(types)
+    })
+
+    rule('CompoundTypeReference', (source) => {
+      const types = source.values.map(it => this.inferType(it) ?? this.classTypeOf('any'))
+      return new CompoundType(types)
     })
 
     rule('ParenthesizedTypeReference', (source) => {
