@@ -132,8 +132,10 @@ OperatorFunctionDeclaration returns OperatorFunctionDeclaration:
     ')' ('as' returnTypeRef=CompoundType)? ';'?
 ;
 
-Operator returns string:
-    '+' | '-' | '*' | '/' | '%' | '~' | '|' | '&' | '^' | '!' | '['']' | '['']''=' | '..' | 'has' | '.' | '.''=' | 'for_1' | 'for_2' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
+Operator returns string
+    : '+' | '-' | '*' | '/' | '%' | '~' | '|' | '&' | '^'
+    | '+=' | '-=' | '*=' | '/=' | '%=' | '~=' | '|=' | '&=' | '^='
+    | '!' | '['']' | '['']''=' | '..' | 'has' | '.' | '.''=' | 'for_1' | 'for_2' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
 ;
 
 ConstructorDeclaration returns ConstructorDeclaration:
