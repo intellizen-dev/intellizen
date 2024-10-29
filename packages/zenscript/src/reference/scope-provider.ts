@@ -2,7 +2,7 @@ import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, Stream } from '
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI, stream } from 'langium'
 import { substringBeforeLast } from '@intellizen/shared'
 import type { ClassTypeReference, ImportDeclaration, MemberAccess, ZenScriptAstType } from '../generated/ast'
-import { ClassDeclaration, isClassDeclaration, isImportDeclaration, isTypeParameter } from '../generated/ast'
+import { isClassDeclaration, isImportDeclaration, isTypeParameter } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
@@ -12,14 +12,6 @@ type SourceKey = keyof ZenScriptAstType
 type Produce = (source: ReferenceInfo) => Scope
 type Rule = <K extends SourceKey>(match: K, produce: Produce) => void
 type RuleMap = Map<SourceKey, Produce>
-
-const builtin: AstNodeDescription[] = ['any', 'byte', 'short', 'int', 'long', 'float', 'double', 'bool', 'void', 'string']
-  .map(name => ({
-    type: ClassDeclaration,
-    name,
-    documentUri: URI.from({ scheme: 'intellizen', path: `/builtin/${name}` }),
-    path: '',
-  }))
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
@@ -89,12 +81,6 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       if (source.index === 0 || source.index === undefined) {
         const scopes: Array<Stream<AstNodeDescription>> = []
 
-        const globals = stream(this.packageManager.getHierarchyNode('')!.children.values())
-          .flatMap(it => it.values)
-          .filter(it => isClassDeclaration(it))
-          .map(it => this.descriptions.createDescription(it, it.name))
-        scopes.push(globals)
-
         const lexicalScopes = AstUtils.getDocument(source.container).precomputedScopes
         if (lexicalScopes) {
           let currentNode: AstNode | undefined = source.container
@@ -124,7 +110,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
           }
         }
 
-        return scopes.reduce((outer, current) => this.createScope(current, outer), this.createScope(builtin))
+        const globals = stream(this.packageManager.getHierarchyNode('')!.children.values())
+          .flatMap(it => it.values)
+          .filter(it => isClassDeclaration(it))
+          .map(it => this.descriptions.createDescription(it, it.name))
+
+        return scopes.reduce((outer, current) => this.createScope(current, outer), this.createScope(globals))
       }
       else {
         const container = source.container as ClassTypeReference
