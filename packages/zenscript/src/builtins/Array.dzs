@@ -7,6 +7,8 @@ zenClass Array<T> {
 
     operator []=(index as int, value as T) as void;
 
+    operator +=(value as T) as void;
+
     operator for_1() as T;
 
     operator for_2() as int, T;
