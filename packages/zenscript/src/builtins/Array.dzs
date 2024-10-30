@@ -9,7 +9,7 @@ zenClass Array<T> {
 
     operator +=(value as T) as void;
 
-    operator for_1() as T;
+    operator for(value as T) as void;
 
-    operator for_2() as int, T;
+    operator for(index as int, value as T) as void;
 }

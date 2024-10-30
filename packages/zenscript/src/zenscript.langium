@@ -135,7 +135,7 @@ OperatorFunctionDeclaration returns OperatorFunctionDeclaration:
 Operator returns string
     : '+' | '-' | '*' | '/' | '%' | '~' | '|' | '&' | '^'
     | '+=' | '-=' | '*=' | '/=' | '%=' | '~=' | '|=' | '&=' | '^='
-    | '!' | '['']' | '['']''=' | '..' | 'has' | '.' | '.''=' | 'for_1' | 'for_2' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
+    | '!' | '['']' | '['']''=' | '..' | 'has' | '.' | '.''=' | 'for' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
 ;
 
 ConstructorDeclaration returns ConstructorDeclaration:
