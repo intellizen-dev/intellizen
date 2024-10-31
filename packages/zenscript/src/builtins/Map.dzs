@@ -1,13 +1,13 @@
 zenClass Map<K, V> {
     val length as int;
 
-    val keys as [K];
+    val keys as K[];
 
-    val values as [V];
+    val values as V[];
 
-    val keySet as [K];
+    val keySet as K[];
 
-    val valueSet as [V];
+    val valueSet as V[];
 
     val entrySet as Entry<K, V>;
 
