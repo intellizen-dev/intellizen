@@ -626,9 +626,8 @@ ID returns string
     | 'to'
     | 'extends'  // dzs
     | 'operator' // dzs
-    | 'for_1'    // dzs
-    | 'for_2'    // dzs
     | 'default'  // dzs
+    | 'lambda'   // dzs
     | 'orderly'  // zenutils
 ;
 
