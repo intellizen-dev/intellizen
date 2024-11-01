@@ -90,7 +90,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     })
 
     rule('MemberAccess', (source) => {
-      const member = source.refer.ref
+      const member = source.target.ref
       if (!member) {
         return []
       }
@@ -105,7 +105,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     })
 
     rule('ReferenceExpression', (source) => {
-      return this.getMember(source.refer.ref)
+      return this.getMember(source.target.ref)
     })
 
     rule('CallExpression', (source) => {

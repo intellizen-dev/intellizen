@@ -297,7 +297,7 @@ interface ParenthesizedExpression extends Expression {
 
 interface MemberAccess extends Expression {
     receiver: Expression;
-    refer: @NamedElement;
+    target: @NamedElement;
 }
 
 interface TypeCastExpression extends Expression {
@@ -321,7 +321,7 @@ interface InstanceofExpression extends Expression {
 }
 
 interface ReferenceExpression extends Expression {
-    refer: @NamedElement;
+    target: @NamedElement;
 }
 
 interface NumberLiteral extends Expression {
@@ -419,7 +419,7 @@ MemberAccessName returns string:
 
 PostfixExpression returns Expression:
     PrimaryExpression (
-        ({MemberAccess.receiver=current} '.' refer=[NamedElement:MemberAccessName] ) |
+        ({MemberAccess.receiver=current} '.' target=[NamedElement:MemberAccessName] ) |
         ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
         ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
         ({ArrayAccess.array=current} '[' index=Expression ']') |
@@ -465,7 +465,7 @@ MapEntry returns MapEntry:
 ;
 
 ReferenceExpression returns ReferenceExpression:
-    refer=[NamedElement:ID]
+    target=[NamedElement:ID]
 ;
 
 NumberLiteral returns NumberLiteral:

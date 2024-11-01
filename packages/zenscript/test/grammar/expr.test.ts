@@ -179,7 +179,7 @@ describe('parse expression of script with ZenScript ', () => {
 
   it('member access expression', async () => {
     const memberAccessExpr = await parseExpr<MemberAccess>('foo.bar;')
-    expect(memberAccessExpr.refer.$refText).toBe('bar')
+    expect(memberAccessExpr.target.$refText).toBe('bar')
     assertReferenceExpressionText(memberAccessExpr.receiver, 'foo')
   })
 

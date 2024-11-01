@@ -232,12 +232,12 @@ export class ZenScriptTypeComputer implements TypeComputer {
     })
 
     rule('ReferenceExpression', (source) => {
-      return this.inferType(source.refer.ref) ?? this.classTypeOf('any')
+      return this.inferType(source.target.ref) ?? this.classTypeOf('any')
     })
 
     rule('MemberAccess', (source) => {
       const receiverType = this.inferType(source.receiver)
-      const memberType = this.inferType(source.refer.ref)
+      const memberType = this.inferType(source.target.ref)
       if (memberType && isClassType(receiverType)) {
         return memberType.substituteTypeParameters(receiverType.substitutions)
       }

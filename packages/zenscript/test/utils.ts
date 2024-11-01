@@ -46,7 +46,7 @@ export function assertVariableDeclaration(astNode: AstNode, options: {
 export function assertReferenceExpressionText(expr: Expression, matches: string | RegExp) {
   expect(expr.$type).toBe('ReferenceExpression')
   if (typeof matches === 'string')
-    expect((expr as ReferenceExpression).refer.$refText).toBe(matches)
+    expect((expr as ReferenceExpression).target.$refText).toBe(matches)
   else
-    expect((expr as ReferenceExpression).refer.$refText).toMatch(matches)
+    expect((expr as ReferenceExpression).target.$refText).toMatch(matches)
 }
