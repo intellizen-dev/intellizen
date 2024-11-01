@@ -1,5 +1,9 @@
+package stanhebben.zenscript.value;
+
 zenClass IntRange {
     val from as int;
 
     val to as int;
+
+    operator for(value as int) as void;
 }
