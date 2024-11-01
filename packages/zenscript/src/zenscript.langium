@@ -24,7 +24,7 @@ interface ImportDeclaration extends Declaration {
 interface ClassDeclaration extends Declaration {
     name: string;
     typeParameters: TypeParameter[]
-    superTypes: ClassTypeReference[];
+    superTypes: NamedTypeReference[];
     members: ClassMemberDeclaration[];
 }
 
@@ -89,7 +89,7 @@ ImportDeclaration returns ImportDeclaration:
 
 ClassDeclaration returns ClassDeclaration:
     'zenClass' name=ID ('<' typeParameters+=TypeParameter (',' typeParameters+=TypeParameter)* '>')?
-    ('extends' (superTypes+=ClassType (',' superTypes+=ClassType)*))?
+    ('extends' (superTypes+=NamedType (',' superTypes+=NamedType)*))?
     ('{'
         members+=ClassMemberDeclaration*
     '}')?
@@ -297,7 +297,7 @@ interface ParenthesizedExpression extends Expression {
 
 interface MemberAccess extends Expression {
     receiver: Expression;
-    refer: @NamedElement;
+    target: @NamedElement;
 }
 
 interface TypeCastExpression extends Expression {
@@ -321,7 +321,7 @@ interface InstanceofExpression extends Expression {
 }
 
 interface ReferenceExpression extends Expression {
-    refer: @NamedElement;
+    target: @NamedElement;
 }
 
 interface NumberLiteral extends Expression {
@@ -419,7 +419,7 @@ MemberAccessName returns string:
 
 PostfixExpression returns Expression:
     PrimaryExpression (
-        ({MemberAccess.receiver=current} '.' refer=[NamedElement:MemberAccessName] ) |
+        ({MemberAccess.receiver=current} '.' target=[NamedElement:MemberAccessName] ) |
         ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
         ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
         ({ArrayAccess.array=current} '[' index=Expression ']') |
@@ -465,7 +465,7 @@ MapEntry returns MapEntry:
 ;
 
 ReferenceExpression returns ReferenceExpression:
-    refer=[NamedElement:ID]
+    target=[NamedElement:ID]
 ;
 
 NumberLiteral returns NumberLiteral:
@@ -550,9 +550,9 @@ interface FunctionTypeReference extends TypeReference {
     returnType: TypeReference;
 }
 
-interface ClassTypeReference extends TypeReference {
+interface NamedTypeReference extends TypeReference {
     path: @NamedElement[];
-    typeArguments: ClassTypeReference[];
+    typeArguments: NamedTypeReference[];
 }
 
 interface ParenthesizedTypeReference extends TypeReference {
@@ -596,7 +596,7 @@ ComplexType returns TypeReference:
 ;
 
 fragment PrimaryType returns TypeReference:
-    ListType | FunctionType | ParenthesizedType | ClassType
+    ListType | FunctionType | ParenthesizedType | NamedType
 ;
 
 ParenthesizedType returns ParenthesizedTypeReference:
@@ -613,8 +613,8 @@ FunctionType returns FunctionTypeReference:
     ')' returnType=TypeReference
 ;
 
-ClassType returns ClassTypeReference:
-    (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID] ('<' typeArguments+=ClassType (',' typeArguments+=ClassType)* '>')?
+NamedType returns NamedTypeReference:
+    (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID] ('<' typeArguments+=NamedType (',' typeArguments+=NamedType)* '>')?
 ;
 
 //endregion TypeReference
