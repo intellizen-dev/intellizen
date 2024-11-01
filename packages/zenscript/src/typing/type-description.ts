@@ -7,6 +7,7 @@ export interface ZenScriptType {
   ClassType: ClassType
   UnionType: UnionType
   IntersectionType: IntersectionType
+  CompoundType: CompoundType
   TypeVariable: TypeVariable
 }
 
@@ -126,6 +127,22 @@ export class IntersectionType extends Type {
 
   override toString(): string {
     return this.types.map(it => it.toString()).join(' & ')
+  }
+}
+
+export class CompoundType extends Type {
+  types: Type[]
+  constructor(types: Type[]) {
+    super('CompoundType')
+    this.types = types
+  }
+
+  substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
+    return new CompoundType(this.types.map(it => it.substituteTypeParameters(substitutions)))
+  }
+
+  override toString(): string {
+    return this.types.map(it => it.toString()).join(', ')
   }
 }
 // endregion

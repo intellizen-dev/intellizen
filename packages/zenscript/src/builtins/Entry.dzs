@@ -1,0 +1,5 @@
+zenClass Entry<K, V> {
+    val key as K;
+
+    val value as V;
+}

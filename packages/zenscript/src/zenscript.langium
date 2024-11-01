@@ -132,8 +132,10 @@ OperatorFunctionDeclaration returns OperatorFunctionDeclaration:
     ')' ('as' returnTypeRef=CompoundType)? ';'?
 ;
 
-Operator returns string:
-    '+' | '-' | '*' | '/' | '%' | '~' | '|' | '&' | '^' | '!' | '['']' | '['']''=' | '..' | 'has' | '.' | '.''=' | 'for_in' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
+Operator returns string
+    : '+' | '-' | '*' | '/' | '%' | '~' | '|' | '&' | '^'
+    | '+=' | '-=' | '*=' | '/=' | '%=' | '~=' | '|=' | '&=' | '^='
+    | '!' | '['']' | '['']''=' | '..' | 'has' | '.' | '.''=' | 'for' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
 ;
 
 ConstructorDeclaration returns ConstructorDeclaration:
@@ -549,7 +551,8 @@ interface FunctionTypeReference extends TypeReference {
 }
 
 interface ClassTypeReference extends TypeReference {
-    path: @NamedElement[]
+    path: @NamedElement[];
+    typeArguments: ClassTypeReference[];
 }
 
 interface ParenthesizedTypeReference extends TypeReference {
@@ -611,7 +614,7 @@ FunctionType returns FunctionTypeReference:
 ;
 
 ClassType returns ClassTypeReference:
-    (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID]
+    (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID] ('<' typeArguments+=ClassType (',' typeArguments+=ClassType)* '>')?
 ;
 
 //endregion TypeReference
@@ -623,8 +626,8 @@ ID returns string
     | 'to'
     | 'extends'  // dzs
     | 'operator' // dzs
-    | 'for_in'   // dzs
     | 'default'  // dzs
+    | 'lambda'   // dzs
     | 'orderly'  // zenutils
 ;
 

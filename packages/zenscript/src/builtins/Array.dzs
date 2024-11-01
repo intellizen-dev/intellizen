@@ -1,0 +1,15 @@
+zenClass Array<T> {
+    val length as int;
+
+    operator has(value as any) as bool;
+
+    operator [](index as int) as T;
+
+    operator []=(index as int, value as T) as void;
+
+    operator +=(value as T) as void;
+
+    operator for(value as T) as void;
+
+    operator for(index as int, value as T) as void;
+}
