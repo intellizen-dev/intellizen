@@ -4,7 +4,7 @@ import type { LangiumDocument, WorkspaceFolder } from 'langium'
 import { URI } from 'langium'
 import { NodeFileSystem } from 'langium/node'
 import { assertNoErrors } from '../../utils'
-import type { ClassDeclaration, ClassTypeReference, ImportDeclaration, Script, VariableDeclaration } from '../../../src/generated/ast'
+import type { ClassDeclaration, ImportDeclaration, NamedTypeReference, Script, VariableDeclaration } from '../../../src/generated/ast'
 import { createZenScriptServices } from '../../../src/module'
 
 const service = createZenScriptServices(NodeFileSystem)
@@ -43,28 +43,28 @@ describe('check cross reference of class type', () => {
   it('script be imported', () => {
     expect(import_scripts_provider.path[0].ref).toBeUndefined()
     expect(import_scripts_provider.path[1].ref).toBe(script_provider)
-    expect((var_script_be_imported.typeRef as ClassTypeReference).path[0].ref).toBe(script_provider)
-    expect((var_script_be_imported.typeRef as ClassTypeReference).path[1].ref).toBe(zenclass_alpha)
+    expect((var_script_be_imported.typeRef as NamedTypeReference).path[0].ref).toBe(script_provider)
+    expect((var_script_be_imported.typeRef as NamedTypeReference).path[1].ref).toBe(zenclass_alpha)
   })
 
   it('script be imported as alias', () => {
     expect(import_scripts_provider_as_supplier.path[0].ref).toBeUndefined()
     expect(import_scripts_provider_as_supplier.path[1].ref).toBe(script_provider)
-    expect((var_script_be_imported_as_alias.typeRef as ClassTypeReference).path[0].ref).toBe(script_provider)
-    expect((var_script_be_imported_as_alias.typeRef as ClassTypeReference).path[1].ref).toBe(zenclass_alpha)
+    expect((var_script_be_imported_as_alias.typeRef as NamedTypeReference).path[0].ref).toBe(script_provider)
+    expect((var_script_be_imported_as_alias.typeRef as NamedTypeReference).path[1].ref).toBe(zenclass_alpha)
   })
 
   it('class be imported', () => {
     expect(import_scripts_provider_alpha.path[0].ref).toBeUndefined()
     expect(import_scripts_provider_alpha.path[1].ref).toBe(script_provider)
     expect(import_scripts_provider_alpha.path[2].ref).toBe(zenclass_alpha)
-    expect((var_class_be_imported.typeRef as ClassTypeReference).path[0].ref).toBe(zenclass_alpha)
+    expect((var_class_be_imported.typeRef as NamedTypeReference).path[0].ref).toBe(zenclass_alpha)
   })
 
   it('class be imported as alias', () => {
     expect(import_scripts_provider_alpha_as_beta.path[0].ref).toBeUndefined()
     expect(import_scripts_provider_alpha_as_beta.path[1].ref).toBe(script_provider)
     expect(import_scripts_provider_alpha_as_beta.path[2].ref).toBe(zenclass_alpha)
-    expect((var_class_be_imported_as_alias.typeRef as ClassTypeReference).path[0].ref).toBe(zenclass_alpha)
+    expect((var_class_be_imported_as_alias.typeRef as NamedTypeReference).path[0].ref).toBe(zenclass_alpha)
   })
 })

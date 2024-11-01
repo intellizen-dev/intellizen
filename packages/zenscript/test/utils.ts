@@ -4,8 +4,8 @@ import { NodeFileSystem } from 'langium/node'
 import { parseHelper } from 'langium/test'
 import type { AstNode, LangiumDocument } from 'langium'
 import { createZenScriptServices } from '../src/module'
-import type { ClassTypeReference, Expression, ReferenceExpression, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
-import { isClassTypeReference, isVariableDeclaration } from '../src/generated/ast'
+import type { Expression, NamedTypeReference, ReferenceExpression, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
+import { isNamedTypeReference, isVariableDeclaration } from '../src/generated/ast'
 
 export function createParseHelper() {
   const service = createZenScriptServices(NodeFileSystem)
@@ -29,8 +29,8 @@ export async function assertNoErrors(model: LangiumDocument<Script>) {
 }
 
 export function assertClassTypeReference(type: TypeReference | undefined, qualifiedName: string) {
-  expect(isClassTypeReference(type))
-  expect((type as ClassTypeReference).path.map(p => p.$refText).join('.')).toBe(qualifiedName)
+  expect(isNamedTypeReference(type))
+  expect((type as NamedTypeReference).path.map(p => p.$refText).join('.')).toBe(qualifiedName)
 }
 
 export function assertVariableDeclaration(astNode: AstNode, options: {

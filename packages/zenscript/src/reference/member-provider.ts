@@ -69,7 +69,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.getMember(type)
     })
 
-    rule('ClassTypeReference', (source) => {
+    rule('NamedTypeReference', (source) => {
       const script = AstUtils.findRootNode(source) as Script
       const result: AstNodeDescription[] = []
       script.imports.forEach((importDecl) => {

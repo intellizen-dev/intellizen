@@ -100,7 +100,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return new FunctionType(paramTypes, returnType)
     })
 
-    rule('ClassTypeReference', (source) => {
+    rule('NamedTypeReference', (source) => {
       const ref = source.path.at(-1)?.ref
       if (isTypeParameter(ref)) {
         return new TypeVariable(ref)
