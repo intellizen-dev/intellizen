@@ -4,7 +4,7 @@ entry Script:
     package=PackageDeclaration?
     ( imports+=ImportDeclaration
     | functions+=FunctionDeclaration
-    | expands+=ExpandFunctionDeclaration
+    | expands+=(ExpandDeclaration | ExpandFunctionDeclaration)
     | classes+=ClassDeclaration
     | statements+=Statement
     )*
@@ -33,6 +33,8 @@ type NamedElement = Script | ClassDeclaration | FunctionDeclaration | ExpandFunc
 type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration | OperatorFunctionDeclaration;
 
 type CallableDeclaration = FunctionDeclaration | ExpandFunctionDeclaration | ConstructorDeclaration;
+
+type ExpandMemberDeclaration = FunctionDeclaration | OperatorFunctionDeclaration | FieldDeclaration;
 
 interface FieldDeclaration extends Declaration {
     prefix: 'static' | 'var' | 'val';
@@ -144,6 +146,16 @@ ConstructorDeclaration returns ConstructorDeclaration:
     ')' '{'
         (body+=Statement)*
     '}'
+;
+
+ExpandDeclaration:
+    'expand' typeRef=TypeReference '{' 
+        members+=ExpandMemberDeclaration*
+    '}'
+;
+
+ExpandMemberDeclaration returns ExpandMemberDeclaration:
+    FieldDeclaration | FunctionDeclaration | OperatorFunctionDeclaration
 ;
 
 //region Statement Interface
@@ -628,6 +640,7 @@ ID returns string
     | 'operator' // dzs
     | 'default'  // dzs
     | 'lambda'   // dzs
+    | 'expand'   // dzs
     | 'orderly'  // zenutils
 ;
 
