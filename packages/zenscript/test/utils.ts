@@ -1,8 +1,9 @@
 import { expect } from 'vitest'
-
 import { NodeFileSystem } from 'langium/node'
 import { parseHelper } from 'langium/test'
-import type { AstNode, LangiumDocument } from 'langium'
+import type { AstNode, LangiumDocument, WorkspaceFolder } from 'langium'
+import { URI, UriUtils } from 'langium'
+import type { ZenScriptServices } from '../src/module'
 import { createZenScriptServices } from '../src/module'
 import type { Expression, NamedTypeReference, ReferenceExpression, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
 import { isNamedTypeReference, isVariableDeclaration } from '../src/generated/ast'
@@ -10,6 +11,21 @@ import { isNamedTypeReference, isVariableDeclaration } from '../src/generated/as
 export function createParseHelper() {
   const service = createZenScriptServices(NodeFileSystem)
   return parseHelper<Script>(service)
+}
+
+export async function createTestServices(testingPath: string) {
+  const service = createZenScriptServices(NodeFileSystem)
+  const testingUri = URI.file(testingPath)
+  const folder = {
+    uri: testingUri.toString(),
+    name: UriUtils.basename(testingUri),
+  }
+  await service.shared.workspace.WorkspaceManager.initializeWorkspace([folder as WorkspaceFolder])
+  return service
+}
+
+export async function getDocument(services: ZenScriptServices, docPath: string) {
+  return services.shared.workspace.LangiumDocuments.getDocument(URI.file(docPath)) as LangiumDocument<Script>
 }
 
 export async function assertNoErrors(model: LangiumDocument<Script>) {
