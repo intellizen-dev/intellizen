@@ -106,8 +106,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return new TypeVariable(ref)
       }
       else if (isClassDeclaration(ref)) {
-        const className = source.path.map(it => it.$refText).join('.')
-        return this.classTypeOf(className)
+        return new ClassType(ref, new Map())
       }
     })
     // endregion
