@@ -1,7 +1,7 @@
 import { type AstNode, AstUtils, type NameProvider } from 'langium'
 import type { InlayHintAcceptor } from 'langium/lsp'
 import { AbstractInlayHintProvider } from 'langium/lsp'
-import type { Location, MarkupContent } from 'vscode-languageserver'
+import type { InlayHint, InlayHintLabelPart, Location, MarkupContent } from 'vscode-languageserver'
 import { InlayHintKind } from 'vscode-languageserver'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
@@ -68,14 +68,18 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
         }
       }
 
-      acceptor({
+      const parts: InlayHintLabelPart[] = [
+        { value: ': ' },
+        { value: type.toString(), location, tooltip },
+      ]
+
+      const inlayHint: InlayHint = {
         position: nameNode.range.end,
-        label: [
-          { value: ': ' },
-          { value: type.toString(), location, tooltip },
-        ],
+        label: parts,
         kind: InlayHintKind.Type,
-      })
+      }
+
+      acceptor(inlayHint)
     })
 
     rule('ForVariableDeclaration', (source, acceptor) => {
@@ -89,11 +93,31 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
         return
       }
 
-      acceptor({
+      let location: Location | undefined
+      let tooltip: MarkupContent | undefined
+      if (isClassType(type)) {
+        location = {
+          uri: AstUtils.getDocument(type.declaration).uri.toString(),
+          range: this.nameProvider.getNameNode(type.declaration)!.range,
+        }
+        tooltip = {
+          kind: 'markdown',
+          value: `\`\`\`zenscript\n${type.declaration.$cstNode!.text}\n\`\`\``,
+        }
+      }
+
+      const parts: InlayHintLabelPart[] = [
+        { value: ': ' },
+        { value: type.toString(), location, tooltip },
+      ]
+
+      const inlayHint: InlayHint = {
         position: nameNode.range.end,
-        label: `: ${type.toString()}`,
+        label: parts,
         kind: InlayHintKind.Type,
-      })
+      }
+
+      acceptor(inlayHint)
     })
 
     return rules
