@@ -1,10 +1,12 @@
-import type { AstNode, NameProvider } from 'langium'
+import { type AstNode, AstUtils, type NameProvider } from 'langium'
 import type { InlayHintAcceptor } from 'langium/lsp'
 import { AbstractInlayHintProvider } from 'langium/lsp'
+import type { Location, MarkupContent } from 'vscode-languageserver'
 import { InlayHintKind } from 'vscode-languageserver'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
 import type { ZenScriptAstType } from '../generated/ast'
+import { isClassType } from '../typing/type-description'
 
 type SourceMap = ZenScriptAstType
 type SourceKey = keyof SourceMap
@@ -53,9 +55,25 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
         return
       }
 
+      let location: Location | undefined
+      let tooltip: MarkupContent | undefined
+      if (isClassType(type)) {
+        location = {
+          uri: AstUtils.getDocument(type.declaration).uri.toString(),
+          range: this.nameProvider.getNameNode(type.declaration)!.range,
+        }
+        tooltip = {
+          kind: 'markdown',
+          value: `\`\`\`zenscript\n${type.declaration.$cstNode!.text}\n\`\`\``,
+        }
+      }
+
       acceptor({
         position: nameNode.range.end,
-        label: `: ${type.toString()}`,
+        label: [
+          { value: ': ' },
+          { value: type.toString(), location, tooltip },
+        ],
         kind: InlayHintKind.Type,
       })
     })
