@@ -20,4 +20,6 @@ zenClass Map<K, V> {
     operator for(key as K) as void;
 
     operator for(key as K, value as V) as void;
+
+    operator .(key as string) as V;
 }
