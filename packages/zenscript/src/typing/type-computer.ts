@@ -1,6 +1,6 @@
 import type { AstNode } from 'langium'
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
-import { isAssignment, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
 import type { PackageManager } from '../workspace/package-manager'
 import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
@@ -189,6 +189,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
         }
         else if (isVariableDeclaration(funcExpr.$container)) {
           expectingType = this.inferType(funcExpr.$container.typeRef)
+        }
+        else if (isCallExpression(funcExpr.$container)) {
+          const callArgIndex = funcExpr.$containerIndex!
+          const receiverType = this.inferType(funcExpr.$container.receiver)
+          expectingType = isFunctionType(receiverType) ? receiverType.paramTypes.at(callArgIndex) : undefined
         }
 
         if (isFunctionType(expectingType)) {
