@@ -283,17 +283,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     })
 
     rule('FunctionExpression', (source) => {
-      const paramTypes = source.parameters.map((param) => {
-        if (param.typeRef) {
-          return this.inferType(param.typeRef) ?? this.classTypeOf('any')
-        }
-        else if (isExpression(param.defaultValue)) {
-          return this.inferType(param.defaultValue) ?? this.classTypeOf('any')
-        }
-        else {
-          return this.classTypeOf('any')
-        }
-      })
+      const paramTypes = source.parameters.map(param => this.inferType(param) ?? this.classTypeOf('any'))
       const returnType = this.inferType(source.returnTypeRef) ?? this.classTypeOf('any')
       return new FunctionType(paramTypes, returnType)
     })
