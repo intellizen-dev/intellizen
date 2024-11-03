@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { assertClassTypeReference, assertNoErrors, assertReferenceExpressionText, createParseHelper } from '../utils'
-import type { ArrayAccess, ArrayLiteral, Assignment, BooleanLiteral, CallExpression, ConditionalExpression, Expression, ExpressionStatement, FunctionExpression, InfixExpression, InstanceofExpression, MapLiteral, MemberAccess, NullLiteral, NumberLiteral, ParenthesizedExpression, PrefixExpression, ReferenceExpression, StringLiteral, StringTemplate, TypeCastExpression } from '../../src/generated/ast'
+import type { ArrayLiteral, Assignment, BooleanLiteral, CallExpression, ConditionalExpression, Expression, ExpressionStatement, FunctionExpression, IndexingExpression, InfixExpression, InstanceofExpression, MapLiteral, MemberAccess, NullLiteral, NumberLiteral, ParenthesizedExpression, PrefixExpression, ReferenceExpression, StringLiteral, StringTemplate, TypeCastExpression } from '../../src/generated/ast'
 
 const parse = createParseHelper()
 
@@ -213,10 +213,10 @@ describe('parse expression of script with ZenScript ', () => {
     assertClassTypeReference(otherType.typeRef, 'OtherType')
   })
 
-  it('array access', async () => {
-    const arrayAccessExpr = await parseExpr<ArrayAccess>('foo[0];')
-    assertReferenceExpressionText(arrayAccessExpr.array, 'foo')
-    expect(arrayAccessExpr.index.$type).toBe('IntegerLiteral')
+  it('indexing expression', async () => {
+    const indexingExpr = await parseExpr<IndexingExpression>('foo[0];')
+    assertReferenceExpressionText(indexingExpr.receiver, 'foo')
+    expect(indexingExpr.argument.$type).toBe('IntegerLiteral')
   })
 
   it('instanceof expression', async () => {

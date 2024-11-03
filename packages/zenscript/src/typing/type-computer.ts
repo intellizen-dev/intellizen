@@ -301,6 +301,20 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return memberType
     })
 
+    rule('IndexingExpression', (source) => {
+      const receiverType = this.inferType(source.receiver)
+      const operatorDecl = this.memberProvider().getMember(source.receiver)
+        .map(it => it.node)
+        .filter(it => isOperatorFunctionDeclaration(it))
+        .filter(it => it.op === '[]')
+        .at(0)
+      let returnType = this.inferType(operatorDecl?.returnTypeRef)
+      if (isClassType(receiverType)) {
+        returnType = returnType?.substituteTypeParameters(receiverType.substitutions)
+      }
+      return returnType
+    })
+
     rule('CallExpression', (source) => {
       const receiverType = this.inferType(source.receiver)
       if (isFunctionType(receiverType)) {
