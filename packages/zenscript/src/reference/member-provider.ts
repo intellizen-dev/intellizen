@@ -109,7 +109,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.getMember(type)
     })
 
-    rule('ArrayAccess', (source) => {
+    rule('IndexingExpression', (source) => {
       const type = this.typeComputer.inferType(source)
       return this.getMember(type)
     })

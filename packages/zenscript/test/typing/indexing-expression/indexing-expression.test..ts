@@ -5,7 +5,7 @@ import type { VariableDeclaration } from '../../../src/generated/ast'
 
 const services = await createTestServices(__dirname)
 
-describe(`check inferring array access expression`, async () => {
+describe(`check inferring indexing expression`, async () => {
   const document_indexing_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'indexing.zs'))
   const script_indexing_zs = document_indexing_zs.parseResult.value
   const statement_val_d = script_indexing_zs.statements[3] as VariableDeclaration

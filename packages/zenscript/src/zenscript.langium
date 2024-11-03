@@ -317,9 +317,9 @@ interface TypeCastExpression extends Expression {
     typeRef: TypeReference;
 }
 
-interface ArrayAccess extends Expression {
-    array: Expression;
-    index: Expression;
+interface IndexingExpression extends Expression {
+    receiver: Expression;
+    argument: Expression;
 }
 
 interface CallExpression extends Expression {
@@ -434,7 +434,7 @@ PostfixExpression returns Expression:
         ({MemberAccess.receiver=current} '.' target=[NamedElement:MemberAccessName] ) |
         ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
         ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
-        ({ArrayAccess.array=current} '[' index=Expression ']') |
+        ({IndexingExpression.receiver=current} '[' argument=Expression ']') |
         ({CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
         ({InstanceofExpression.expr=current} 'instanceof' typeRef=TypeReference)
     )*

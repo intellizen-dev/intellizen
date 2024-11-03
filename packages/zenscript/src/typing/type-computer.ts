@@ -301,9 +301,9 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return memberType
     })
 
-    rule('ArrayAccess', (source) => {
-      const receiverType = this.inferType(source.array)
-      const operatorDecl = this.memberProvider().getMember(source.array)
+    rule('IndexingExpression', (source) => {
+      const receiverType = this.inferType(source.receiver)
+      const operatorDecl = this.memberProvider().getMember(source.receiver)
         .map(it => it.node)
         .filter(it => isOperatorFunctionDeclaration(it))
         .filter(it => it.op === '[]')
