@@ -31,6 +31,48 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
     this.rules.get($type)?.call(this, astNode, acceptor)
   }
 
+  private acceptTypeHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
+    if ('typeRef' in astNode) {
+      return
+    }
+
+    const nameNode = this.nameProvider.getNameNode(astNode)
+    if (!nameNode) {
+      return
+    }
+
+    const type = this.typeComputer.inferType(astNode)
+    if (!type) {
+      return
+    }
+
+    let location: Location | undefined
+    let tooltip: MarkupContent | undefined
+    if (isClassType(type)) {
+      location = {
+        uri: AstUtils.getDocument(type.declaration).uri.toString(),
+        range: this.nameProvider.getNameNode(type.declaration)!.range,
+      }
+      tooltip = {
+        kind: 'markdown',
+        value: `\`\`\`zenscript\n${type.declaration.$cstNode!.text}\n\`\`\``,
+      }
+    }
+
+    const parts: InlayHintLabelPart[] = [
+      { value: ': ' },
+      { value: type.toString(), location, tooltip },
+    ]
+
+    const typeHint: InlayHint = {
+      position: nameNode.range.end,
+      label: parts,
+      kind: InlayHintKind.Type,
+    }
+
+    acceptor(typeHint)
+  }
+
   private initRules(): RuleMap {
     const rules: RuleMap = new Map()
     const rule: Rule = (match, produce) => {
@@ -41,83 +83,11 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
     }
 
     rule('VariableDeclaration', (source, acceptor) => {
-      if (source.typeRef) {
-        return
-      }
-
-      const nameNode = this.nameProvider.getNameNode(source)
-      if (!nameNode) {
-        return
-      }
-
-      const type = this.typeComputer.inferType(source)
-      if (!type) {
-        return
-      }
-
-      let location: Location | undefined
-      let tooltip: MarkupContent | undefined
-      if (isClassType(type)) {
-        location = {
-          uri: AstUtils.getDocument(type.declaration).uri.toString(),
-          range: this.nameProvider.getNameNode(type.declaration)!.range,
-        }
-        tooltip = {
-          kind: 'markdown',
-          value: `\`\`\`zenscript\n${type.declaration.$cstNode!.text}\n\`\`\``,
-        }
-      }
-
-      const parts: InlayHintLabelPart[] = [
-        { value: ': ' },
-        { value: type.toString(), location, tooltip },
-      ]
-
-      const inlayHint: InlayHint = {
-        position: nameNode.range.end,
-        label: parts,
-        kind: InlayHintKind.Type,
-      }
-
-      acceptor(inlayHint)
+      this.acceptTypeHint(source, acceptor)
     })
 
     rule('ForVariableDeclaration', (source, acceptor) => {
-      const nameNode = this.nameProvider.getNameNode(source)
-      if (!nameNode) {
-        return
-      }
-
-      const type = this.typeComputer.inferType(source)
-      if (!type) {
-        return
-      }
-
-      let location: Location | undefined
-      let tooltip: MarkupContent | undefined
-      if (isClassType(type)) {
-        location = {
-          uri: AstUtils.getDocument(type.declaration).uri.toString(),
-          range: this.nameProvider.getNameNode(type.declaration)!.range,
-        }
-        tooltip = {
-          kind: 'markdown',
-          value: `\`\`\`zenscript\n${type.declaration.$cstNode!.text}\n\`\`\``,
-        }
-      }
-
-      const parts: InlayHintLabelPart[] = [
-        { value: ': ' },
-        { value: type.toString(), location, tooltip },
-      ]
-
-      const inlayHint: InlayHint = {
-        position: nameNode.range.end,
-        label: parts,
-        kind: InlayHintKind.Type,
-      }
-
-      acceptor(inlayHint)
+      this.acceptTypeHint(source, acceptor)
     })
 
     return rules
