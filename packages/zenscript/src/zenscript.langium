@@ -143,9 +143,9 @@ Operator returns string
 ConstructorDeclaration returns ConstructorDeclaration:
     'zenConstructor' '('
         (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' '{'
+    ')' ('{'
         (body+=Statement)*
-    '}'
+    '}')? ';'?
 ;
 
 ExpandDeclaration:
