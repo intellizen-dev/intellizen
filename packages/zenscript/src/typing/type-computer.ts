@@ -230,7 +230,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
           return this.classTypeOf('string')
         case 'to':
         case '..':
-          return this.classTypeOf('IntRange')
+          return this.classTypeOf('stanhebben.zenscript.value.IntRange')
       }
     })
 
