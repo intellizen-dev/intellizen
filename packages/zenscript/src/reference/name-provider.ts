@@ -1,7 +1,7 @@
 import type { AstNode, CstNode, NameProvider } from 'langium'
 import { AstUtils, GrammarUtils, isNamed } from 'langium'
 import type { Script } from '../generated/ast'
-import { isClassDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
+import { isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
 import { isImportable, isStatic, isToplevel } from '../utils/ast'
 import { getName, getQualifiedName } from '../utils/document'
 
@@ -21,6 +21,9 @@ export class ZenScriptNameProvider implements NameProvider {
     }
     else if (isOperatorFunctionDeclaration(node)) {
       return node.op
+    }
+    else if (isFunctionDeclaration(node)) {
+      return node.name || 'lambda function'
     }
     else if (isNamed(node)) {
       return node.name

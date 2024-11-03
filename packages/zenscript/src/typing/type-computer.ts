@@ -1,6 +1,6 @@
 import type { AstNode } from 'langium'
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
-import { isClassDeclaration, isExpression, isOperatorFunctionDeclaration, isTypeParameter } from '../generated/ast'
+import { isAssignment, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
 import type { PackageManager } from '../workspace/package-manager'
 import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
@@ -174,8 +174,34 @@ export class ZenScriptTypeComputer implements TypeComputer {
       if (source.typeRef) {
         return this.inferType(source.typeRef)
       }
-      else if (source.defaultValue && isExpression(source.defaultValue)) {
+
+      if (source.defaultValue && isExpression(source.defaultValue)) {
         return this.inferType(source.defaultValue)
+      }
+
+      if (isFunctionExpression(source.$container)) {
+        const funcExpr = source.$container
+        const index = source.$containerIndex!
+
+        let expectingType: Type | undefined
+        if (isAssignment(funcExpr.$container) && funcExpr.$container.op === '=') {
+          expectingType = this.inferType(funcExpr.$container.left)
+        }
+        else if (isVariableDeclaration(funcExpr.$container)) {
+          expectingType = this.inferType(funcExpr.$container.typeRef)
+        }
+
+        if (isFunctionType(expectingType)) {
+          return expectingType.paramTypes.at(index)
+        }
+        else if (isClassType(expectingType)) {
+          const lambdaDecl = this.memberProvider().getMember(expectingType)
+            .map(it => it.node)
+            .filter(it => isFunctionDeclaration(it))
+            .filter(it => it.prefix === 'lambda')
+            .at(0)
+          return this.inferType(lambdaDecl?.parameters.at(index))
+        }
       }
     })
     // endregion

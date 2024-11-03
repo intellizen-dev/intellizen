@@ -90,6 +90,10 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
       this.acceptTypeHint(source, acceptor)
     })
 
+    rule('ValueParameter', (source, acceptor) => {
+      this.acceptTypeHint(source, acceptor)
+    })
+
     return rules
   }
 }
