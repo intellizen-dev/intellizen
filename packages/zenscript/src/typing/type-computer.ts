@@ -1,6 +1,6 @@
 import type { AstNode } from 'langium'
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
-import { isClassDeclaration, isExpression, isOperatorFunctionDeclaration, isTypeParameter } from '../generated/ast'
+import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
 import type { PackageManager } from '../workspace/package-manager'
 import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
@@ -174,8 +174,39 @@ export class ZenScriptTypeComputer implements TypeComputer {
       if (source.typeRef) {
         return this.inferType(source.typeRef)
       }
-      else if (source.defaultValue && isExpression(source.defaultValue)) {
+
+      if (source.defaultValue && isExpression(source.defaultValue)) {
         return this.inferType(source.defaultValue)
+      }
+
+      if (isFunctionExpression(source.$container)) {
+        const funcExpr = source.$container
+        const index = source.$containerIndex!
+
+        let expectingType: Type | undefined
+        if (isAssignment(funcExpr.$container) && funcExpr.$container.op === '=') {
+          expectingType = this.inferType(funcExpr.$container.left)
+        }
+        else if (isVariableDeclaration(funcExpr.$container)) {
+          expectingType = this.inferType(funcExpr.$container.typeRef)
+        }
+        else if (isCallExpression(funcExpr.$container)) {
+          const callArgIndex = funcExpr.$containerIndex!
+          const receiverType = this.inferType(funcExpr.$container.receiver)
+          expectingType = isFunctionType(receiverType) ? receiverType.paramTypes.at(callArgIndex) : undefined
+        }
+
+        if (isFunctionType(expectingType)) {
+          return expectingType.paramTypes.at(index)
+        }
+        else if (isClassType(expectingType)) {
+          const lambdaDecl = this.memberProvider().getMember(expectingType)
+            .map(it => it.node)
+            .filter(it => isFunctionDeclaration(it))
+            .filter(it => it.prefix === 'lambda')
+            .at(0)
+          return this.inferType(lambdaDecl?.parameters.at(index))
+        }
       }
     })
     // endregion
@@ -252,17 +283,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     })
 
     rule('FunctionExpression', (source) => {
-      const paramTypes = source.parameters.map((param) => {
-        if (param.typeRef) {
-          return this.inferType(param.typeRef) ?? this.classTypeOf('any')
-        }
-        else if (isExpression(param.defaultValue)) {
-          return this.inferType(param.defaultValue) ?? this.classTypeOf('any')
-        }
-        else {
-          return this.classTypeOf('any')
-        }
-      })
+      const paramTypes = source.parameters.map(param => this.inferType(param) ?? this.classTypeOf('any'))
       const returnType = this.inferType(source.returnTypeRef) ?? this.classTypeOf('any')
       return new FunctionType(paramTypes, returnType)
     })

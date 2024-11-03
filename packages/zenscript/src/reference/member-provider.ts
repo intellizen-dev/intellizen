@@ -69,6 +69,11 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.getMember(type)
     })
 
+    rule('ValueParameter', (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.getMember(type)
+    })
+
     rule('NamedTypeReference', (source) => {
       const script = AstUtils.findRootNode(source) as Script
       const result: AstNodeDescription[] = []
