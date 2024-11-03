@@ -11,7 +11,7 @@ export interface ZenScriptType {
   TypeVariable: TypeVariable
 }
 
-export type BuiltinTypes = 'any' | 'bool' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'string' | 'void' | 'Array' | 'List' | 'Map' | 'IntRange'
+export type BuiltinTypes = 'any' | 'bool' | 'byte' | 'short' | 'int' | 'long' | 'float' | 'double' | 'string' | 'void' | 'Array' | 'List' | 'Map' | 'Entry' | 'stanhebben.zenscript.value.IntRange'
 
 export type TypeParameterSubstitutions = Map<TypeParameter, Type>
 
