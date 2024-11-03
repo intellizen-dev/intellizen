@@ -1,8 +1,9 @@
 import type { AstNode } from 'langium'
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
-import { isClassDeclaration, isExpression, isTypeParameter } from '../generated/ast'
+import { isClassDeclaration, isExpression, isOperatorFunctionDeclaration, isTypeParameter } from '../generated/ast'
 import type { PackageManager } from '../workspace/package-manager'
 import type { ZenScriptServices } from '../module'
+import type { MemberProvider } from '../reference/member-provider'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
 import { ClassType, CompoundType, FunctionType, IntersectionType, TypeVariable, UnionType, isClassType, isFunctionType } from './type-description'
 
@@ -18,10 +19,12 @@ type RuleMap = Map<SourceKey, Produce<SourceKey, any>>
 
 export class ZenScriptTypeComputer implements TypeComputer {
   private readonly packageManager: PackageManager
+  private readonly memberProvider: () => MemberProvider
   private readonly rules: RuleMap
 
   constructor(services: ZenScriptServices) {
     this.packageManager = services.workspace.PackageManager
+    this.memberProvider = () => services.references.MemberProvider
     this.rules = this.initRules()
   }
 
@@ -139,6 +142,40 @@ export class ZenScriptTypeComputer implements TypeComputer {
       }
       else {
         return this.classTypeOf('any')
+      }
+    })
+
+    rule('ForVariableDeclaration', (source) => {
+      const length = source.$container.variables.length
+      const index = source.$containerIndex
+      if (index === undefined) {
+        return
+      }
+      const iterType = this.inferType(source.$container.iter)
+      if (!iterType) {
+        return
+      }
+
+      const operatorDecl = this.memberProvider().getMember(iterType)
+        .map(it => it.node)
+        .filter(it => isOperatorFunctionDeclaration(it))
+        .filter(it => it.op === 'for')
+        .filter(it => it.parameters.length === length)
+        .at(0)
+
+      let paramType = this.inferType(operatorDecl?.parameters.at(index))
+      if (isClassType(iterType)) {
+        paramType = paramType?.substituteTypeParameters(iterType.substitutions)
+      }
+      return paramType
+    })
+
+    rule('ValueParameter', (source) => {
+      if (source.typeRef) {
+        return this.inferType(source.typeRef)
+      }
+      else if (source.defaultValue && isExpression(source.defaultValue)) {
+        return this.inferType(source.defaultValue)
       }
     })
     // endregion
