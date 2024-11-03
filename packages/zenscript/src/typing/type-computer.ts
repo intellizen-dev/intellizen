@@ -302,12 +302,17 @@ export class ZenScriptTypeComputer implements TypeComputer {
     })
 
     rule('ArrayAccess', (source) => {
+      const receiverType = this.inferType(source.array)
       const operatorDecl = this.memberProvider().getMember(source.array)
         .map(it => it.node)
         .filter(it => isOperatorFunctionDeclaration(it))
         .filter(it => it.op === '[]')
         .at(0)
-      return this.inferType(operatorDecl?.returnTypeRef)
+      let returnType = this.inferType(operatorDecl?.returnTypeRef)
+      if (isClassType(receiverType)) {
+        returnType = returnType?.substituteTypeParameters(receiverType.substitutions)
+      }
+      return returnType
     })
 
     rule('CallExpression', (source) => {
