@@ -1,6 +1,6 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, Stream } from 'langium'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI, stream } from 'langium'
-import { substringBeforeLast } from '@intellizen/shared'
+import { generateSequence, substringBeforeLast } from '@intellizen/shared'
 import type { ImportDeclaration, MemberAccess, NamedTypeReference, ZenScriptAstType } from '../generated/ast'
 import { isClassDeclaration, isImportDeclaration, isTypeParameter } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
@@ -30,6 +30,17 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return this.rules.get(match)?.call(this, context) ?? EMPTY_SCOPE
   }
 
+  private createLexicalScope(astNode: AstNode, mapper: (desc: AstNodeDescription) => AstNodeDescription | undefined, outer?: Scope): Scope {
+    const precomputed = AstUtils.getDocument(astNode).precomputedScopes
+    if (!precomputed) {
+      return this.createScope([], outer)
+    }
+    return stream(generateSequence(astNode, it => it.$container))
+      .map(container => precomputed.get(container))
+      .map(descriptions => descriptions.map(mapper).filter(desc => !!desc))
+      .reduce((scope, descriptions) => this.createScope(descriptions, scope), outer as Scope)
+  }
+
   private initRules(): RuleMap {
     const rules: RuleMap = new Map()
     const rule: Rule = (match, produce) => {
@@ -43,7 +54,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       const importDecl = source.container as ImportDeclaration
       const path = getPathAsString(importDecl, source.index)
       const parentPath = substringBeforeLast(path, '.')
-      const siblings = this.packageManager.getHierarchyNode(parentPath)?.children.values()
+      const siblings = this.packageManager.retrieve(parentPath)?.children.values()
       if (!siblings) {
         return EMPTY_SCOPE
       }
@@ -58,7 +69,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
           elements.push({
             type: 'package',
             name: sibling.name,
-            documentUri: URI.file('file:///path/to/package'),
+            documentUri: URI.from({ scheme: 'package' }),
             path: '',
           })
         }
@@ -68,7 +79,34 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     })
 
     rule('ReferenceExpression', (source) => {
-      return super.getScope(source)
+      let outer: Scope
+
+      const packages: Stream<AstNodeDescription> = stream(this.packageManager.retrieve('')!.children.values())
+        .filter(it => !it.isLeaf())
+        .map(it => ({
+          type: 'package',
+          name: it.name,
+          documentUri: URI.from({ scheme: 'package' }),
+          path: '',
+        }))
+      outer = this.createScope(packages)
+
+      const globals = this.indexManager.allElements()
+      outer = this.createScope(globals, outer)
+
+      const mapper = (desc: AstNodeDescription) => {
+        if (isImportDeclaration(desc.node)) {
+          const importDecl = desc.node
+          const ref = importDecl.path.at(-1)?.ref ?? importDecl
+          return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
+        }
+        if (isTypeParameter(desc.node)) {
+          return undefined
+        }
+        return desc
+      }
+
+      return this.createLexicalScope(source.container, mapper, outer)
     })
 
     rule('MemberAccess', (source) => {
@@ -79,43 +117,29 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     rule('NamedTypeReference', (source) => {
       if (source.index === 0 || source.index === undefined) {
-        const scopes: Array<Stream<AstNodeDescription>> = []
-
-        const lexicalScopes = AstUtils.getDocument(source.container).precomputedScopes
-        if (lexicalScopes) {
-          let currentNode: AstNode | undefined = source.container
-          while (currentNode) {
-            const lexicalDescriptions = lexicalScopes.get(currentNode)
-            if (lexicalDescriptions.length > 0) {
-              scopes.push(
-                stream(lexicalDescriptions).map((it) => {
-                  if (isTypeParameter(it.node)) {
-                    return it
-                  }
-                  else if (isClassDeclaration(it.node)) {
-                    return it
-                  }
-                  else if (isImportDeclaration(it.node)) {
-                    const importDecl = it.node
-                    const ref = importDecl.path.at(-1)?.ref ?? importDecl
-                    return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
-                  }
-                  else {
-                    return undefined
-                  }
-                }).filter(it => !!it),
-              )
-            }
-            currentNode = currentNode.$container
-          }
-        }
-
-        const globals = stream(this.packageManager.getHierarchyNode('')!.children.values())
+        const classes = stream(this.packageManager.retrieve('')!.children.values())
           .flatMap(it => it.values)
           .filter(it => isClassDeclaration(it))
           .map(it => this.descriptions.createDescription(it, it.name))
+        const outer = this.createScope(classes)
 
-        return scopes.reduce((outer, current) => this.createScope(current, outer), this.createScope(globals))
+        const mapper = (desc: AstNodeDescription) => {
+          if (isTypeParameter(desc.node)) {
+            return desc
+          }
+          else if (isClassDeclaration(desc.node)) {
+            return desc
+          }
+          else if (isImportDeclaration(desc.node)) {
+            const importDecl = desc.node
+            const ref = importDecl.path.at(-1)?.ref ?? importDecl
+            return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
+          }
+          else {
+            return undefined
+          }
+        }
+        return this.createLexicalScope(source.container, mapper, outer)
       }
       else {
         const container = source.container as NamedTypeReference

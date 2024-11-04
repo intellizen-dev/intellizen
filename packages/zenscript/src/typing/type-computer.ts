@@ -42,7 +42,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   private classDeclOf(className: BuiltinTypes | string): ClassDeclaration | undefined {
-    return this.packageManager.getAstNode(className)?.filter(it => isClassDeclaration(it))[0]
+    return this.packageManager.retrieve(className)?.values.filter(it => isClassDeclaration(it))[0]
   }
 
   private initRules(): RuleMap {

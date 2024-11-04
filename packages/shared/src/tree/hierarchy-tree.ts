@@ -16,11 +16,7 @@ export class HierarchyTree<V> {
     target.values.push(value)
   }
 
-  retrieve(path: string): V[] | undefined {
-    return this.getNode(path)?.values
-  }
-
-  getNode(path: string | undefined): HierarchyNode<V> | undefined {
+  retrieve(path: string): HierarchyNode<V> | undefined {
     if (path === undefined) {
       return
     }
@@ -45,16 +41,34 @@ export class HierarchyNode<V> {
     this.values = []
   }
 
+  isLeaf(): boolean {
+    return this.values.length > 0
+  }
+
   createChild(name: string): HierarchyNode<V> {
     const child = new HierarchyNode(name, this)
     this.children.set(name, child)
     return child
   }
 
+  remove(value: V): void {
+    const index = this.values.indexOf(value)
+    if (index !== -1) {
+      this.values.splice(index, 1)
+    }
+    if (this.shouldFree()) {
+      this.free()
+    }
+  }
+
   free() {
     this.parent?.children.delete(this.name)
-    if (this.parent?.children.size === 0) {
+    if (this.parent?.shouldFree()) {
       this.parent.free()
     }
+  }
+
+  private shouldFree() {
+    return this.values.length === 0 && this.children.size === 0
   }
 }
