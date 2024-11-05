@@ -1,4 +1,4 @@
-import type { AstNode } from 'langium'
+import { type AstNode, stream } from 'langium'
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
 import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
 import type { PackageManager } from '../workspace/package-manager'
@@ -42,7 +42,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   private classDeclOf(className: BuiltinTypes | string): ClassDeclaration | undefined {
-    return this.packageManager.retrieve(className)?.values.filter(it => isClassDeclaration(it))[0]
+    return stream(this.packageManager.retrieve(className)).find(isClassDeclaration)
   }
 
   private initRules(): RuleMap {

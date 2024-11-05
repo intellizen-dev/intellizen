@@ -54,14 +54,14 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       const importDecl = source.container as ImportDeclaration
       const path = getPathAsString(importDecl, source.index)
       const parentPath = substringBeforeLast(path, '.')
-      const siblings = this.packageManager.retrieve(parentPath)?.children.values()
+      const siblings = this.packageManager.find(parentPath)?.children.values()
       if (!siblings) {
         return EMPTY_SCOPE
       }
 
       const elements: AstNodeDescription[] = []
       for (const sibling of siblings) {
-        if (sibling.values?.length) {
+        if (sibling.values?.size) {
           sibling.values.forEach(it => elements.push(this.descriptions.createDescription(it, sibling.name)))
         }
         else {
@@ -81,8 +81,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     rule('ReferenceExpression', (source) => {
       let outer: Scope
 
-      const packages: Stream<AstNodeDescription> = stream(this.packageManager.retrieve('')!.children.values())
-        .filter(it => !it.isLeaf())
+      const packages: Stream<AstNodeDescription> = stream(this.packageManager.find('')!.children.values())
+        .filter(it => it.values.size === 0)
         .map(it => ({
           type: 'package',
           name: it.name,
@@ -117,7 +117,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     rule('NamedTypeReference', (source) => {
       if (source.index === 0 || source.index === undefined) {
-        const classes = stream(this.packageManager.retrieve('')!.children.values())
+        const classes = stream(this.packageManager.find('')!.children.values())
           .flatMap(it => it.values)
           .filter(it => isClassDeclaration(it))
           .map(it => this.descriptions.createDescription(it, it.name))

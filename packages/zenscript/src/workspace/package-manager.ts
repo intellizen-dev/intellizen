@@ -8,7 +8,8 @@ import { isImportable, isStatic } from '../utils/ast'
 import type { ZenScriptNameProvider } from '../reference/name-provider'
 
 export interface PackageManager {
-  retrieve: (path: string) => HierarchyNode<AstNode> | undefined
+  retrieve: (path: string) => ReadonlySet<AstNode>
+  find: (path: string) => HierarchyNode<AstNode> | undefined
 }
 
 export class ZenScriptPackageManager implements PackageManager {
@@ -33,8 +34,12 @@ export class ZenScriptPackageManager implements PackageManager {
     })
   }
 
-  retrieve(path: string): HierarchyNode<AstNode> | undefined {
+  retrieve(path: string): ReadonlySet<AstNode> {
     return this.packageTree.retrieve(path)
+  }
+
+  find(path: string): HierarchyNode<AstNode> | undefined {
+    return this.packageTree.find(path)
   }
 
   private insert(document: LangiumDocument) {
@@ -76,7 +81,7 @@ export class ZenScriptPackageManager implements PackageManager {
   private removeNode(node: AstNode) {
     const name = this.nameProvider.getQualifiedName(node)
     if (name) {
-      this.packageTree.retrieve(name)?.free()
+      this.packageTree.find(name)?.free()
     }
   }
 }
