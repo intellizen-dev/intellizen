@@ -84,11 +84,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     rule('ReferenceExpression', (source) => {
       let outer: Scope
 
-      const packages: Stream<AstNodeDescription> = stream(this.packageManager.find('')!.children.values())
+      const packages: Stream<AstNodeDescription> = stream(this.packageManager.root.children.values())
         .filter(it => it.values.size === 0)
         .map(it => ({
           type: 'package',
           name: it.name,
+          packageNode: it,
           documentUri: URI.from({ scheme: 'package' }),
           path: '',
         }))
