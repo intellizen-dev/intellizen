@@ -2,7 +2,7 @@ import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, Stream } from '
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI, stream } from 'langium'
 import { substringBeforeLast } from '@intellizen/shared'
 import type { MemberAccess, NamedTypeReference, ZenScriptAstType } from '../generated/ast'
-import { ClassDeclaration, ImportDeclaration, TypeParameter, isClassDeclaration, isImportDeclaration, isTypeParameter } from '../generated/ast'
+import { ClassDeclaration, ImportDeclaration, TypeParameter, isClassDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
@@ -97,19 +97,20 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       const globals = this.indexManager.allElements()
       outer = this.createScope(globals, outer)
 
-      const mapper = (desc: AstNodeDescription) => {
-        if (isImportDeclaration(desc.node)) {
-          const importDecl = desc.node
-          const ref = importDecl.path.at(-1)?.ref ?? importDecl
-          return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
+      const processor = (desc: AstNodeDescription) => {
+        switch (desc.type) {
+          case TypeParameter:
+            return
+          case ImportDeclaration: {
+            const importDecl = desc.node as ImportDeclaration
+            const ref = importDecl.path.at(-1)?.ref ?? importDecl
+            return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
+          }
+          default:
+            return desc
         }
-        if (isTypeParameter(desc.node)) {
-          return undefined
-        }
-        return desc
       }
-
-      return this.lexicalScope(source.container, mapper, outer)
+      return this.lexicalScope(source.container, processor, outer)
     })
 
     rule('MemberAccess', (source) => {
@@ -133,7 +134,6 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
               return desc
             case ImportDeclaration: {
               const importDecl = desc.node as ImportDeclaration
-              // Make sure the ref is not undefined if import is invalid
               const ref = importDecl.path.at(-1)?.ref ?? importDecl
               return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
             }
