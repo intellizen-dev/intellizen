@@ -148,9 +148,9 @@ describe('parse top-level of script with ZenScript', () => {
     expect(whileStatement.$type).toBe('WhileStatement')
 
     expect(forStatementEachNumber.$type).toBe('ForStatement')
-    expect((forStatementEachNumber as ForStatement).variables.map(item => item.name)).toStrictEqual(['i'])
+    expect((forStatementEachNumber as ForStatement).parameters.map(item => item.name)).toStrictEqual(['i'])
     expect(forStatementEachArray.$type).toBe('ForStatement')
-    expect((forStatementEachArray as ForStatement).variables.map(item => item.name)).toStrictEqual(['item'])
+    expect((forStatementEachArray as ForStatement).parameters.map(item => item.name)).toStrictEqual(['item'])
 
     assertVariableDeclaration(global$VariableDeclaration, { prefix: 'global', name: 'a' })
     assertClassTypeReference((global$VariableDeclaration as VariableDeclaration).typeRef, 'int')

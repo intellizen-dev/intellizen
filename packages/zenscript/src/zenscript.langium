@@ -28,7 +28,7 @@ interface ClassDeclaration extends Declaration {
     members: ClassMemberDeclaration[];
 }
 
-type NamedElement = Script | ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | ForVariableDeclaration | MapEntry | ImportDeclaration;
+type NamedElement = Script | ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | LoopParameter | MapEntry | ImportDeclaration;
 
 type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration | OperatorFunctionDeclaration;
 
@@ -174,9 +174,13 @@ interface WhileStatement extends Statement {
 }
 
 interface ForStatement extends Statement {
-    variables: ForVariableDeclaration[];
-    iter: Expression;
+    parameters: LoopParameter[];
+    range: Expression;
     body: Statement[];
+}
+
+interface LoopParameter extends Declaration {
+    name: string;
 }
 
 interface BlockStatement extends Statement {
@@ -200,10 +204,6 @@ interface VariableDeclaration extends Declaration, Statement {
     name: string;
     typeRef?: TypeReference;
     initializer?: Expression;
-}
-
-interface ForVariableDeclaration extends Declaration {
-    name: string;
 }
 
 //endregion Statement Interface
@@ -234,12 +234,12 @@ WhileStatement returns WhileStatement:
 ;
 
 ForStatement returns ForStatement:
-    'for' variables+=ForVariableDeclaration (',' variables+=ForVariableDeclaration)* 'in' iter=Expression '{'
+    'for' parameters+=LoopParameter (',' parameters+=LoopParameter)* 'in' range=Expression '{'
         (body+=Statement)*
     '}'
 ;
 
-ForVariableDeclaration returns ForVariableDeclaration:
+LoopParameter returns LoopParameter:
     name=ID
 ;
 
