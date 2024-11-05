@@ -145,18 +145,18 @@ export class ZenScriptTypeComputer implements TypeComputer {
       }
     })
 
-    rule('ForVariableDeclaration', (source) => {
-      const length = source.$container.variables.length
+    rule('LoopParameter', (source) => {
+      const length = source.$container.parameters.length
       const index = source.$containerIndex
       if (index === undefined) {
         return
       }
-      const iterType = this.inferType(source.$container.iter)
-      if (!iterType) {
+      const rangeType = this.inferType(source.$container.range)
+      if (!rangeType) {
         return
       }
 
-      const operatorDecl = this.memberProvider().getMember(iterType)
+      const operatorDecl = this.memberProvider().getMember(rangeType)
         .map(it => it.node)
         .filter(it => isOperatorFunctionDeclaration(it))
         .filter(it => it.op === 'for')
@@ -164,8 +164,8 @@ export class ZenScriptTypeComputer implements TypeComputer {
         .at(0)
 
       let paramType = this.inferType(operatorDecl?.parameters.at(index))
-      if (isClassType(iterType)) {
-        paramType = paramType?.substituteTypeParameters(iterType.substitutions)
+      if (isClassType(rangeType)) {
+        paramType = paramType?.substituteTypeParameters(rangeType.substitutions)
       }
       return paramType
     })
