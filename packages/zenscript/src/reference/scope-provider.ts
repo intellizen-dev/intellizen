@@ -1,11 +1,12 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, Stream } from 'langium'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI, stream } from 'langium'
-import { generateSequence, substringBeforeLast } from '@intellizen/shared'
-import type { ImportDeclaration, MemberAccess, NamedTypeReference, ZenScriptAstType } from '../generated/ast'
-import { isClassDeclaration, isImportDeclaration, isTypeParameter } from '../generated/ast'
+import { substringBeforeLast } from '@intellizen/shared'
+import type { MemberAccess, NamedTypeReference, ZenScriptAstType } from '../generated/ast'
+import { ClassDeclaration, ImportDeclaration, TypeParameter, isClassDeclaration, isImportDeclaration, isTypeParameter } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
+import { generateStream } from '../utils/stream'
 import type { MemberProvider } from './member-provider'
 
 type SourceKey = keyof ZenScriptAstType
@@ -30,15 +31,17 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return this.rules.get(match)?.call(this, context) ?? EMPTY_SCOPE
   }
 
-  private createLexicalScope(astNode: AstNode, mapper: (desc: AstNodeDescription) => AstNodeDescription | undefined, outer?: Scope): Scope {
+  private lexicalScope(
+    astNode: AstNode,
+    processor: (desc: AstNodeDescription) => AstNodeDescription | undefined,
+    outside?: Scope,
+  ): Scope {
     const precomputed = AstUtils.getDocument(astNode).precomputedScopes
-    if (!precomputed) {
-      return this.createScope([], outer)
-    }
-    return stream(generateSequence(astNode, it => it.$container))
-      .map(container => precomputed.get(container))
-      .map(descriptions => descriptions.map(mapper).filter(desc => !!desc))
-      .reduce((scope, descriptions) => this.createScope(descriptions, scope), outer as Scope)
+    return generateStream(astNode, it => it.$container)
+      .map(container => precomputed?.get(container))
+      .nonNullable()
+      .map(descriptions => stream(descriptions).map(processor).nonNullable())
+      .reduce((outer, descriptions) => this.createScope(descriptions, outer), outside as Scope)
   }
 
   private initRules(): RuleMap {
@@ -106,7 +109,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         return desc
       }
 
-      return this.createLexicalScope(source.container, mapper, outer)
+      return this.lexicalScope(source.container, mapper, outer)
     })
 
     rule('MemberAccess', (source) => {
@@ -116,30 +119,27 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     })
 
     rule('NamedTypeReference', (source) => {
-      if (source.index === 0 || source.index === undefined) {
-        const classes = stream(this.packageManager.find('')!.children.values())
+      if (!source.index) {
+        const classes = stream(this.packageManager.root.children.values())
           .flatMap(it => it.values)
-          .filter(it => isClassDeclaration(it))
+          .filter(isClassDeclaration)
           .map(it => this.descriptions.createDescription(it, it.name))
         const outer = this.createScope(classes)
 
-        const mapper = (desc: AstNodeDescription) => {
-          if (isTypeParameter(desc.node)) {
-            return desc
-          }
-          else if (isClassDeclaration(desc.node)) {
-            return desc
-          }
-          else if (isImportDeclaration(desc.node)) {
-            const importDecl = desc.node
-            const ref = importDecl.path.at(-1)?.ref ?? importDecl
-            return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
-          }
-          else {
-            return undefined
+        const processor = (desc: AstNodeDescription) => {
+          switch (desc.type) {
+            case TypeParameter:
+            case ClassDeclaration:
+              return desc
+            case ImportDeclaration: {
+              const importDecl = desc.node as ImportDeclaration
+              // Make sure the ref is not undefined if import is invalid
+              const ref = importDecl.path.at(-1)?.ref ?? importDecl
+              return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
+            }
           }
         }
-        return this.createLexicalScope(source.container, mapper, outer)
+        return this.lexicalScope(source.container, processor, outer)
       }
       else {
         const container = source.container as NamedTypeReference

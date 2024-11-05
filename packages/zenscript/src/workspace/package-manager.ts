@@ -10,6 +10,7 @@ import type { ZenScriptNameProvider } from '../reference/name-provider'
 export interface PackageManager {
   retrieve: (path: string) => ReadonlySet<AstNode>
   find: (path: string) => HierarchyNode<AstNode> | undefined
+  root: HierarchyNode<AstNode>
 }
 
 export class ZenScriptPackageManager implements PackageManager {
@@ -40,6 +41,10 @@ export class ZenScriptPackageManager implements PackageManager {
 
   find(path: string): HierarchyNode<AstNode> | undefined {
     return this.packageTree.find(path)
+  }
+
+  get root(): HierarchyNode<AstNode> {
+    return this.packageTree.root
   }
 
   private insert(document: LangiumDocument) {
