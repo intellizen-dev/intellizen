@@ -1,8 +1,10 @@
-import { type AstNode, type AstNodeDescription, type AstNodeDescriptionProvider, AstUtils, type NameProvider } from 'langium'
+import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, NameProvider } from 'langium'
+import { AstUtils, stream } from 'langium'
+import type { HierarchyNode } from '@intellizen/shared'
 import type { Script, ZenScriptAstType } from '../generated/ast'
 import { isScript, isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import { getClassChain, isStatic } from '../utils/ast'
+import { createHierarchyNodeDescription, getClassChain, isStatic } from '../utils/ast'
 import { type Type, type ZenScriptType, isFunctionType } from '../typing/type-description'
 import type { TypeComputer } from '../typing/type-computer'
 
@@ -10,7 +12,7 @@ export interface MemberProvider {
   getMember: (source: AstNode | Type | undefined) => AstNodeDescription[]
 }
 
-type SourceMap = ZenScriptAstType & ZenScriptType
+type SourceMap = ZenScriptAstType & ZenScriptType & { HierarchyNode: HierarchyNode<AstNode> }
 type SourceKey = keyof SourceMap
 type Produce<K extends SourceKey, S extends SourceMap[K]> = (source: S) => AstNodeDescription[]
 type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Produce<K, S>) => void
@@ -42,6 +44,17 @@ export class ZenScriptMemberProvider implements MemberProvider {
       }
       rules.set(match, produce)
     }
+
+    rule('HierarchyNode', (source) => {
+      const astNodes = stream(source.children.values())
+        .filter(it => it.values.size >= 0)
+        .flatMap(it => it.values)
+        .map(it => this.descriptions.createDescription(it, undefined))
+      const hrcNodes = stream(source.children.values())
+        .filter(it => it.values.size === 0)
+        .map(it => createHierarchyNodeDescription(it))
+      return [...astNodes, ...hrcNodes]
+    })
 
     rule('Script', (source) => {
       const members: AstNode[] = []
@@ -98,6 +111,10 @@ export class ZenScriptMemberProvider implements MemberProvider {
       const member = source.target.ref
       if (!member) {
         return []
+      }
+
+      if (member.$type as string === 'HierarchyNode') {
+        return this.getMember(member)
       }
 
       const receiverType = this.typeComputer.inferType(source.receiver)

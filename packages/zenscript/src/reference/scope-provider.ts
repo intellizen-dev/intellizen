@@ -1,10 +1,10 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, Stream } from 'langium'
-import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, URI, stream } from 'langium'
+import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
 import { substringBeforeLast } from '@intellizen/shared'
 import type { MemberAccess, NamedTypeReference, ZenScriptAstType } from '../generated/ast'
 import { ClassDeclaration, ImportDeclaration, TypeParameter, isClassDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import { getPathAsString } from '../utils/ast'
+import { createHierarchyNodeDescription, getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
 import { generateStream } from '../utils/stream'
 import type { MemberProvider } from './member-provider'
@@ -69,15 +69,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         }
         else {
           // TODO: temporary, needs to be reimplemented
-          elements.push({
-            type: 'package',
-            name: sibling.name,
-            documentUri: URI.from({ scheme: 'package' }),
-            path: '',
-          })
+          elements.push(createHierarchyNodeDescription(sibling))
         }
       }
-
       return this.createScope(elements)
     })
 
@@ -86,13 +80,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
       const packages: Stream<AstNodeDescription> = stream(this.packageManager.root.children.values())
         .filter(it => it.values.size === 0)
-        .map(it => ({
-          type: 'package',
-          name: it.name,
-          packageNode: it,
-          documentUri: URI.from({ scheme: 'package' }),
-          path: '',
-        }))
+        .map(it => createHierarchyNodeDescription(it))
       outer = this.createScope(packages)
 
       const globals = this.indexManager.allElements()
