@@ -65,7 +65,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       const elements: AstNodeDescription[] = []
       for (const sibling of siblings) {
         if (sibling.isDataNode()) {
-          sibling.values.forEach(it => elements.push(this.descriptions.createDescription(it, sibling.name)))
+          sibling.data.forEach(it => elements.push(this.descriptions.createDescription(it, sibling.name)))
         }
         else {
           // TODO: temporary, needs to be reimplemented
@@ -111,7 +111,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     rule('NamedTypeReference', (source) => {
       if (!source.index) {
         const classes = stream(this.packageManager.root.children.values())
-          .flatMap(it => it.values)
+          .filter(it => it.isDataNode())
+          .flatMap(it => it.data)
           .filter(isClassDeclaration)
           .map(it => this.descriptions.createDescription(it, it.name))
         const outer = this.createScope(classes)

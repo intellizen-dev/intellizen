@@ -48,7 +48,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     rule('HierarchyNode', (source) => {
       const astNodes = stream(source.children.values())
         .filter(it => it.isDataNode())
-        .flatMap(it => it.values)
+        .flatMap(it => it.data)
         .map(it => this.descriptions.createDescription(it, undefined))
       const hrcNodes = stream(source.children.values())
         .filter(it => it.isInternalNode())

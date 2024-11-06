@@ -13,11 +13,11 @@ export class HierarchyTree<V> {
     }
     const names = path.split(this.separator)
     const target = names.reduce((node, name) => node.children.get(name) || node.createChild(name), this.root)
-    target.values.add(value)
+    target.data.add(value)
   }
 
   retrieve(path: string): ReadonlySet<V> {
-    return this.find(path)?.values ?? new Set()
+    return this.find(path)?.data ?? new Set()
   }
 
   find(path: string): HierarchyNode<V> | undefined {
@@ -36,21 +36,21 @@ export class HierarchyNode<V> {
   readonly name: string
   readonly parent?: HierarchyNode<V>
   readonly children: Map<string, HierarchyNode<V>>
-  readonly values: Set<V>
+  readonly data: Set<V>
 
   constructor(name: string, parent?: HierarchyNode<V>) {
     this.name = name
     this.parent = parent
     this.children = new Map()
-    this.values = new Set()
+    this.data = new Set()
   }
 
-  isDataNode() {
-    return this.values.size >= 0
+  isDataNode(): boolean {
+    return this.data.size > 0
   }
 
   isInternalNode(): boolean {
-    return this.values.size === 0
+    return this.data.size === 0
   }
 
   createChild(name: string): HierarchyNode<V> {
@@ -60,7 +60,7 @@ export class HierarchyNode<V> {
   }
 
   delete(value: V): void {
-    this.values.delete(value)
+    this.data.delete(value)
     if (this.shouldFree()) {
       this.free()
     }
@@ -74,6 +74,6 @@ export class HierarchyNode<V> {
   }
 
   private shouldFree() {
-    return this.values.size === 0 && this.children.size === 0
+    return this.data.size === 0 && this.children.size === 0
   }
 }
