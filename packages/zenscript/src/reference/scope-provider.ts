@@ -64,7 +64,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
       const elements: AstNodeDescription[] = []
       for (const sibling of siblings) {
-        if (sibling.values?.size) {
+        if (sibling.isDataNode()) {
           sibling.values.forEach(it => elements.push(this.descriptions.createDescription(it, sibling.name)))
         }
         else {
@@ -79,7 +79,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       let outer: Scope
 
       const packages: Stream<AstNodeDescription> = stream(this.packageManager.root.children.values())
-        .filter(it => it.values.size === 0)
+        .filter(it => it.isInternalNode())
         .map(it => createHierarchyNodeDescription(it))
       outer = this.createScope(packages)
 

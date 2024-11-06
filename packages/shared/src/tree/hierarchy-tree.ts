@@ -45,6 +45,14 @@ export class HierarchyNode<V> {
     this.values = new Set()
   }
 
+  isDataNode() {
+    return this.values.size >= 0
+  }
+
+  isInternalNode(): boolean {
+    return this.values.size === 0
+  }
+
   createChild(name: string): HierarchyNode<V> {
     const child = new HierarchyNode(name, this)
     this.children.set(name, child)
