@@ -361,6 +361,10 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return this.classTypeOf('string')
     })
 
+    rule('UnquotedString', (_) => {
+      return this.classTypeOf('string')
+    })
+
     rule('StringTemplate', (_) => {
       return this.classTypeOf('string')
     })
