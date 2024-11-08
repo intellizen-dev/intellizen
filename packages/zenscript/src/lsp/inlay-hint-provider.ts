@@ -9,10 +9,7 @@ import { InlayHintKind } from 'vscode-languageserver'
 import { isClassType } from '../typing/type-description'
 
 type SourceMap = ZenScriptAstType
-type SourceKey = keyof SourceMap
-type Produce<K extends SourceKey, S extends SourceMap[K]> = (source: S, acceptor: InlayHintAcceptor) => void
-type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Produce<K, S>) => void
-type RuleMap = Map<SourceKey, Produce<SourceKey, any>>
+type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], acceptor: InlayHintAcceptor) => void }
 
 export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
   private readonly typeComputer: TypeComputer
@@ -27,8 +24,8 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
   }
 
   computeInlayHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
-    const $type = astNode.$type as SourceKey
-    this.rules.get($type)?.call(this, astNode, acceptor)
+    const match = astNode.$type
+    this.rules[match]?.call(this, astNode, acceptor)
   }
 
   private acceptTypeHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
@@ -73,27 +70,18 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
     acceptor(typeHint)
   }
 
-  private initRules(): RuleMap {
-    const rules: RuleMap = new Map()
-    const rule: Rule = (match, produce) => {
-      if (rules.has(match)) {
-        throw new Error(`Rule "${match}" is already defined.`)
-      }
-      rules.set(match, produce)
-    }
-
-    rule('VariableDeclaration', (source, acceptor) => {
+  private initRules = (): RuleMap => ({
+    VariableDeclaration: (source, acceptor) => {
       this.acceptTypeHint(source, acceptor)
-    })
+    },
 
-    rule('LoopParameter', (source, acceptor) => {
+    LoopParameter: (source, acceptor) => {
       this.acceptTypeHint(source, acceptor)
-    })
+    },
 
-    rule('ValueParameter', (source, acceptor) => {
+    ValueParameter: (source, acceptor) => {
       this.acceptTypeHint(source, acceptor)
-    })
+    },
 
-    return rules
-  }
+  })
 }

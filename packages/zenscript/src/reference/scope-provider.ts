@@ -9,10 +9,8 @@ import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter 
 import { createHierarchyNodeDescription, getPathAsString } from '../utils/ast'
 import { generateStream } from '../utils/stream'
 
-type SourceKey = keyof ZenScriptAstType
-type Produce = (source: ReferenceInfo) => Scope
-type Rule = <K extends SourceKey>(match: K, produce: Produce) => void
-type RuleMap = Map<SourceKey, Produce>
+type SourceMap = ZenScriptAstType
+type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo) => Scope }
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
@@ -27,8 +25,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   override getScope(context: ReferenceInfo): Scope {
-    const match = context.container.$type as SourceKey
-    return this.rules.get(match)?.call(this, context) ?? EMPTY_SCOPE
+    const match = context.container.$type
+    return this.rules[match]?.call(this, context) ?? EMPTY_SCOPE
   }
 
   private lexicalScope(
@@ -44,16 +42,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .reduce((outer, descriptions) => this.createScope(descriptions, outer), outside as Scope)
   }
 
-  private initRules(): RuleMap {
-    const rules: RuleMap = new Map()
-    const rule: Rule = (match, produce) => {
-      if (rules.has(match)) {
-        throw new Error(`Rule "${match}" is already defined.`)
-      }
-      rules.set(match, produce)
-    }
-
-    rule('ImportDeclaration', (source) => {
+  private initRules = (): RuleMap => ({
+    ImportDeclaration: (source) => {
       const importDecl = source.container as ImportDeclaration
       const path = getPathAsString(importDecl, source.index)
       const parentPath = substringBeforeLast(path, '.')
@@ -72,9 +62,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         }
       }
       return this.createScope(elements)
-    })
+    },
 
-    rule('ReferenceExpression', (source) => {
+    ReferenceExpression: (source) => {
       let outer: Scope
 
       const packages: Stream<AstNodeDescription> = stream(this.packageManager.root.children.values())
@@ -99,15 +89,15 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         }
       }
       return this.lexicalScope(source.container, processor, outer)
-    })
+    },
 
-    rule('MemberAccess', (source) => {
+    MemberAccess: (source) => {
       const container = source.container as MemberAccess
       const members = this.memberProvider.getMember(container.receiver)
       return this.createScope(members)
-    })
+    },
 
-    rule('NamedTypeReference', (source) => {
+    NamedTypeReference: (source) => {
       if (!source.index) {
         const classes = stream(this.packageManager.root.children.values())
           .filter(it => it.isDataNode())
@@ -136,8 +126,6 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         const members = this.memberProvider.getMember(prev)
         return this.createScope(members)
       }
-    })
-
-    return rules
-  }
+    },
+  })
 }
