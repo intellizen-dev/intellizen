@@ -17,12 +17,10 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => Type | undef
 export class ZenScriptTypeComputer implements TypeComputer {
   private readonly packageManager: PackageManager
   private readonly memberProvider: () => MemberProvider
-  private readonly rules: RuleMap
 
   constructor(services: ZenScriptServices) {
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = () => services.references.MemberProvider
-    this.rules = this.initRules()
   }
 
   public inferType(node: AstNode | undefined): Type | undefined {
@@ -42,7 +40,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     return stream(this.packageManager.retrieve(className)).find(isClassDeclaration)
   }
 
-  private initRules = (): RuleMap => ({
+  private readonly rules: RuleMap = {
     // region TypeReference
     ArrayTypeReference: (source) => {
       const arrayType = this.classTypeOf('Array')
@@ -374,5 +372,5 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return mapType
     },
     // endregion
-  })
+  }
 }

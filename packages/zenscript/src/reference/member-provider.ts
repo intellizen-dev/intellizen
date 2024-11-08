@@ -18,12 +18,10 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => AstNodeDescr
 export class ZenScriptMemberProvider implements MemberProvider {
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
-  private readonly rules: RuleMap
 
   constructor(services: ZenScriptServices) {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.typeComputer = services.typing.TypeComputer
-    this.rules = this.initRules()
   }
 
   getMember(source: AstNode | Type | undefined): AstNodeDescription[] {
@@ -31,7 +29,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     return this.rules[match]?.call(this, source) ?? []
   }
 
-  private initRules = (): RuleMap => ({
+  private readonly rules: RuleMap = {
     HierarchyNode: (source) => {
       const declarations = stream(source.children.values())
         .filter(it => it.isDataNode())
@@ -148,5 +146,5 @@ export class ZenScriptMemberProvider implements MemberProvider {
         .filter(it => !isStatic(it))
         .map(it => this.descriptions.createDescription(it, undefined))
     },
-  })
+  }
 }

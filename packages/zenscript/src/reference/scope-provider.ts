@@ -15,13 +15,11 @@ type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo) => Scope }
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
-  private readonly rules: RuleMap
 
   constructor(services: ZenScriptServices) {
     super(services)
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
-    this.rules = this.initRules()
   }
 
   override getScope(context: ReferenceInfo): Scope {
@@ -42,7 +40,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .reduce((outer, descriptions) => this.createScope(descriptions, outer), outside as Scope)
   }
 
-  private initRules = (): RuleMap => ({
+  private readonly rules: RuleMap = {
     ImportDeclaration: (source) => {
       const importDecl = source.container as ImportDeclaration
       const path = getPathAsString(importDecl, source.index)
@@ -127,5 +125,5 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         return this.createScope(members)
       }
     },
-  })
+  }
 }

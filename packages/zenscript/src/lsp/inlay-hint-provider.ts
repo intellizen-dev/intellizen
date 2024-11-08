@@ -14,13 +14,11 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], acceptor: Inlay
 export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
   private readonly typeComputer: TypeComputer
   private readonly nameProvider: NameProvider
-  private readonly rules: RuleMap
 
   constructor(services: ZenScriptServices) {
     super()
     this.nameProvider = services.references.NameProvider
     this.typeComputer = services.typing.TypeComputer
-    this.rules = this.initRules()
   }
 
   computeInlayHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
@@ -70,7 +68,7 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
     acceptor(typeHint)
   }
 
-  private initRules = (): RuleMap => ({
+  private readonly rules: RuleMap = {
     VariableDeclaration: (source, acceptor) => {
       this.acceptTypeHint(source, acceptor)
     },
@@ -82,6 +80,5 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
     ValueParameter: (source, acceptor) => {
       this.acceptTypeHint(source, acceptor)
     },
-
-  })
+  }
 }
