@@ -86,18 +86,18 @@ export class ZenScriptMemberProvider implements MemberProvider {
     })
 
     rule('MemberAccess', (source) => {
-      const member = source.target.ref
-      if (!member) {
+      const target = source.target.ref
+      if (!target) {
         return []
       }
 
-      if (member.$type as string === 'HierarchyNode') {
-        return this.getMember(member)
+      if (target.$type as string === 'HierarchyNode') {
+        return this.getMember(target)
       }
 
       const receiverType = this.typeComputer.inferType(source.receiver)
       if (!receiverType) {
-        return this.getMember(member)
+        return this.getMember(target)
       }
 
       const type = this.typeComputer.inferType(source)
