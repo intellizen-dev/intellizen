@@ -156,7 +156,12 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return
       }
 
-      const operatorDecl = this.memberProvider().getMember(rangeType).map(it => it.node).filter(it => isOperatorFunctionDeclaration(it)).filter(it => it.op === 'for').filter(it => it.parameters.length === length).at(0)
+      const operatorDecl = this.memberProvider().getMember(rangeType)
+        .map(it => it.node)
+        .filter(it => isOperatorFunctionDeclaration(it))
+        .filter(it => it.op === 'for')
+        .filter(it => it.parameters.length === length)
+        .at(0)
 
       let paramType = this.inferType(operatorDecl?.parameters.at(index))
       if (isClassType(rangeType)) {
@@ -195,7 +200,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
           return expectingType.paramTypes.at(index)
         }
         else if (isClassType(expectingType)) {
-          const lambdaDecl = this.memberProvider().getMember(expectingType).map(it => it.node).filter(it => isFunctionDeclaration(it)).filter(it => it.prefix === 'lambda').at(0)
+          const lambdaDecl = this.memberProvider().getMember(expectingType)
+            .map(it => it.node)
+            .filter(it => isFunctionDeclaration(it))
+            .filter(it => it.prefix === 'lambda')
+            .at(0)
           return this.inferType(lambdaDecl?.parameters.at(index))
         }
       }
@@ -294,7 +303,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     rule('IndexingExpression', (source) => {
       const receiverType = this.inferType(source.receiver)
-      const operatorDecl = this.memberProvider().getMember(source.receiver).map(it => it.node).filter(it => isOperatorFunctionDeclaration(it)).filter(it => it.op === '[]').at(0)
+      const operatorDecl = this.memberProvider().getMember(source.receiver)
+        .map(it => it.node)
+        .filter(it => isOperatorFunctionDeclaration(it))
+        .filter(it => it.op === '[]')
+        .at(0)
       let returnType = this.inferType(operatorDecl?.returnTypeRef)
       if (isClassType(receiverType)) {
         returnType = returnType?.substituteTypeParameters(receiverType.substitutions)
