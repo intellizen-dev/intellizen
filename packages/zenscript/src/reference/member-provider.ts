@@ -1,8 +1,8 @@
 import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, NameProvider } from 'langium'
-import { AstUtils, stream } from 'langium'
+import { stream } from 'langium'
 import type { HierarchyNode } from '@intellizen/shared'
-import type { Script, ZenScriptAstType } from '../generated/ast'
-import { isScript, isVariableDeclaration } from '../generated/ast'
+import type { ZenScriptAstType } from '../generated/ast'
+import { isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { createHierarchyNodeDescription, getClassChain, isStatic } from '../utils/ast'
 import { type Type, type ZenScriptType, isFunctionType } from '../typing/type-description'
@@ -85,26 +85,6 @@ export class ZenScriptMemberProvider implements MemberProvider {
     rule('ValueParameter', (source) => {
       const type = this.typeComputer.inferType(source)
       return this.getMember(type)
-    })
-
-    rule('NamedTypeReference', (source) => {
-      const script = AstUtils.findRootNode(source) as Script
-      const result: AstNodeDescription[] = []
-      script.imports.forEach((importDecl) => {
-        const importDeclName = this.nameProvider.getName(importDecl)
-        const ref = importDecl.path.at(-1)?.ref
-        if (isScript(ref)) {
-          const scriptMembers = this.getMember(ref)
-          scriptMembers.forEach((member) => {
-            member.name = `${importDeclName}.${member.name}`
-          })
-          result.push(...scriptMembers)
-        }
-        else if (ref) {
-          result.push(this.createDescriptionForNode(ref, importDeclName))
-        }
-      })
-      return result
     })
 
     rule('MemberAccess', (source) => {
