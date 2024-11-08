@@ -5,7 +5,7 @@
   "type": "module",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@9.7.1",
+  "packageManager": "pnpm@9.12.3",
   "description": "A extension with ZenScript(Based CraftTweaker) for VSCode",
   "author": "intellizen-dev",
   "license": "MIT",
@@ -65,20 +65,20 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^2.26.0",
-    "@types/node": "^22.4.1",
+    "@antfu/eslint-config": "^3.8.0",
+    "@types/node": "^22.9.0",
     "@types/wait-on": "^5.3.4",
-    "concurrently": "^8.2.2",
+    "concurrently": "^9.1.0",
     "cross-env": "^7.0.3",
-    "eslint": "^9.9.0",
-    "pnpm": "^9.7.1",
-    "reactive-vscode": "^0.2.0",
+    "eslint": "^9.14.0",
+    "pnpm": "^9.12.3",
+    "reactive-vscode": "0.2.7",
     "rimraf": "^6.0.1",
-    "tsup": "^8.2.4",
-    "turbo": "^2.0.14",
-    "typescript": "^5.5.4",
-    "vite": "^5.4.1",
-    "vitest": "^2.0.5",
-    "wait-on": "^8.0.0"
+    "tsup": "^8.3.5",
+    "turbo": "^2.2.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4",
+    "wait-on": "^8.0.1"
   }
 }
