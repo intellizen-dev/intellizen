@@ -352,6 +352,10 @@ interface StringLiteral extends Expression {
     value: string;
 }
 
+interface UnquotedString extends Expression {
+    value: string;
+}
+
 interface NullLiteral extends Expression {
     value: 'null';
 }
@@ -473,7 +477,7 @@ MapLiteral returns MapLiteral:
 ;
 
 MapEntry returns MapEntry:
-    key=Expression ':' value=Expression
+    key=(UnquotedString | Expression) ':' value=Expression
 ;
 
 ReferenceExpression returns ReferenceExpression:
@@ -498,6 +502,10 @@ BooleanLiteral returns BooleanLiteral:
 
 StringLiteral returns StringLiteral:
     value=STRING
+;
+
+UnquotedString returns UnquotedString:
+    value=ID
 ;
 
 NullLiteral returns NullLiteral:

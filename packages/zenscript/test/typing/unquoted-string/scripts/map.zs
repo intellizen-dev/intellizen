@@ -1,0 +1,1 @@
+val map = { UnquotedString: "QuotedString" };
