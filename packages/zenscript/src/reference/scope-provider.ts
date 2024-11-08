@@ -68,7 +68,6 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
           sibling.data.forEach(it => elements.push(this.descriptions.createDescription(it, sibling.name)))
         }
         else {
-          // TODO: temporary, needs to be reimplemented
           elements.push(createHierarchyNodeDescription(sibling))
         }
       }
