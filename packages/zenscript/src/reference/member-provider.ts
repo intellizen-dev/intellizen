@@ -44,14 +44,14 @@ export class ZenScriptMemberProvider implements MemberProvider {
     }
 
     rule('HierarchyNode', (source) => {
-      const astNodes = stream(source.children.values())
+      const declarations = stream(source.children.values())
         .filter(it => it.isDataNode())
         .flatMap(it => it.data)
         .map(it => this.descriptions.createDescription(it, undefined))
-      const hrcNodes = stream(source.children.values())
+      const packages = stream(source.children.values())
         .filter(it => it.isInternalNode())
         .map(it => createHierarchyNodeDescription(it))
-      return [...astNodes, ...hrcNodes]
+      return stream(declarations, packages).toArray()
     })
 
     rule('Script', (source) => {
