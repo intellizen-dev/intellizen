@@ -1,8 +1,10 @@
-import { type AstNode, type AstNodeDescription, type AstNodeDescriptionProvider, AstUtils, type NameProvider } from 'langium'
-import type { Script, ZenScriptAstType } from '../generated/ast'
-import { isScript, isVariableDeclaration } from '../generated/ast'
+import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'langium'
+import { stream } from 'langium'
+import type { HierarchyNode } from '@intellizen/shared'
+import type { ZenScriptAstType } from '../generated/ast'
+import { isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import { getClassChain, isStatic } from '../utils/ast'
+import { createHierarchyNodeDescription, getClassChain, isStatic } from '../utils/ast'
 import { type Type, type ZenScriptType, isFunctionType } from '../typing/type-description'
 import type { TypeComputer } from '../typing/type-computer'
 
@@ -10,20 +12,18 @@ export interface MemberProvider {
   getMember: (source: AstNode | Type | undefined) => AstNodeDescription[]
 }
 
-type SourceMap = ZenScriptAstType & ZenScriptType
+type SourceMap = ZenScriptAstType & ZenScriptType & { HierarchyNode: HierarchyNode<AstNode> }
 type SourceKey = keyof SourceMap
 type Produce<K extends SourceKey, S extends SourceMap[K]> = (source: S) => AstNodeDescription[]
 type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Produce<K, S>) => void
 type RuleMap = Map<SourceKey, Produce<SourceKey, any>>
 
 export class ZenScriptMemberProvider implements MemberProvider {
-  private readonly nameProvider: NameProvider
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
   private readonly rules: RuleMap
 
   constructor(services: ZenScriptServices) {
-    this.nameProvider = services.references.NameProvider
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.typeComputer = services.typing.TypeComputer
     this.rules = this.initRules()
@@ -43,6 +43,17 @@ export class ZenScriptMemberProvider implements MemberProvider {
       rules.set(match, produce)
     }
 
+    rule('HierarchyNode', (source) => {
+      const declarations = stream(source.children.values())
+        .filter(it => it.isDataNode())
+        .flatMap(it => it.data)
+        .map(it => this.descriptions.createDescription(it, undefined))
+      const packages = stream(source.children.values())
+        .filter(it => it.isInternalNode())
+        .map(it => createHierarchyNodeDescription(it))
+      return stream(declarations, packages).toArray()
+    })
+
     rule('Script', (source) => {
       const members: AstNode[] = []
       source.classes.forEach(it => members.push(it))
@@ -50,7 +61,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       source.statements.filter(it => isVariableDeclaration(it))
         .filter(it => it.prefix === 'static')
         .forEach(it => members.push(it))
-      return members.map(it => this.createDescriptionForNode(it))
+      return members.map(it => this.descriptions.createDescription(it, undefined))
     })
 
     rule('ImportDeclaration', (source) => {
@@ -61,7 +72,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return getClassChain(source)
         .flatMap(it => it.members)
         .filter(it => isStatic(it))
-        .map(it => this.createDescriptionForNode(it, undefined))
+        .map(it => this.descriptions.createDescription(it, undefined))
     })
 
     rule('VariableDeclaration', (source) => {
@@ -79,35 +90,19 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.getMember(type)
     })
 
-    rule('NamedTypeReference', (source) => {
-      const script = AstUtils.findRootNode(source) as Script
-      const result: AstNodeDescription[] = []
-      script.imports.forEach((importDecl) => {
-        const importDeclName = this.nameProvider.getName(importDecl)
-        const ref = importDecl.path.at(-1)?.ref
-        if (isScript(ref)) {
-          const scriptMembers = this.getMember(ref)
-          scriptMembers.forEach((member) => {
-            member.name = `${importDeclName}.${member.name}`
-          })
-          result.push(...scriptMembers)
-        }
-        else if (ref) {
-          result.push(this.createDescriptionForNode(ref, importDeclName))
-        }
-      })
-      return result
-    })
-
     rule('MemberAccess', (source) => {
-      const member = source.target.ref
-      if (!member) {
+      const target = source.target.ref
+      if (!target) {
         return []
+      }
+
+      if (target.$type as string === 'HierarchyNode') {
+        return this.getMember(target)
       }
 
       const receiverType = this.typeComputer.inferType(source.receiver)
       if (!receiverType) {
-        return this.getMember(member)
+        return this.getMember(target)
       }
 
       const type = this.typeComputer.inferType(source)
@@ -162,14 +157,9 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return getClassChain(source.declaration)
         .flatMap(it => it.members)
         .filter(it => !isStatic(it))
-        .map(it => this.createDescriptionForNode(it))
+        .map(it => this.descriptions.createDescription(it, undefined))
     })
 
     return rules
-  }
-
-  private createDescriptionForNode(node: AstNode, name?: string): AstNodeDescription {
-    name ??= this.nameProvider.getName(node)
-    return this.descriptions.createDescription(node, name)
   }
 }
