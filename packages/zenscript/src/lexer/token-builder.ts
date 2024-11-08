@@ -1,5 +1,5 @@
-import { DefaultTokenBuilder, type GrammarAST, isTokenTypeArray } from 'langium'
 import type { IMultiModeLexerDefinition, TokenType, TokenVocabulary } from 'chevrotain'
+import { DefaultTokenBuilder, type GrammarAST, isTokenTypeArray } from 'langium'
 
 const REGULAR_MODE = 'regular_mode'
 const TEMPLATE_MODE = 'template_mode'

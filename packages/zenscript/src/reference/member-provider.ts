@@ -1,12 +1,12 @@
-import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'langium'
-import { stream } from 'langium'
 import type { HierarchyNode } from '@intellizen/shared'
+import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
-import { isVariableDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import { createHierarchyNodeDescription, getClassChain, isStatic } from '../utils/ast'
-import { type Type, type ZenScriptType, isFunctionType } from '../typing/type-description'
 import type { TypeComputer } from '../typing/type-computer'
+import { stream } from 'langium'
+import { isVariableDeclaration } from '../generated/ast'
+import { isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
+import { createHierarchyNodeDescription, getClassChain, isStatic } from '../utils/ast'
 
 export interface MemberProvider {
   getMember: (source: AstNode | Type | undefined) => AstNodeDescription[]

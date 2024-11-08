@@ -1,13 +1,13 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, Stream } from 'langium'
-import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
-import { substringBeforeLast } from '@intellizen/shared'
 import type { MemberAccess, NamedTypeReference, ZenScriptAstType } from '../generated/ast'
-import { ClassDeclaration, ImportDeclaration, TypeParameter, isClassDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import { createHierarchyNodeDescription, getPathAsString } from '../utils/ast'
 import type { PackageManager } from '../workspace/package-manager'
-import { generateStream } from '../utils/stream'
 import type { MemberProvider } from './member-provider'
+import { substringBeforeLast } from '@intellizen/shared'
+import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
+import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter } from '../generated/ast'
+import { createHierarchyNodeDescription, getPathAsString } from '../utils/ast'
+import { generateStream } from '../utils/stream'
 
 type SourceKey = keyof ZenScriptAstType
 type Produce = (source: ReferenceInfo) => Scope

@@ -1,7 +1,7 @@
-import { substringBeforeLast } from '@intellizen/shared'
 import type { LangiumDocument } from 'langium'
-import { UriUtils } from 'langium'
 import type { Script } from '../generated/ast'
+import { substringBeforeLast } from '@intellizen/shared'
+import { UriUtils } from 'langium'
 
 export function isZs(document: LangiumDocument): boolean {
   return UriUtils.extname(document.uri) === '.zs'

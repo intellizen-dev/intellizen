@@ -1,5 +1,5 @@
-import { stream } from 'langium'
 import type { ClassDeclaration, Declaration, TypeParameter } from '../generated/ast'
+import { stream } from 'langium'
 
 // region TypeDescription
 export interface ZenScriptType {

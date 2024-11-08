@@ -1,7 +1,7 @@
+import type { MapLiteral, UnquotedString, VariableDeclaration } from '../../../src/generated/ast'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { assertNoErrors, createTestServices, getDocument } from '../../utils'
-import type { MapLiteral, UnquotedString, VariableDeclaration } from '../../../src/generated/ast'
 
 const services = await createTestServices(__dirname)
 

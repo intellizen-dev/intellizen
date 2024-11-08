@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest'
-
-import { assertClassTypeReference, assertNoErrors, assertReferenceExpressionText, createParseHelper } from '../utils'
 import type { ArrayLiteral, Assignment, BooleanLiteral, CallExpression, ConditionalExpression, Expression, ExpressionStatement, FunctionExpression, IndexingExpression, InfixExpression, InstanceofExpression, MapLiteral, MemberAccess, NullLiteral, NumberLiteral, ParenthesizedExpression, PrefixExpression, ReferenceExpression, StringLiteral, StringTemplate, TypeCastExpression } from '../../src/generated/ast'
+import { describe, expect, it } from 'vitest'
+import { assertClassTypeReference, assertNoErrors, assertReferenceExpressionText, createParseHelper } from '../utils'
 
 const parse = createParseHelper()
 

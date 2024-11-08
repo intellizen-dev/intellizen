@@ -1,7 +1,7 @@
-import type { AstNode, AstNodeDescription, ReferenceInfo } from 'langium'
-import { AstUtils, URI } from 'langium'
 import type { HierarchyNode } from '@intellizen/shared'
+import type { AstNode, AstNodeDescription, ReferenceInfo } from 'langium'
 import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
+import { AstUtils, URI } from 'langium'
 import { isClassDeclaration, isFunctionDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
 

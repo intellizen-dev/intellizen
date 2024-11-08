@@ -1,11 +1,11 @@
-import { type AstNode, AstUtils, type NameProvider } from 'langium'
 import type { InlayHintAcceptor } from 'langium/lsp'
-import { AbstractInlayHintProvider } from 'langium/lsp'
 import type { InlayHint, InlayHintLabelPart, Location, MarkupContent } from 'vscode-languageserver'
-import { InlayHintKind } from 'vscode-languageserver'
+import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
-import type { ZenScriptAstType } from '../generated/ast'
+import { type AstNode, AstUtils, type NameProvider } from 'langium'
+import { AbstractInlayHintProvider } from 'langium/lsp'
+import { InlayHintKind } from 'vscode-languageserver'
 import { isClassType } from '../typing/type-description'
 
 type SourceMap = ZenScriptAstType

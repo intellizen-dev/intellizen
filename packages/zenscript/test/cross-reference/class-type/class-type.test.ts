@@ -1,12 +1,12 @@
-import * as path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import type { HierarchyNode } from '@intellizen/shared'
 import type { AstNode, LangiumDocument, WorkspaceFolder } from 'langium'
+import type { ClassDeclaration, ImportDeclaration, NamedTypeReference, Script, VariableDeclaration } from '../../../src/generated/ast'
+import * as path from 'node:path'
 import { URI } from 'langium'
 import { NodeFileSystem } from 'langium/node'
-import type { HierarchyNode } from '@intellizen/shared'
-import { assertNoErrors } from '../../utils'
-import type { ClassDeclaration, ImportDeclaration, NamedTypeReference, Script, VariableDeclaration } from '../../../src/generated/ast'
+import { describe, expect, it } from 'vitest'
 import { createZenScriptServices } from '../../../src/module'
+import { assertNoErrors } from '../../utils'
 
 const service = createZenScriptServices(NodeFileSystem)
 

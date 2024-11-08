@@ -1,11 +1,11 @@
-import { type AstNode, stream } from 'langium'
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
-import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
-import type { PackageManager } from '../workspace/package-manager'
 import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
+import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
-import { ClassType, CompoundType, FunctionType, IntersectionType, TypeVariable, UnionType, isClassType, isFunctionType } from './type-description'
+import { type AstNode, stream } from 'langium'
+import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { ClassType, CompoundType, FunctionType, IntersectionType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => Type | undefined

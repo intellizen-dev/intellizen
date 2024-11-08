@@ -1,7 +1,7 @@
 import type { AstNode, AstNodeDescription, LangiumDocument } from 'langium'
-import { DefaultScopeComputation } from 'langium'
 import type { Script } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
+import { DefaultScopeComputation } from 'langium'
 import { isGlobal } from '../utils/ast'
 
 export class ZenScriptScopeComputation extends DefaultScopeComputation {
