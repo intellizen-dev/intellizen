@@ -1,7 +1,7 @@
+import type { ExpressionStatement, FieldDeclaration, FunctionDeclaration, MemberAccess } from '../../../src/generated/ast'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { assertNoErrors, createTestServices, getDocument } from '../../utils'
-import type { ExpressionStatement, FieldDeclaration, FunctionDeclaration, MemberAccess } from '../../../src/generated/ast'
 
 const services = await createTestServices(__dirname)
 

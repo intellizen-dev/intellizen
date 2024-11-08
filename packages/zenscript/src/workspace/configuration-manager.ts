@@ -1,11 +1,11 @@
-import { resolve as resolvePath } from 'node:path'
 import type { FileSystemProvider, WorkspaceFolder } from 'langium'
-import { URI, UriUtils } from 'langium'
-import { Resolver } from '@stoplight/json-ref-resolver'
-import { existsDirectory, findInside, isDirectory, isFile } from '../utils/fs'
 import type { ZenScriptSharedServices } from '../module'
-import { ConfigError, DirectoryNotFoundError } from '../utils/error'
 import type { ParsedConfig } from './configurations'
+import { resolve as resolvePath } from 'node:path'
+import { Resolver } from '@stoplight/json-ref-resolver'
+import { URI, UriUtils } from 'langium'
+import { ConfigError, DirectoryNotFoundError } from '../utils/error'
+import { existsDirectory, findInside, isDirectory, isFile } from '../utils/fs'
 import { IntelliZenSchema, StringConstants } from './configurations'
 
 declare module 'langium' {

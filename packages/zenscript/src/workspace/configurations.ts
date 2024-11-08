@@ -1,5 +1,5 @@
-import z from 'zod'
 import type { URI } from 'langium'
+import z from 'zod'
 
 export const StringConstants = Object.freeze({
   Folder: {

@@ -1,11 +1,11 @@
-import { type AstNode, stream } from 'langium'
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
-import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
-import type { PackageManager } from '../workspace/package-manager'
 import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
+import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
-import { ClassType, CompoundType, FunctionType, IntersectionType, TypeVariable, UnionType, isClassType, isFunctionType } from './type-description'
+import { type AstNode, stream } from 'langium'
+import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { ClassType, CompoundType, FunctionType, IntersectionType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => Type | undefined
@@ -156,12 +156,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return
       }
 
-      const operatorDecl = this.memberProvider().getMember(rangeType)
-        .map(it => it.node)
-        .filter(it => isOperatorFunctionDeclaration(it))
-        .filter(it => it.op === 'for')
-        .filter(it => it.parameters.length === length)
-        .at(0)
+      const operatorDecl = this.memberProvider().getMember(rangeType).map(it => it.node).filter(it => isOperatorFunctionDeclaration(it)).filter(it => it.op === 'for').filter(it => it.parameters.length === length).at(0)
 
       let paramType = this.inferType(operatorDecl?.parameters.at(index))
       if (isClassType(rangeType)) {
@@ -200,11 +195,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
           return expectingType.paramTypes.at(index)
         }
         else if (isClassType(expectingType)) {
-          const lambdaDecl = this.memberProvider().getMember(expectingType)
-            .map(it => it.node)
-            .filter(it => isFunctionDeclaration(it))
-            .filter(it => it.prefix === 'lambda')
-            .at(0)
+          const lambdaDecl = this.memberProvider().getMember(expectingType).map(it => it.node).filter(it => isFunctionDeclaration(it)).filter(it => it.prefix === 'lambda').at(0)
           return this.inferType(lambdaDecl?.parameters.at(index))
         }
       }
@@ -303,11 +294,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     rule('IndexingExpression', (source) => {
       const receiverType = this.inferType(source.receiver)
-      const operatorDecl = this.memberProvider().getMember(source.receiver)
-        .map(it => it.node)
-        .filter(it => isOperatorFunctionDeclaration(it))
-        .filter(it => it.op === '[]')
-        .at(0)
+      const operatorDecl = this.memberProvider().getMember(source.receiver).map(it => it.node).filter(it => isOperatorFunctionDeclaration(it)).filter(it => it.op === '[]').at(0)
       let returnType = this.inferType(operatorDecl?.returnTypeRef)
       if (isClassType(receiverType)) {
         returnType = returnType?.substituteTypeParameters(receiverType.substitutions)

@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest'
-
-import { assertClassTypeReference, assertNoErrors, assertVariableDeclaration, createParseHelper } from '../utils'
 import type { ForStatement, IfStatement, VariableDeclaration } from '../../src/generated/ast'
+import { describe, expect, it } from 'vitest'
+import { assertClassTypeReference, assertNoErrors, assertVariableDeclaration, createParseHelper } from '../utils'
 
 const parse = createParseHelper()
 

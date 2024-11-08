@@ -1,12 +1,12 @@
-import { expect } from 'vitest'
+import type { AstNode, LangiumDocument, WorkspaceFolder } from 'langium'
+import type { Expression, NamedTypeReference, ReferenceExpression, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
+import type { ZenScriptServices } from '../src/module'
+import { URI, UriUtils } from 'langium'
 import { NodeFileSystem } from 'langium/node'
 import { parseHelper } from 'langium/test'
-import type { AstNode, LangiumDocument, WorkspaceFolder } from 'langium'
-import { URI, UriUtils } from 'langium'
-import type { ZenScriptServices } from '../src/module'
-import { createZenScriptServices } from '../src/module'
-import type { Expression, NamedTypeReference, ReferenceExpression, Script, TypeReference, VariableDeclaration } from '../src/generated/ast'
+import { expect } from 'vitest'
 import { isNamedTypeReference, isVariableDeclaration } from '../src/generated/ast'
+import { createZenScriptServices } from '../src/module'
 
 export function createParseHelper() {
   const service = createZenScriptServices(NodeFileSystem)

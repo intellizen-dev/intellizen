@@ -1,6 +1,6 @@
 import { startLanguageServer } from 'langium/lsp'
 import { NodeFileSystem } from 'langium/node'
-import { ProposedFeatures, createConnection } from 'vscode-languageserver/node.js'
+import { createConnection, ProposedFeatures } from 'vscode-languageserver/node.js'
 import { createZenScriptServices } from './module'
 
 // Create a connection to the client

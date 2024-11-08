@@ -1,10 +1,10 @@
 import type { LangiumDocument, WorkspaceFolder } from 'langium'
-import { DefaultWorkspaceManager, URI, UriUtils, interruptAndCheck } from 'langium'
-import { CancellationToken } from 'vscode-languageserver'
 import type { ZenScriptSharedServices } from '../module'
-import { traverseInside } from '../utils/fs'
-import { builtinsPath } from '../resource'
 import type { ZenScriptConfigurationManager } from './configuration-manager'
+import { DefaultWorkspaceManager, interruptAndCheck, URI, UriUtils } from 'langium'
+import { CancellationToken } from 'vscode-languageserver'
+import { builtinsPath } from '../resource'
+import { traverseInside } from '../utils/fs'
 
 declare module 'langium' {
   interface LangiumDocument {

@@ -1,5 +1,5 @@
-import { resolve } from 'node:path'
 import { cp } from 'node:fs/promises'
+import { resolve } from 'node:path'
 import { defineConfig } from 'tsup'
 import DefaultConfig from '../../tsup-default.config'
 
