@@ -1,5 +1,6 @@
 import type { ForStatement, IfStatement, VariableDeclaration } from '../../src/generated/ast'
 import { describe, expect, it } from 'vitest'
+import { isExpandFunctionDeclaration } from '../../src/generated/ast'
 import { assertClassTypeReference, assertNoErrors, assertVariableDeclaration, createParseHelper } from '../utils'
 
 const parse = createParseHelper()
@@ -51,7 +52,7 @@ describe('parse top-level of script with ZenScript', () => {
       $expand OtherType$foo(foo as OtherType.ChildType) as void {}
     `)
     await assertNoErrors(model)
-    const [string$reverse, otherType$foo] = model.parseResult.value.expands
+    const [string$reverse, otherType$foo] = model.parseResult.value.expands.filter(isExpandFunctionDeclaration)
 
     expect(string$reverse.name).toBe('reverse')
     assertClassTypeReference(string$reverse.typeRef, 'string')

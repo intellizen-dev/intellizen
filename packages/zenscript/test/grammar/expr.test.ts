@@ -1,5 +1,6 @@
 import type { ArrayLiteral, Assignment, BooleanLiteral, CallExpression, ConditionalExpression, Expression, ExpressionStatement, FunctionExpression, IndexingExpression, InfixExpression, InstanceofExpression, MapLiteral, MemberAccess, NullLiteral, NumberLiteral, ParenthesizedExpression, PrefixExpression, ReferenceExpression, StringLiteral, StringTemplate, TypeCastExpression } from '../../src/generated/ast'
 import { describe, expect, it } from 'vitest'
+import { IntegerLiteral, UnquotedString } from '../../src/generated/ast'
 import { assertClassTypeReference, assertNoErrors, assertReferenceExpressionText, createParseHelper } from '../utils'
 
 const parse = createParseHelper()
@@ -115,9 +116,9 @@ describe('parse expression of script with ZenScript ', () => {
     const [empty, withElements] = mapLiteral
     expect(empty.entries).toHaveLength(0)
     expect(withElements.entries).toHaveLength(2)
-    withElements.entries.forEach(({ value, key }) => {
-      assertReferenceExpressionText(key, /\w/)
-      expect(value.$type).toBe('IntegerLiteral')
+    withElements.entries.forEach(({ key, value }) => {
+      expect(key.$type).toBe(UnquotedString)
+      expect(value.$type).toBe(IntegerLiteral)
     })
   })
 

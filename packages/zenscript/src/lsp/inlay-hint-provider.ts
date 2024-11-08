@@ -86,7 +86,7 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
       this.acceptTypeHint(source, acceptor)
     })
 
-    rule('ForVariableDeclaration', (source, acceptor) => {
+    rule('LoopParameter', (source, acceptor) => {
       this.acceptTypeHint(source, acceptor)
     })
 
