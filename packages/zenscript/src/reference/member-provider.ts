@@ -1,4 +1,4 @@
-import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, NameProvider } from 'langium'
+import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'langium'
 import { stream } from 'langium'
 import type { HierarchyNode } from '@intellizen/shared'
 import type { ZenScriptAstType } from '../generated/ast'
@@ -19,13 +19,11 @@ type Rule = <K extends SourceKey, S extends SourceMap[K]>(match: K, produce: Pro
 type RuleMap = Map<SourceKey, Produce<SourceKey, any>>
 
 export class ZenScriptMemberProvider implements MemberProvider {
-  private readonly nameProvider: NameProvider
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
   private readonly rules: RuleMap
 
   constructor(services: ZenScriptServices) {
-    this.nameProvider = services.references.NameProvider
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.typeComputer = services.typing.TypeComputer
     this.rules = this.initRules()
@@ -63,7 +61,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       source.statements.filter(it => isVariableDeclaration(it))
         .filter(it => it.prefix === 'static')
         .forEach(it => members.push(it))
-      return members.map(it => this.createDescriptionForNode(it))
+      return members.map(it => this.descriptions.createDescription(it, undefined))
     })
 
     rule('ImportDeclaration', (source) => {
@@ -74,7 +72,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return getClassChain(source)
         .flatMap(it => it.members)
         .filter(it => isStatic(it))
-        .map(it => this.createDescriptionForNode(it, undefined))
+        .map(it => this.descriptions.createDescription(it, undefined))
     })
 
     rule('VariableDeclaration', (source) => {
@@ -154,14 +152,9 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return getClassChain(source.declaration)
         .flatMap(it => it.members)
         .filter(it => !isStatic(it))
-        .map(it => this.createDescriptionForNode(it))
+        .map(it => this.descriptions.createDescription(it, undefined))
     })
 
     return rules
-  }
-
-  private createDescriptionForNode(node: AstNode, name?: string): AstNodeDescription {
-    name ??= this.nameProvider.getName(node)
-    return this.descriptions.createDescription(node, name)
   }
 }
