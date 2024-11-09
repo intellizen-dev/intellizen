@@ -1,7 +1,7 @@
 import type { AstNode, CstNode, NameProvider } from 'langium'
-import type { Script } from '../generated/ast'
-import { AstUtils, GrammarUtils, isNamed } from 'langium'
-import { isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
+import type { Script, ZenScriptAstType } from '../generated/ast'
+import { AstUtils, GrammarUtils } from 'langium'
+import { isClassDeclaration, isScript } from '../generated/ast'
 import { isImportable, isStatic, isToplevel } from '../utils/ast'
 import { getName, getQualifiedName } from '../utils/document'
 
@@ -11,27 +11,19 @@ declare module 'langium' {
   }
 }
 
+type SourceMap = ZenScriptAstType
+type NameRuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => string | undefined }
+type NameNodeRuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CstNode | undefined }
+
 export class ZenScriptNameProvider implements NameProvider {
   getName(node: AstNode): string | undefined {
-    if (isScript(node)) {
-      return node.$document ? getName(node.$document) : undefined
-    }
-    else if (isImportDeclaration(node)) {
-      return node.alias || node.path.at(-1)?.$refText
-    }
-    else if (isOperatorFunctionDeclaration(node)) {
-      return node.op
-    }
-    else if (isFunctionDeclaration(node)) {
-      return node.name || 'lambda function'
-    }
-    else if (isNamed(node)) {
-      return node.name
-    }
+    // @ts-expect-error allowed index type
+    return this.nameRules[node.$type]?.call(this, node)
   }
 
   getNameNode(node: AstNode): CstNode | undefined {
-    return GrammarUtils.findNodeForProperty(node.$cstNode, 'name')
+    // @ts-expect-error allowed index type
+    return this.nameNodeRules[node.$type]?.call(this, node)
   }
 
   getQualifiedName(node: AstNode): string | undefined {
@@ -49,6 +41,35 @@ export class ZenScriptNameProvider implements NameProvider {
     else if (isClassDeclaration(node.$container) && isStatic(node)) {
       return concat(this.getQualifiedName(node.$container!), this.getName(node))
     }
+  }
+
+  private readonly nameRules: NameRuleMap = {
+    Script: source => source.$document ? getName(source.$document) : undefined,
+    ImportDeclaration: source => source.alias || source.path.at(-1)?.$refText,
+    VariableDeclaration: source => source.name,
+    FunctionDeclaration: source => source.name || 'lambda function',
+    ClassDeclaration: source => source.name,
+    FieldDeclaration: source => source.name,
+    ConstructorDeclaration: _ => 'zenConstructor',
+    OperatorFunctionDeclaration: source => source.op,
+    ExpandFunctionDeclaration: source => source.name,
+    ValueParameter: source => source.name,
+    TypeParameter: source => source.name,
+    LoopParameter: source => source.name,
+  }
+
+  private readonly nameNodeRules: NameNodeRuleMap = {
+    ImportDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'alias'),
+    VariableDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
+    FunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
+    ClassDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
+    FieldDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
+    ConstructorDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'zenConstructor'),
+    OperatorFunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'op'),
+    ExpandFunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
+    ValueParameter: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
+    TypeParameter: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
+    LoopParameter: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
   }
 }
 
