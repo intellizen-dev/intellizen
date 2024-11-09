@@ -5,7 +5,7 @@ import type { TypeComputer } from '../typing/type-computer'
 import type { ZenScriptSyntheticAstType } from './synthetic'
 import { stream } from 'langium'
 import { isVariableDeclaration } from '../generated/ast'
-import { isAnyType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
+import { isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
 import { getClassChain, isStatic } from '../utils/ast'
 import { createSyntheticAstNodeDescription, isSyntheticAstNode } from './synthetic'
 
@@ -93,7 +93,10 @@ export class ZenScriptMemberProvider implements MemberProvider {
         return this.getMember(target)
       }
 
-      const type = this.typeComputer.inferType(source)
+      let type = this.typeComputer.inferType(source)
+      if (isClassType(receiverType)) {
+        type = type?.substituteTypeParameters(receiverType.substitutions)
+      }
       return this.getMember(type)
     },
 
