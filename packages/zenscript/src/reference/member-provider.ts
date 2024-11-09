@@ -5,7 +5,7 @@ import type { TypeComputer } from '../typing/type-computer'
 import type { ZenScriptSyntheticAstType } from './synthetic'
 import { stream } from 'langium'
 import { isVariableDeclaration } from '../generated/ast'
-import { isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
+import { isAnyType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
 import { getClassChain, isStatic } from '../utils/ast'
 import { createSyntheticAstNodeDescription, isSyntheticAstNode } from './synthetic'
 
@@ -108,7 +108,13 @@ export class ZenScriptMemberProvider implements MemberProvider {
 
     CallExpression: (source) => {
       const receiverType = this.typeComputer.inferType(source.receiver)
-      return isFunctionType(receiverType) ? this.getMember(receiverType.returnType) : []
+      if (isFunctionType(receiverType)) {
+        return this.getMember(receiverType.returnType)
+      }
+      if (isAnyType(receiverType)) {
+        return this.getMember(receiverType)
+      }
+      return []
     },
 
     BracketExpression: (source) => {
