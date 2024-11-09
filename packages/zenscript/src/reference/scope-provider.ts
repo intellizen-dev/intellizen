@@ -1,5 +1,5 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, Stream } from 'langium'
-import type { MemberAccess, NamedTypeReference, ZenScriptAstType } from '../generated/ast'
+import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { PackageManager } from '../workspace/package-manager'
 import type { MemberProvider } from './member-provider'
@@ -9,26 +9,22 @@ import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter 
 import { createHierarchyNodeDescription, getPathAsString } from '../utils/ast'
 import { generateStream } from '../utils/stream'
 
-type SourceKey = keyof ZenScriptAstType
-type Produce = (source: ReferenceInfo) => Scope
-type Rule = <K extends SourceKey>(match: K, produce: Produce) => void
-type RuleMap = Map<SourceKey, Produce>
+type SourceMap = ZenScriptAstType
+type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => Scope }
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
-  private readonly rules: RuleMap
 
   constructor(services: ZenScriptServices) {
     super(services)
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
-    this.rules = this.initRules()
   }
 
   override getScope(context: ReferenceInfo): Scope {
-    const match = context.container.$type as SourceKey
-    return this.rules.get(match)?.call(this, context) ?? EMPTY_SCOPE
+    // @ts-expect-error allowed index type
+    return this.rules[context.container.$type]?.call(this, context) ?? EMPTY_SCOPE
   }
 
   private lexicalScope(
@@ -44,18 +40,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .reduce((outer, descriptions) => this.createScope(descriptions, outer), outside as Scope)
   }
 
-  private initRules(): RuleMap {
-    const rules: RuleMap = new Map()
-    const rule: Rule = (match, produce) => {
-      if (rules.has(match)) {
-        throw new Error(`Rule "${match}" is already defined.`)
-      }
-      rules.set(match, produce)
-    }
-
-    rule('ImportDeclaration', (source) => {
-      const importDecl = source.container as ImportDeclaration
-      const path = getPathAsString(importDecl, source.index)
+  private readonly rules: RuleMap = {
+    ImportDeclaration: (source) => {
+      const path = getPathAsString(source.container, source.index)
       const parentPath = substringBeforeLast(path, '.')
       const siblings = this.packageManager.find(parentPath)?.children.values()
       if (!siblings) {
@@ -72,9 +59,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         }
       }
       return this.createScope(elements)
-    })
+    },
 
-    rule('ReferenceExpression', (source) => {
+    ReferenceExpression: (source) => {
       let outer: Scope
 
       const packages: Stream<AstNodeDescription> = stream(this.packageManager.root.children.values())
@@ -99,15 +86,14 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         }
       }
       return this.lexicalScope(source.container, processor, outer)
-    })
+    },
 
-    rule('MemberAccess', (source) => {
-      const container = source.container as MemberAccess
-      const members = this.memberProvider.getMember(container.receiver)
+    MemberAccess: (source) => {
+      const members = this.memberProvider.getMember(source.container.receiver)
       return this.createScope(members)
-    })
+    },
 
-    rule('NamedTypeReference', (source) => {
+    NamedTypeReference: (source) => {
       if (!source.index) {
         const classes = stream(this.packageManager.root.children.values())
           .filter(it => it.isDataNode())
@@ -131,13 +117,10 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         return this.lexicalScope(source.container, processor, outer)
       }
       else {
-        const container = source.container as NamedTypeReference
-        const prev = container.path[source.index - 1].ref
+        const prev = source.container.path[source.index - 1].ref
         const members = this.memberProvider.getMember(prev)
         return this.createScope(members)
       }
-    })
-
-    return rules
+    },
   }
 }
