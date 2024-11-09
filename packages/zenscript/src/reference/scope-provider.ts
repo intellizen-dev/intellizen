@@ -1,5 +1,5 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, Stream } from 'langium'
-import type { MemberAccess, NamedTypeReference, ZenScriptAstType } from '../generated/ast'
+import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { PackageManager } from '../workspace/package-manager'
 import type { MemberProvider } from './member-provider'
@@ -10,7 +10,7 @@ import { createHierarchyNodeDescription, getPathAsString } from '../utils/ast'
 import { generateStream } from '../utils/stream'
 
 type SourceMap = ZenScriptAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo) => Scope }
+type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => Scope }
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
@@ -42,8 +42,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
   private readonly rules: RuleMap = {
     ImportDeclaration: (source) => {
-      const importDecl = source.container as ImportDeclaration
-      const path = getPathAsString(importDecl, source.index)
+      const path = getPathAsString(source.container, source.index)
       const parentPath = substringBeforeLast(path, '.')
       const siblings = this.packageManager.find(parentPath)?.children.values()
       if (!siblings) {
@@ -90,8 +89,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     },
 
     MemberAccess: (source) => {
-      const container = source.container as MemberAccess
-      const members = this.memberProvider.getMember(container.receiver)
+      const members = this.memberProvider.getMember(source.container.receiver)
       return this.createScope(members)
     },
 
@@ -119,8 +117,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         return this.lexicalScope(source.container, processor, outer)
       }
       else {
-        const container = source.container as NamedTypeReference
-        const prev = container.path[source.index - 1].ref
+        const prev = source.container.path[source.index - 1].ref
         const members = this.memberProvider.getMember(prev)
         return this.createScope(members)
       }
