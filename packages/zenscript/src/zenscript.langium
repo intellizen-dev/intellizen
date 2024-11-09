@@ -449,7 +449,7 @@ fragment PrimaryExpression returns Expression:
 ;
 
 BracketExpression returns BracketExpression:
-    '<' content = (ID | INTEGER | ':' | ',' | '=' | '/' | '|' | '-' | '_' | '$')+ '>'
+    '<' content = (ID | INTEGER | ':' | ',' | '=' | '/' | '|' | '-' | '_' | '$' | '.' | '*')+ '>'
 ;
 
 ParenthesizedExpression returns ParenthesizedExpression:
