@@ -111,6 +111,11 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return isFunctionType(receiverType) ? this.getMember(receiverType.returnType) : []
     },
 
+    BracketExpression: (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.getMember(type)
+    },
+
     FieldDeclaration: (source) => {
       const type = this.typeComputer.inferType(source)
       return this.getMember(type)

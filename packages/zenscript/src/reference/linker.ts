@@ -1,20 +1,21 @@
-import type { AstNodeDescription, LinkingError, ReferenceInfo } from 'langium'
+import type { AstNodeDescription, AstNodeDescriptionProvider, LinkingError, ReferenceInfo } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import type { TypeComputer } from '../typing/type-computer'
-import { DefaultLinker } from 'langium'
-import { isAnyType } from '../typing/type-description'
-import { createSyntheticAstNodeDescription } from './synthetic'
+import type { MemberProvider } from './member-provider'
+import { DefaultLinker, stream } from 'langium'
+import { isOperatorFunctionDeclaration } from '../generated/ast'
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => AstNodeDescription | undefined }
 
 export class ZenScriptLinker extends DefaultLinker {
-  private readonly typeComputer: TypeComputer
+  private readonly memberProvider: MemberProvider
+  private readonly descriptions: AstNodeDescriptionProvider
 
   constructor(services: ZenScriptServices) {
     super(services)
-    this.typeComputer = services.typing.TypeComputer
+    this.memberProvider = services.references.MemberProvider
+    this.descriptions = services.workspace.AstNodeDescriptionProvider
   }
 
   override getCandidate(refInfo: ReferenceInfo): AstNodeDescription | LinkingError {
@@ -30,10 +31,12 @@ export class ZenScriptLinker extends DefaultLinker {
 
   private readonly rules: RuleMap = {
     MemberAccess: (source) => {
-      const receiverType = this.typeComputer.inferType(source.container.receiver)
-      if (isAnyType(receiverType)) {
-        return createSyntheticAstNodeDescription('SyntheticUnknown', source.reference.$refText)
-      }
+      return stream(this.memberProvider.getMember(source.container.receiver))
+        .map(it => it.node)
+        .filter(isOperatorFunctionDeclaration)
+        .filter(it => it.op === '.')
+        .map(it => this.descriptions.createDescription(it.parameters[0], undefined))
+        .head()
     },
   }
 }

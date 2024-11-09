@@ -42,10 +42,6 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   private readonly rules: RuleMap = {
-    SyntheticUnknown: (_) => {
-      return this.classTypeOf('any')
-    },
-
     // region TypeReference
     ArrayTypeReference: (source) => {
       const arrayType = this.classTypeOf('Array')
@@ -285,6 +281,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
     },
 
     MemberAccess: (source) => {
+      const targetContainer = source.target.ref?.$container
+      if (isOperatorFunctionDeclaration(targetContainer) && targetContainer.op === '.') {
+        return this.inferType(targetContainer.returnTypeRef)
+      }
+
       const receiverType = this.inferType(source.receiver)
       const memberType = this.inferType(source.target.ref)
       if (memberType && isClassType(receiverType)) {

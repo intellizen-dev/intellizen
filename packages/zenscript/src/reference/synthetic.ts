@@ -4,8 +4,6 @@ import { URI } from 'langium'
 
 export interface ZenScriptSyntheticAstType {
   SyntheticHierarchyNode: HierarchyNode<AstNode>
-  SyntheticUnknown: AstNode
-  SyntheticString: AstNode
 }
 
 export function createSyntheticAstNodeDescription<K extends keyof ZenScriptSyntheticAstType>(

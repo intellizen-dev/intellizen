@@ -1,1 +1,3 @@
-zenClass any
+zenClass any {
+    operator .(target as any) as any;
+}
