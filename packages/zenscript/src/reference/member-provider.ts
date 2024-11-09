@@ -1,18 +1,19 @@
-import type { HierarchyNode } from '@intellizen/shared'
 import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
+import type { ZenScriptSyntheticAstType } from './synthetic'
 import { stream } from 'langium'
 import { isVariableDeclaration } from '../generated/ast'
 import { isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
-import { createHierarchyNodeDescription, getClassChain, isStatic } from '../utils/ast'
+import { getClassChain, isStatic } from '../utils/ast'
+import { createSyntheticAstNodeDescription } from './synthetic'
 
 export interface MemberProvider {
   getMember: (source: AstNode | Type | undefined) => AstNodeDescription[]
 }
 
-type SourceMap = ZenScriptAstType & ZenScriptType & { HierarchyNode: HierarchyNode<AstNode> }
+type SourceMap = ZenScriptAstType & ZenScriptType & ZenScriptSyntheticAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => AstNodeDescription[] }
 
 export class ZenScriptMemberProvider implements MemberProvider {
@@ -30,14 +31,14 @@ export class ZenScriptMemberProvider implements MemberProvider {
   }
 
   private readonly rules: RuleMap = {
-    HierarchyNode: (source) => {
+    SyntheticHierarchyNode: (source) => {
       const declarations = stream(source.children.values())
         .filter(it => it.isDataNode())
         .flatMap(it => it.data)
         .map(it => this.descriptions.createDescription(it, undefined))
       const packages = stream(source.children.values())
         .filter(it => it.isInternalNode())
-        .map(it => createHierarchyNodeDescription(it))
+        .map(it => createSyntheticAstNodeDescription('SyntheticHierarchyNode', it.name, it))
       return stream(declarations, packages).toArray()
     },
 

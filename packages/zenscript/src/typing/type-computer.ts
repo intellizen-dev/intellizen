@@ -1,6 +1,7 @@
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
+import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
 import { type AstNode, stream } from 'langium'
@@ -11,7 +12,7 @@ export interface TypeComputer {
   inferType: (node: AstNode | undefined) => Type | undefined
 }
 
-type SourceMap = ZenScriptAstType
+type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => Type | undefined }
 
 export class ZenScriptTypeComputer implements TypeComputer {
@@ -41,6 +42,10 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   private readonly rules: RuleMap = {
+    SyntheticUnknown: (_) => {
+      return this.classTypeOf('any')
+    },
+
     // region TypeReference
     ArrayTypeReference: (source) => {
       const arrayType = this.classTypeOf('Array')
