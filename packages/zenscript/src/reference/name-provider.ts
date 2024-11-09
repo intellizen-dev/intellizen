@@ -1,6 +1,6 @@
-import type { AstNode, CstNode, NameProvider } from 'langium'
+import type { AstNode, CstNode } from 'langium'
 import type { Script, ZenScriptAstType } from '../generated/ast'
-import { AstUtils, GrammarUtils, isNamed } from 'langium'
+import { AstUtils, DefaultNameProvider, GrammarUtils } from 'langium'
 import { isClassDeclaration, isScript } from '../generated/ast'
 import { isImportable, isStatic, isToplevel } from '../utils/ast'
 import { getName, getQualifiedName } from '../utils/document'
@@ -15,17 +15,15 @@ type SourceMap = ZenScriptAstType
 type NameRuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => string | undefined }
 type NameNodeRuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CstNode | undefined }
 
-export class ZenScriptNameProvider implements NameProvider {
+export class ZenScriptNameProvider extends DefaultNameProvider {
   getName(node: AstNode): string | undefined {
     // @ts-expect-error allowed index type
-    const rule = this.nameRules[node.$type] ?? (source => isNamed(source) ? source.name : undefined)
-    return rule.call(this, node)
+    return (this.nameRules[node.$type] ?? super.getName).call(this, node)
   }
 
   getNameNode(node: AstNode): CstNode | undefined {
     // @ts-expect-error allowed index type
-    const rule = this.nameNodeRules[node.$type] ?? (source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'))
-    return rule.call(this, node)
+    return (this.nameNodeRules[node.$type] ?? super.getNameNode).call(this, node)
   }
 
   getQualifiedName(node: AstNode): string | undefined {
