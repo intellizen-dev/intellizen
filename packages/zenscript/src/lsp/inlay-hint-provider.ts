@@ -22,8 +22,8 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
   }
 
   computeInlayHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
-    const match = astNode.$type
-    this.rules[match]?.call(this, astNode, acceptor)
+    // @ts-expect-error allowed index type
+    this.rules[astNode.$type]?.call(this, astNode, acceptor)
   }
 
   private acceptTypeHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {

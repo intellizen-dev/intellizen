@@ -23,8 +23,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   override getScope(context: ReferenceInfo): Scope {
-    const match = context.container.$type
-    return this.rules[match]?.call(this, context) ?? EMPTY_SCOPE
+    // @ts-expect-error allowed index type
+    return this.rules[context.container.$type]?.call(this, context) ?? EMPTY_SCOPE
   }
 
   private lexicalScope(

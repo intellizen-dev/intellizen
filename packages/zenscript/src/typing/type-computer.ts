@@ -24,8 +24,8 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   public inferType(node: AstNode | undefined): Type | undefined {
-    const match = node?.$type
-    return this.rules[match]?.call(this, node)
+    // @ts-expect-error allowed index type
+    return this.rules[node?.$type]?.call(this, node)
   }
 
   private classTypeOf(className: BuiltinTypes | string, substitutions: TypeParameterSubstitutions = new Map()): ClassType {

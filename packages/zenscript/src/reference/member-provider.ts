@@ -25,8 +25,8 @@ export class ZenScriptMemberProvider implements MemberProvider {
   }
 
   getMember(source: AstNode | Type | undefined): AstNodeDescription[] {
-    const match = source?.$type
-    return this.rules[match]?.call(this, source) ?? []
+    // @ts-expect-error allowed index type
+    return this.rules[source?.$type]?.call(this, source) ?? []
   }
 
   private readonly rules: RuleMap = {
