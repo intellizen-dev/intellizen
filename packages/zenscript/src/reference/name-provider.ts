@@ -1,6 +1,6 @@
 import type { AstNode, CstNode, NameProvider } from 'langium'
 import type { Script, ZenScriptAstType } from '../generated/ast'
-import { AstUtils, GrammarUtils } from 'langium'
+import { AstUtils, GrammarUtils, isNamed } from 'langium'
 import { isClassDeclaration, isScript } from '../generated/ast'
 import { isImportable, isStatic, isToplevel } from '../utils/ast'
 import { getName, getQualifiedName } from '../utils/document'
@@ -18,12 +18,14 @@ type NameNodeRuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CstN
 export class ZenScriptNameProvider implements NameProvider {
   getName(node: AstNode): string | undefined {
     // @ts-expect-error allowed index type
-    return this.nameRules[node.$type]?.call(this, node)
+    const rule = this.nameRules[node.$type] ?? (source => isNamed(source) ? source.name : undefined)
+    return rule.call(this, node)
   }
 
   getNameNode(node: AstNode): CstNode | undefined {
     // @ts-expect-error allowed index type
-    return this.nameNodeRules[node.$type]?.call(this, node)
+    const rule = this.nameNodeRules[node.$type] ?? (source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'))
+    return rule.call(this, node)
   }
 
   getQualifiedName(node: AstNode): string | undefined {
@@ -46,30 +48,15 @@ export class ZenScriptNameProvider implements NameProvider {
   private readonly nameRules: NameRuleMap = {
     Script: source => source.$document ? getName(source.$document) : undefined,
     ImportDeclaration: source => source.alias || source.path.at(-1)?.$refText,
-    VariableDeclaration: source => source.name,
     FunctionDeclaration: source => source.name || 'lambda function',
-    ClassDeclaration: source => source.name,
-    FieldDeclaration: source => source.name,
     ConstructorDeclaration: _ => 'zenConstructor',
     OperatorFunctionDeclaration: source => source.op,
-    ExpandFunctionDeclaration: source => source.name,
-    ValueParameter: source => source.name,
-    TypeParameter: source => source.name,
-    LoopParameter: source => source.name,
   }
 
   private readonly nameNodeRules: NameNodeRuleMap = {
     ImportDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'alias'),
-    VariableDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
-    FunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
-    ClassDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
-    FieldDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
     ConstructorDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'zenConstructor'),
     OperatorFunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'op'),
-    ExpandFunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
-    ValueParameter: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
-    TypeParameter: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
-    LoopParameter: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'name'),
   }
 }
 
