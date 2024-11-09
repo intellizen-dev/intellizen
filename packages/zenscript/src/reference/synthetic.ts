@@ -25,3 +25,7 @@ export function createSyntheticAstNodeDescription<K extends keyof ZenScriptSynth
 export function createSyntheticAstNode($type: string, origin?: any): AstNode {
   return { $type, ...origin }
 }
+
+export function isSyntheticAstNode(node: AstNode): boolean {
+  return node?.$type?.startsWith('Synthetic')
+}

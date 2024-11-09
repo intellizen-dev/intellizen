@@ -7,7 +7,7 @@ import { stream } from 'langium'
 import { isVariableDeclaration } from '../generated/ast'
 import { isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
 import { getClassChain, isStatic } from '../utils/ast'
-import { createSyntheticAstNodeDescription } from './synthetic'
+import { createSyntheticAstNodeDescription, isSyntheticAstNode } from './synthetic'
 
 export interface MemberProvider {
   getMember: (source: AstNode | Type | undefined) => AstNodeDescription[]
@@ -84,7 +84,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
         return []
       }
 
-      if (target.$type as string === 'HierarchyNode') {
+      if (isSyntheticAstNode(target)) {
         return this.getMember(target)
       }
 
