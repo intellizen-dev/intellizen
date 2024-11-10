@@ -6,7 +6,7 @@ import { DefaultLinker, stream } from 'langium'
 import { isOperatorFunctionDeclaration } from '../generated/ast'
 
 type SourceMap = ZenScriptAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => AstNodeDescription | undefined }
+type SyntheticRuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => AstNodeDescription | undefined }
 
 export class ZenScriptLinker extends DefaultLinker {
   private readonly memberProvider: MemberProvider
@@ -26,10 +26,10 @@ export class ZenScriptLinker extends DefaultLinker {
 
   private getSynthetic(refInfo: ReferenceInfo): AstNodeDescription | undefined {
     // @ts-expect-error allowed index type
-    return this.rules[refInfo.container.$type]?.call(this, refInfo)
+    return this.syntheticRules[refInfo.container.$type]?.call(this, refInfo)
   }
 
-  private readonly rules: RuleMap = {
+  private readonly syntheticRules: SyntheticRuleMap = {
     MemberAccess: (source) => {
       return stream(this.memberProvider.getMember(source.container.receiver))
         .map(it => it.node)

@@ -3,7 +3,7 @@ import type { AstNode, AstNodeDescription } from 'langium'
 import { URI } from 'langium'
 
 export interface ZenScriptSyntheticAstType {
-  SyntheticHierarchyNode: HierarchyNode<AstNode>
+  SyntheticHierarchyNode: AstNode & HierarchyNode<AstNode>
 }
 
 export function createSyntheticAstNodeDescription<K extends keyof ZenScriptSyntheticAstType>(
