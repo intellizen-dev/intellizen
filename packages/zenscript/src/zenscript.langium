@@ -581,11 +581,13 @@ interface ParenthesizedTypeReference extends TypeReference {
 
 interface ArrayTypeReference extends TypeReference {
     value: TypeReference;
+    orderly?: 'orderly'
 }
 
 interface MapTypeReference extends TypeReference {
     key: TypeReference;
     value: TypeReference;
+    orderly?: 'orderly'
 }
 
 //endregion
@@ -612,7 +614,7 @@ ComplexType returns TypeReference:
     PrimaryType ('['(
         ({MapTypeReference.value=current} key=TypeReference) |
         ({ArrayTypeReference.value=current})
-    )']')*
+    )']' ('$' orderly='orderly')? )*
 ;
 
 fragment PrimaryType returns TypeReference:
