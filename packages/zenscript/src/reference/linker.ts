@@ -2,8 +2,8 @@ import type { AstNodeDescription, AstNodeDescriptionProvider, LinkingError, Refe
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from './member-provider'
-import { DefaultLinker, stream } from 'langium'
-import { isOperatorFunctionDeclaration } from '../generated/ast'
+import { AstUtils, DefaultLinker, stream } from 'langium'
+import { isClassDeclaration, isOperatorFunctionDeclaration } from '../generated/ast'
 
 type SourceMap = ZenScriptAstType
 type SyntheticRuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => AstNodeDescription | undefined }
@@ -37,6 +37,15 @@ export class ZenScriptLinker extends DefaultLinker {
         .filter(it => it.op === '.')
         .map(it => this.descriptions.createDescription(it.parameters[0], undefined))
         .head()
+    },
+
+    ReferenceExpression: (source) => {
+      if (source.reference.$refText === 'this') {
+        const classDecl = AstUtils.getContainerOfType(source.container, isClassDeclaration)
+        if (classDecl) {
+          return this.descriptions.createDescription(classDecl, 'this')
+        }
+      }
     },
   }
 }

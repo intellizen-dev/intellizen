@@ -4,8 +4,8 @@ import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
 import type { ZenScriptSyntheticAstType } from './synthetic'
 import { stream } from 'langium'
-import { isVariableDeclaration } from '../generated/ast'
-import { isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
+import { isClassDeclaration, isVariableDeclaration } from '../generated/ast'
+import { ClassType, isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
 import { getClassChain, isStatic } from '../utils/ast'
 import { createSyntheticAstNodeDescription, isSyntheticAstNode } from './synthetic'
 
@@ -106,6 +106,9 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     ReferenceExpression: (source) => {
+      if (source.target.$refText === 'this' && isClassDeclaration(source.target.ref)) {
+        return this.getMember(new ClassType(source.target.ref, new Map()))
+      }
       return this.getMember(source.target.ref)
     },
 
