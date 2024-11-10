@@ -53,7 +53,7 @@ export class ZenScriptLinker extends DefaultLinker {
       }
 
       // synthetic argument
-      if (isCallExpression(source.container.$container)) {
+      if (isCallExpression(source.container.$container) && source.container.$containerProperty === 'arguments') {
         const argIndex = source.container.$containerIndex!
         const receiverType = this.typeComputer.inferType(source.container.$container.receiver)
         if (!isFunctionType(receiverType)) {
