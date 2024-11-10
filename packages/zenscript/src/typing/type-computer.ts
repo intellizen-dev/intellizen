@@ -277,6 +277,10 @@ export class ZenScriptTypeComputer implements TypeComputer {
     },
 
     ReferenceExpression: (source) => {
+      // synthetic argument
+      if (isCallExpression(source.$container) && source.$containerIndex !== undefined && isFunctionDeclaration(source.target.ref)) {
+        return this.inferType(source.target.ref.returnTypeRef)
+      }
       return this.inferType(source.target.ref) ?? this.classTypeOf('any')
     },
 
