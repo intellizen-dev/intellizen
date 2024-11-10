@@ -30,7 +30,7 @@ export class ZenScriptSyntheticsProvider implements SyntheticsProvider {
     return this.rules[source.$type]?.call(this, source)
   }
 
-  private rules: RuleMap = {
+  private readonly rules: RuleMap = {
     ReferenceExpression: (source) => {
       const synthetics: AstNodeDescription[] = []
 
