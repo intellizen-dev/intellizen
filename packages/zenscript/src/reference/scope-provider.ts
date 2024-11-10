@@ -3,6 +3,7 @@ import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { PackageManager } from '../workspace/package-manager'
 import type { MemberProvider } from './member-provider'
+import type { SyntheticsProvider } from './synthetics-provider'
 import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
 import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter } from '../generated/ast'
@@ -16,11 +17,13 @@ type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
+  private readonly syntheticsProvider: SyntheticsProvider
 
   constructor(services: ZenScriptServices) {
     super(services)
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
+    this.syntheticsProvider = services.references.SyntheticsProvider
   }
 
   override getScope(context: ReferenceInfo): Scope {
@@ -73,6 +76,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       const globals = this.indexManager.allElements()
       outer = this.createScope(globals, outer)
 
+      const synthetics = this.syntheticsProvider.getSynthetics(source.container)
+      outer = this.createScope(synthetics, outer)
+
       const processor = (desc: AstNodeDescription) => {
         switch (desc.type) {
           case TypeParameter:
@@ -90,8 +96,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     },
 
     MemberAccess: (source) => {
+      const synthetics = this.syntheticsProvider.getSynthetics(source.container)
       const members = this.memberProvider.getMember(source.container.receiver)
-      return this.createScope(members)
+      return this.createScope(members, this.createScope(synthetics))
     },
 
     NamedTypeReference: (source) => {

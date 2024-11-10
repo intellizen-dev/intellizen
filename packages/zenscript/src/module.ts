@@ -12,6 +12,7 @@ import { ZenScriptMemberProvider } from './reference/member-provider'
 import { ZenScriptNameProvider } from './reference/name-provider'
 import { ZenScriptScopeComputation } from './reference/scope-computation'
 import { ZenScriptScopeProvider } from './reference/scope-provider'
+import { ZenScriptSyntheticsProvider } from './reference/synthetics-provider'
 import { ZenScriptTypeComputer } from './typing/type-computer'
 import { registerValidationChecks, ZenScriptValidator } from './validation/validator'
 import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
@@ -27,6 +28,7 @@ export interface ZenScriptAddedServices {
   }
   references: {
     MemberProvider: ZenScriptMemberProvider
+    SyntheticsProvider: ZenScriptSyntheticsProvider
   }
   typing: {
     TypeComputer: ZenScriptTypeComputer
@@ -65,6 +67,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     ScopeComputation: services => new ZenScriptScopeComputation(services),
     ScopeProvider: services => new ZenScriptScopeProvider(services),
     MemberProvider: services => new ZenScriptMemberProvider(services),
+    SyntheticsProvider: services => new ZenScriptSyntheticsProvider(services),
     Linker: services => new ZenScriptLinker(services),
   },
   workspace: {
