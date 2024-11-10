@@ -1,17 +1,18 @@
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
+import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
 import { type AstNode, stream } from 'langium'
 import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
-import { ClassType, CompoundType, FunctionType, IntersectionType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
+import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => Type | undefined
 }
 
-type SourceMap = ZenScriptAstType
+type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => Type | undefined }
 
 export class ZenScriptTypeComputer implements TypeComputer {
@@ -280,6 +281,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
     },
 
     MemberAccess: (source) => {
+      const targetContainer = source.target.ref?.$container
+      if (isOperatorFunctionDeclaration(targetContainer) && targetContainer.op === '.') {
+        return this.inferType(targetContainer.returnTypeRef)
+      }
+
       const receiverType = this.inferType(source.receiver)
       const memberType = this.inferType(source.target.ref)
       if (memberType && isClassType(receiverType)) {
@@ -290,6 +296,10 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     IndexingExpression: (source) => {
       const receiverType = this.inferType(source.receiver)
+      if (isAnyType(receiverType)) {
+        return receiverType
+      }
+
       const operatorDecl = this.memberProvider().getMember(source.receiver)
         .map(it => it.node)
         .filter(it => isOperatorFunctionDeclaration(it))
@@ -306,6 +316,9 @@ export class ZenScriptTypeComputer implements TypeComputer {
       const receiverType = this.inferType(source.receiver)
       if (isFunctionType(receiverType)) {
         return receiverType.returnType
+      }
+      if (isAnyType(receiverType)) {
+        return receiverType
       }
     },
 

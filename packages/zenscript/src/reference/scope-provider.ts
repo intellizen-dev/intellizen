@@ -6,8 +6,9 @@ import type { MemberProvider } from './member-provider'
 import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
 import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter } from '../generated/ast'
-import { createHierarchyNodeDescription, getPathAsString } from '../utils/ast'
+import { getPathAsString } from '../utils/ast'
 import { generateStream } from '../utils/stream'
+import { createSyntheticAstNodeDescription } from './synthetic'
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => Scope }
@@ -55,7 +56,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
           sibling.data.forEach(it => elements.push(this.descriptions.createDescription(it, sibling.name)))
         }
         else {
-          elements.push(createHierarchyNodeDescription(sibling))
+          elements.push(createSyntheticAstNodeDescription('SyntheticHierarchyNode', sibling.name, sibling))
         }
       }
       return this.createScope(elements)
@@ -66,7 +67,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
       const packages: Stream<AstNodeDescription> = stream(this.packageManager.root.children.values())
         .filter(it => it.isInternalNode())
-        .map(it => createHierarchyNodeDescription(it))
+        .map(it => createSyntheticAstNodeDescription('SyntheticHierarchyNode', it.name, it))
       outer = this.createScope(packages)
 
       const globals = this.indexManager.allElements()

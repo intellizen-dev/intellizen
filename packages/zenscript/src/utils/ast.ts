@@ -1,7 +1,6 @@
-import type { HierarchyNode } from '@intellizen/shared'
-import type { AstNode, AstNodeDescription, ReferenceInfo } from 'langium'
+import type { AstNode, ReferenceInfo } from 'langium'
 import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
-import { AstUtils, URI } from 'langium'
+import { AstUtils } from 'langium'
 import { isClassDeclaration, isFunctionDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
 
@@ -68,22 +67,4 @@ export function getPathAsString(importDecl: ImportDeclaration, index?: number): 
     names = names.slice(0, index + 1)
   }
   return names.join('.')
-}
-
-export function createHierarchyNodeDescription(node: HierarchyNode<AstNode>): AstNodeDescription {
-  return createSyntheticAstNodeDescription('HierarchyNode', node, node.name)
-}
-
-export function createSyntheticAstNodeDescription(type: string, origin: any, name: string): AstNodeDescription {
-  return {
-    node: createSyntheticAstNode(type, origin),
-    type,
-    name,
-    documentUri: URI.from({ scheme: 'synthetic', path: `/${type}/${name}` }),
-    path: '',
-  }
-}
-
-export function createSyntheticAstNode($type: string, origin: any): AstNode {
-  return { $type, ...origin }
 }

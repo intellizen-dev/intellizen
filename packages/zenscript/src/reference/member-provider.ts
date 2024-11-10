@@ -1,18 +1,19 @@
-import type { HierarchyNode } from '@intellizen/shared'
 import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
+import type { ZenScriptSyntheticAstType } from './synthetic'
 import { stream } from 'langium'
 import { isVariableDeclaration } from '../generated/ast'
-import { isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
-import { createHierarchyNodeDescription, getClassChain, isStatic } from '../utils/ast'
+import { isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
+import { getClassChain, isStatic } from '../utils/ast'
+import { createSyntheticAstNodeDescription, isSyntheticAstNode } from './synthetic'
 
 export interface MemberProvider {
   getMember: (source: AstNode | Type | undefined) => AstNodeDescription[]
 }
 
-type SourceMap = ZenScriptAstType & ZenScriptType & { HierarchyNode: HierarchyNode<AstNode> }
+type SourceMap = ZenScriptAstType & ZenScriptType & ZenScriptSyntheticAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => AstNodeDescription[] }
 
 export class ZenScriptMemberProvider implements MemberProvider {
@@ -30,14 +31,14 @@ export class ZenScriptMemberProvider implements MemberProvider {
   }
 
   private readonly rules: RuleMap = {
-    HierarchyNode: (source) => {
+    SyntheticHierarchyNode: (source) => {
       const declarations = stream(source.children.values())
         .filter(it => it.isDataNode())
         .flatMap(it => it.data)
         .map(it => this.descriptions.createDescription(it, undefined))
       const packages = stream(source.children.values())
         .filter(it => it.isInternalNode())
-        .map(it => createHierarchyNodeDescription(it))
+        .map(it => createSyntheticAstNodeDescription('SyntheticHierarchyNode', it.name, it))
       return stream(declarations, packages).toArray()
     },
 
@@ -83,7 +84,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
         return []
       }
 
-      if (target.$type as string === 'HierarchyNode') {
+      if (isSyntheticAstNode(target)) {
         return this.getMember(target)
       }
 
@@ -92,7 +93,10 @@ export class ZenScriptMemberProvider implements MemberProvider {
         return this.getMember(target)
       }
 
-      const type = this.typeComputer.inferType(source)
+      let type = this.typeComputer.inferType(source)
+      if (isClassType(receiverType)) {
+        type = type?.substituteTypeParameters(receiverType.substitutions)
+      }
       return this.getMember(type)
     },
 
@@ -107,7 +111,18 @@ export class ZenScriptMemberProvider implements MemberProvider {
 
     CallExpression: (source) => {
       const receiverType = this.typeComputer.inferType(source.receiver)
-      return isFunctionType(receiverType) ? this.getMember(receiverType.returnType) : []
+      if (isFunctionType(receiverType)) {
+        return this.getMember(receiverType.returnType)
+      }
+      if (isAnyType(receiverType)) {
+        return this.getMember(receiverType)
+      }
+      return []
+    },
+
+    BracketExpression: (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.getMember(type)
     },
 
     FieldDeclaration: (source) => {
