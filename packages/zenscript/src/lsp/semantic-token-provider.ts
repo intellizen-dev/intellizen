@@ -1,8 +1,8 @@
-import type { AstNode } from 'langium'
 import type { SemanticTokenAcceptor } from 'langium/lsp'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
+import { type AstNode, CstUtils, GrammarUtils, stream } from 'langium'
 import { AbstractSemanticTokenProvider } from 'langium/lsp'
 import { SemanticTokenModifiers, SemanticTokenTypes } from 'vscode-languageserver'
 import { ValueParameter } from '../generated/ast'
@@ -49,6 +49,29 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         property: 'value',
         type: SemanticTokenTypes.string,
       })
+    },
+
+    BracketExpression: (source, acceptor) => {
+      const parts = stream(GrammarUtils.findNodesForProperty(source.$cstNode!, 'parts')).flatMap(CstUtils.flattenCst).toArray()
+      const idParts = parts.filter(it => it.tokenType.name === 'IDENTIFIER')
+      const [firstId, ...restIds] = idParts
+      if (firstId) {
+        acceptor({
+          cst: firstId,
+          type: SemanticTokenTypes.namespace,
+        })
+      }
+      if (restIds) {
+        restIds.forEach(it => acceptor({
+          cst: it,
+          type: SemanticTokenTypes.variable,
+        }))
+      }
+      const numParts = parts.filter(it => it.tokenType.name === 'INTEGER')
+      numParts.forEach(it => acceptor({
+        cst: it,
+        type: SemanticTokenTypes.number,
+      }))
     },
 
     ValueParameter: (source, acceptor) => {

@@ -300,7 +300,7 @@ interface FunctionExpression extends Expression {
 }
 
 interface BracketExpression extends Expression {
-    content: string;
+    parts: string[];
 }
 
 interface ParenthesizedExpression extends Expression {
@@ -449,7 +449,7 @@ fragment PrimaryExpression returns Expression:
 ;
 
 BracketExpression returns BracketExpression:
-    '<' content = (ID | INTEGER | ':' | ',' | '=' | '/' | '|' | '-' | '_' | '$' | '.' | '*')+ '>'
+    '<' parts+=(ID | INTEGER | ':' | ',' | '=' | '/' | '|' | '-' | '_' | '$' | '.' | '*')+ '>'
 ;
 
 ParenthesizedExpression returns ParenthesizedExpression:
