@@ -5,17 +5,17 @@ import { assertNoErrors, createTestServices, getDocument } from '../../utils'
 
 const services = await createTestServices(__dirname)
 
-describe(`check synthetic member`, async () => {
-  const document_synthetic_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'synthetic.zs'))
-  const script_synthetic_zs = document_synthetic_zs.parseResult.value
-  const statement_justAny_foo_bar = script_synthetic_zs.statements[1] as ExpressionStatement
+describe(`check dynamic member`, async () => {
+  const document_member_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'member.zs'))
+  const script_member_zs = document_member_zs.parseResult.value
+  const statement_justAny_foo_bar = script_member_zs.statements[1] as ExpressionStatement
   const expression_justAny_foo_bar = statement_justAny_foo_bar.expr as MemberAccess
 
   it('should no errors', () => {
-    assertNoErrors(document_synthetic_zs)
+    assertNoErrors(document_member_zs)
   })
 
-  it('check inferring synthetic member', () => {
+  it('check inferring dynamic member', () => {
     const bar = expression_justAny_foo_bar.target.ref
     const type_bar = services.typing.TypeComputer.inferType(bar)
     expect(bar).toBeDefined()

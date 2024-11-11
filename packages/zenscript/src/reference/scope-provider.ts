@@ -1,7 +1,8 @@
-import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, Stream } from 'langium'
+import type { AstNode, AstNodeDescription, ReferenceInfo, Scope } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { PackageManager } from '../workspace/package-manager'
+import type { DynamicProvider } from './dynamic-provider'
 import type { MemberProvider } from './member-provider'
 import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
@@ -16,11 +17,13 @@ type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
+  private readonly dynamicProvider: DynamicProvider
 
   constructor(services: ZenScriptServices) {
     super(services)
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
+    this.dynamicProvider = services.references.DynamicProvider
   }
 
   override getScope(context: ReferenceInfo): Scope {
@@ -39,6 +42,30 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .nonNullable()
       .map(descriptions => stream(descriptions).map(processor).nonNullable())
       .reduce((outer, descriptions) => this.createScope(descriptions, outer), outside as Scope)
+  }
+
+  private dynamicScope(astNode: AstNode, outside?: Scope) {
+    return this.createScope(this.dynamicProvider.getDynamics(astNode), outside)
+  }
+
+  private globalScope(outside?: Scope) {
+    return this.createScope(this.indexManager.allElements(), outside)
+  }
+
+  private packageScope(outside?: Scope) {
+    const packages = stream(this.packageManager.root.children.values())
+      .filter(it => it.isInternalNode())
+      .map(it => createSyntheticAstNodeDescription('SyntheticHierarchyNode', it.name, it))
+    return this.createScope(packages, outside)
+  }
+
+  private classScope(outside?: Scope) {
+    const classes = stream(this.packageManager.root.children.values())
+      .filter(it => it.isDataNode())
+      .flatMap(it => it.data)
+      .filter(isClassDeclaration)
+      .map(it => this.descriptions.createDescription(it, it.name))
+    return this.createScope(classes, outside)
   }
 
   private readonly rules: RuleMap = {
@@ -64,14 +91,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     ReferenceExpression: (source) => {
       let outer: Scope
-
-      const packages: Stream<AstNodeDescription> = stream(this.packageManager.root.children.values())
-        .filter(it => it.isInternalNode())
-        .map(it => createSyntheticAstNodeDescription('SyntheticHierarchyNode', it.name, it))
-      outer = this.createScope(packages)
-
-      const globals = this.indexManager.allElements()
-      outer = this.createScope(globals, outer)
+      outer = this.packageScope()
+      outer = this.globalScope(outer)
+      outer = this.dynamicScope(source.container, outer)
 
       const processor = (desc: AstNodeDescription) => {
         switch (desc.type) {
@@ -90,19 +112,14 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     },
 
     MemberAccess: (source) => {
+      const outer = this.dynamicScope(source.container)
       const members = this.memberProvider.getMember(source.container.receiver)
-      return this.createScope(members)
+      return this.createScope(members, outer)
     },
 
     NamedTypeReference: (source) => {
       if (!source.index) {
-        const classes = stream(this.packageManager.root.children.values())
-          .filter(it => it.isDataNode())
-          .flatMap(it => it.data)
-          .filter(isClassDeclaration)
-          .map(it => this.descriptions.createDescription(it, it.name))
-        const outer = this.createScope(classes)
-
+        const outer = this.classScope()
         const processor = (desc: AstNodeDescription) => {
           switch (desc.type) {
             case TypeParameter:

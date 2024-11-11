@@ -7,7 +7,7 @@ import { CustomTokenBuilder } from './lexer/token-builder'
 import { CustomValueConverter } from './lexer/value-converter'
 import { ZenScriptCompletionProvider } from './lsp/completion-provider'
 import { ZenScriptInlayHintProvider } from './lsp/inlay-hint-provider'
-import { ZenScriptLinker } from './reference/linker'
+import { ZenScriptDynamicProvider } from './reference/dynamic-provider'
 import { ZenScriptMemberProvider } from './reference/member-provider'
 import { ZenScriptNameProvider } from './reference/name-provider'
 import { ZenScriptScopeComputation } from './reference/scope-computation'
@@ -27,6 +27,7 @@ export interface ZenScriptAddedServices {
   }
   references: {
     MemberProvider: ZenScriptMemberProvider
+    DynamicProvider: ZenScriptDynamicProvider
   }
   typing: {
     TypeComputer: ZenScriptTypeComputer
@@ -65,7 +66,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     ScopeComputation: services => new ZenScriptScopeComputation(services),
     ScopeProvider: services => new ZenScriptScopeProvider(services),
     MemberProvider: services => new ZenScriptMemberProvider(services),
-    Linker: services => new ZenScriptLinker(services),
+    DynamicProvider: services => new ZenScriptDynamicProvider(services),
   },
   workspace: {
     PackageManager: services => new ZenScriptPackageManager(services),
