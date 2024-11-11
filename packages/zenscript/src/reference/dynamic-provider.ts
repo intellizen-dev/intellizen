@@ -7,14 +7,14 @@ import { AstUtils, stream } from 'langium'
 import { isCallExpression, isClassDeclaration, isFunctionDeclaration, isOperatorFunctionDeclaration } from '../generated/ast'
 import { isClassType, isFunctionType } from '../typing/type-description'
 
-export interface SyntheticsProvider {
-  getSynthetics: (source: AstNode) => AstNodeDescription[]
+export interface DynamicProvider {
+  getDynamics: (source: AstNode) => AstNodeDescription[]
 }
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => AstNodeDescription[] }
 
-export class ZenScriptSyntheticsProvider implements SyntheticsProvider {
+export class ZenScriptDynamicProvider implements DynamicProvider {
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
   private readonly memberProvider: MemberProvider
@@ -25,22 +25,22 @@ export class ZenScriptSyntheticsProvider implements SyntheticsProvider {
     this.memberProvider = services.references.MemberProvider
   }
 
-  getSynthetics(source: AstNode): AstNodeDescription[] {
+  getDynamics(source: AstNode): AstNodeDescription[] {
     // @ts-expect-error allowed index type
     return this.rules[source.$type]?.call(this, source)
   }
 
   private readonly rules: RuleMap = {
     ReferenceExpression: (source) => {
-      const synthetics: AstNodeDescription[] = []
+      const dynamics: AstNodeDescription[] = []
 
-      // synthetic this
+      // dynamic this
       const classDecl = AstUtils.getContainerOfType(source, isClassDeclaration)
       if (classDecl) {
-        synthetics.push(this.descriptions.createDescription(classDecl, 'this'))
+        dynamics.push(this.descriptions.createDescription(classDecl, 'this'))
       }
 
-      // synthetic arguments
+      // dynamic arguments
       if (isCallExpression(source.$container) && source.$containerProperty === 'arguments') {
         const index = source.$containerIndex!
         const receiverType = this.typeComputer.inferType(source.$container.receiver)
@@ -52,28 +52,28 @@ export class ZenScriptSyntheticsProvider implements SyntheticsProvider {
               .filter(it => isFunctionDeclaration(it))
               .filter(it => it.prefix === 'static')
               .filter(it => it.parameters.length === 0)
-              .forEach(it => synthetics.push(this.descriptions.createDescription(it, it.name)))
+              .forEach(it => dynamics.push(this.descriptions.createDescription(it, it.name)))
           }
         }
       }
 
-      return synthetics
+      return dynamics
     },
 
     MemberAccess: (source) => {
-      const synthetics: AstNodeDescription[] = []
+      const dynamics: AstNodeDescription[] = []
 
-      // synthetic member
+      // dynamic member
       const operatorDecl = stream(this.memberProvider.getMember(source.receiver))
         .map(it => it.node)
         .filter(it => isOperatorFunctionDeclaration(it))
         .filter(it => it.parameters.length === 1)
         .find(it => it.op === '.')
       if (operatorDecl) {
-        synthetics.push(this.descriptions.createDescription(operatorDecl.parameters[0], source.target.$refText))
+        dynamics.push(this.descriptions.createDescription(operatorDecl.parameters[0], source.target.$refText))
       }
 
-      return synthetics
+      return dynamics
     },
   }
 }

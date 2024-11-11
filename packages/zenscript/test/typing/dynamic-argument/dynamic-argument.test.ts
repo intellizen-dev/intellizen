@@ -5,7 +5,7 @@ import { assertNoErrors, createTestServices, getDocument } from '../../utils'
 
 const services = await createTestServices(__dirname)
 
-describe(`check synthetic argument`, async () => {
+describe(`check dynamic arguments`, async () => {
   const document_argument_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'argument.zs'))
   const script_argument_zs = document_argument_zs.parseResult.value
   const statement_apply_up = script_argument_zs.statements[0] as ExpressionStatement
@@ -15,7 +15,7 @@ describe(`check synthetic argument`, async () => {
     assertNoErrors(document_argument_zs)
   })
 
-  it('check inferring synthetic argument', () => {
+  it('check inferring dynamic argument', () => {
     const up = expression_apply_up.arguments[0]
     const type_up = services.typing.TypeComputer.inferType(up)
     expect(up).toBeDefined()

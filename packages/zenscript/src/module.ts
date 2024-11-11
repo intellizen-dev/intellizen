@@ -7,11 +7,11 @@ import { CustomTokenBuilder } from './lexer/token-builder'
 import { CustomValueConverter } from './lexer/value-converter'
 import { ZenScriptCompletionProvider } from './lsp/completion-provider'
 import { ZenScriptInlayHintProvider } from './lsp/inlay-hint-provider'
+import { ZenScriptDynamicProvider } from './reference/dynamic-provider'
 import { ZenScriptMemberProvider } from './reference/member-provider'
 import { ZenScriptNameProvider } from './reference/name-provider'
 import { ZenScriptScopeComputation } from './reference/scope-computation'
 import { ZenScriptScopeProvider } from './reference/scope-provider'
-import { ZenScriptSyntheticsProvider } from './reference/synthetics-provider'
 import { ZenScriptTypeComputer } from './typing/type-computer'
 import { registerValidationChecks, ZenScriptValidator } from './validation/validator'
 import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
@@ -27,7 +27,7 @@ export interface ZenScriptAddedServices {
   }
   references: {
     MemberProvider: ZenScriptMemberProvider
-    SyntheticsProvider: ZenScriptSyntheticsProvider
+    DynamicProvider: ZenScriptDynamicProvider
   }
   typing: {
     TypeComputer: ZenScriptTypeComputer
@@ -66,7 +66,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     ScopeComputation: services => new ZenScriptScopeComputation(services),
     ScopeProvider: services => new ZenScriptScopeProvider(services),
     MemberProvider: services => new ZenScriptMemberProvider(services),
-    SyntheticsProvider: services => new ZenScriptSyntheticsProvider(services),
+    DynamicProvider: services => new ZenScriptDynamicProvider(services),
   },
   workspace: {
     PackageManager: services => new ZenScriptPackageManager(services),
