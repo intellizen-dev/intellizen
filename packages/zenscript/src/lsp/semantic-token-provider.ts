@@ -2,10 +2,10 @@ import type { SemanticTokenAcceptor } from 'langium/lsp'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
-import { type AstNode, CstUtils, GrammarUtils, stream } from 'langium'
+import { type AstNode, CstUtils, stream } from 'langium'
 import { AbstractSemanticTokenProvider } from 'langium/lsp'
 import { SemanticTokenModifiers, SemanticTokenTypes } from 'vscode-languageserver'
-import { ValueParameter } from '../generated/ast'
+import { isLocation, ValueParameter } from '../generated/ast'
 import { isStringType } from '../typing/type-description'
 
 type SourceMap = ZenScriptAstType
@@ -52,26 +52,28 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
     },
 
     BracketExpression: (source, acceptor) => {
-      const parts = stream(GrammarUtils.findNodesForProperty(source.$cstNode!, 'parts')).flatMap(CstUtils.flattenCst).toArray()
-      const idParts = parts.filter(it => it.tokenType.name === 'IDENTIFIER')
-      const [firstId, ...restIds] = idParts
-      if (firstId) {
-        acceptor({
-          cst: firstId,
-          type: SemanticTokenTypes.namespace,
-        })
-      }
-      if (restIds) {
-        restIds.forEach(it => acceptor({
-          cst: it,
-          type: SemanticTokenTypes.variable,
-        }))
-      }
-      const numParts = parts.filter(it => it.tokenType.name === 'INTEGER')
-      numParts.forEach(it => acceptor({
-        cst: it,
-        type: SemanticTokenTypes.number,
-      }))
+      const locations = stream(source.path).filter(isLocation)
+      locations.forEach((it) => {
+        switch (CstUtils.flattenCst(it.$cstNode!).head()?.tokenType.name) {
+          case 'IDENTIFIER': {
+            acceptor({
+              node: it,
+              property: 'value',
+              type: SemanticTokenTypes.namespace,
+            })
+            break
+          }
+
+          case 'INTEGER': {
+            acceptor({
+              node: it,
+              property: 'value',
+              type: SemanticTokenTypes.number,
+            })
+            break
+          }
+        }
+      })
     },
 
     ValueParameter: (source, acceptor) => {
