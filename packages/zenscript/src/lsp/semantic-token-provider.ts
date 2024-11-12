@@ -5,7 +5,7 @@ import type { TypeComputer } from '../typing/type-computer'
 import { type AstNode, CstUtils, stream } from 'langium'
 import { AbstractSemanticTokenProvider } from 'langium/lsp'
 import { SemanticTokenModifiers, SemanticTokenTypes } from 'vscode-languageserver'
-import { isLocation, ValueParameter } from '../generated/ast'
+import { isLocation } from '../generated/ast'
 import { isStringType } from '../typing/type-description'
 
 type SourceMap = ZenScriptAstType
@@ -167,6 +167,14 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
 
     MemberAccess: (source, acceptor) => {
       switch (source.target.ref?.$type) {
+        case 'Script':
+          acceptor({
+            node: source,
+            property: 'target',
+            type: SemanticTokenTypes.namespace,
+          })
+          break
+
         case 'FunctionDeclaration':
           acceptor({
             node: source,
@@ -200,7 +208,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
           })
           break
 
-        case ValueParameter: {
+        case 'ValueParameter': {
           // dynamic member
           const type = this.typeComputer.inferType(source.target.ref)
           acceptor({
@@ -225,6 +233,14 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         node: source,
         property: 'name',
         type: SemanticTokenTypes.class,
+      })
+    },
+
+    TypeParameter: (source, acceptor) => {
+      acceptor({
+        node: source,
+        property: 'name',
+        type: SemanticTokenTypes.typeParameter,
       })
     },
 
