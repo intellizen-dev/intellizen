@@ -55,23 +55,21 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
       const locations = stream(source.path).filter(isLocation)
       locations.forEach((it) => {
         switch (CstUtils.flattenCst(it.$cstNode!).head()?.tokenType.name) {
-          case 'IDENTIFIER': {
+          case 'IDENTIFIER':
             acceptor({
               node: it,
               property: 'value',
               type: SemanticTokenTypes.namespace,
             })
             break
-          }
 
-          case 'INTEGER': {
+          case 'INTEGER':
             acceptor({
               node: it,
               property: 'value',
               type: SemanticTokenTypes.number,
             })
             break
-          }
         }
       })
     },
@@ -126,7 +124,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
           })
           break
 
-        case 'VariableDeclaration': {
+        case 'VariableDeclaration':
           acceptor({
             node: source,
             property: 'target',
@@ -134,16 +132,14 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
             modifier: READONLY_PREFIX.includes(source.target.ref.prefix) ? SemanticTokenModifiers.readonly : undefined,
           })
           break
-        }
 
-        case 'FunctionDeclaration': {
+        case 'FunctionDeclaration':
           acceptor({
             node: source,
             property: 'target',
             type: SemanticTokenTypes.function,
           })
           break
-        }
 
         case 'LoopParameter':
           acceptor({
@@ -208,15 +204,14 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
           })
           break
 
-        case 'ValueParameter': {
+        case 'ValueParameter':
           // dynamic member
-          const type = this.typeComputer.inferType(source.target.ref)
           acceptor({
             node: source,
             property: 'target',
-            type: isStringType(type) ? SemanticTokenTypes.string : SemanticTokenTypes.variable,
+            type: isStringType(this.typeComputer.inferType(source.target.ref)) ? SemanticTokenTypes.string : SemanticTokenTypes.variable,
           })
-        }
+          break
       }
     },
 
