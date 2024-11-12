@@ -101,7 +101,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
       acceptor({
         node: source,
         property: 'typeArguments',
-        type: SemanticTokenTypes.typeParameter,
+        type: SemanticTokenTypes.class,
       })
     },
 
