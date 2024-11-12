@@ -300,7 +300,8 @@ interface FunctionExpression extends Expression {
 }
 
 interface BracketExpression extends Expression {
-    content: string;
+    path: (Location | ExpressionTemplate)[];
+    properties: Property[];
 }
 
 interface ParenthesizedExpression extends Expression {
@@ -448,10 +449,6 @@ fragment PrimaryExpression returns Expression:
     ParenthesizedExpression | FunctionExpression | ReferenceExpression | LiteralExpression | BracketExpression
 ;
 
-BracketExpression returns BracketExpression:
-    '<' content = (ID | INTEGER | ':' | ',' | '=' | '/' | '|' | '-' | '_' | '$' | '.' | '*')+ '>'
-;
-
 ParenthesizedExpression returns ParenthesizedExpression:
     '(' expr=Expression ')'
 ;
@@ -541,6 +538,24 @@ terminal TEMPLATE_LITERAL_END:
 
 terminal fragment IN_TEMPLATE_LITERAL:
     /[^$`\\]|\\./;
+
+BracketExpression returns BracketExpression:
+    '<' path+=(Location | ExpressionTemplate) (':' path+=(Location | ExpressionTemplate))*
+        (':' properties+=Property (',' properties+=Property)*)?
+    '>'
+;
+
+Location:
+    value=(ID | INTEGER | '.' | '-' | '*')+
+;
+
+ExpressionTemplate:
+    '${' expr=Expression '}'
+;
+
+Property:
+    key=ID '=' value=(ID | INTEGER)
+;
 
 //endregion Expression
 
