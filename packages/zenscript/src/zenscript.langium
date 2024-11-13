@@ -554,7 +554,7 @@ ExpressionTemplate:
 ;
 
 Property:
-    key=ID '=' value=(ID | INTEGER)
+    key=UnquotedString '=' value=(UnquotedString | IntegerLiteral)
 ;
 
 //endregion Expression
