@@ -53,13 +53,25 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
 
     BracketExpression: (source, acceptor) => {
       const locations = stream(source.path).filter(isLocation)
-      locations.forEach((it) => {
+      const [first, ...rest] = locations
+
+      switch (CstUtils.flattenCst(first.$cstNode!).head()?.tokenType.name) {
+        case 'IDENTIFIER':
+          acceptor({
+            node: first,
+            property: 'value',
+            type: SemanticTokenTypes.enum,
+          })
+          break
+      }
+
+      rest.forEach((it) => {
         switch (CstUtils.flattenCst(it.$cstNode!).head()?.tokenType.name) {
           case 'IDENTIFIER':
             acceptor({
               node: it,
               property: 'value',
-              type: SemanticTokenTypes.namespace,
+              type: SemanticTokenTypes.enumMember,
             })
             break
 
