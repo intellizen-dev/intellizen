@@ -118,7 +118,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
     },
 
     ReferenceExpression: (source, acceptor) => {
-      switch (source.target.ref?.$type) {
+      switch (source.target?.ref?.$type) {
         // @ts-expect-error SyntheticHierarchyNode
         case 'SyntheticHierarchyNode':
           acceptor({
@@ -174,7 +174,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
     },
 
     MemberAccess: (source, acceptor) => {
-      switch (source.target.ref?.$type) {
+      switch (source.target?.ref?.$type) {
         case 'Script':
           acceptor({
             node: source,
