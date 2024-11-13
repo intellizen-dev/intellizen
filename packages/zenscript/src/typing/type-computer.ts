@@ -2,6 +2,7 @@ import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
+import type { BracketManager } from '../workspace/bracket-manager'
 import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
 import { type AstNode, stream } from 'langium'
@@ -17,10 +18,12 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => Type | undef
 
 export class ZenScriptTypeComputer implements TypeComputer {
   private readonly packageManager: PackageManager
+  private readonly bracketManager: BracketManager
   private readonly memberProvider: () => MemberProvider
 
   constructor(services: ZenScriptServices) {
     this.packageManager = services.workspace.PackageManager
+    this.bracketManager = services.workspace.BracketManager
     this.memberProvider = () => services.references.MemberProvider
   }
 
@@ -265,9 +268,15 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return this.inferType(source.expr)
     },
 
-    BracketExpression: (_) => {
-      // TODO: infer bracket expression
-      return this.classTypeOf('any')
+    BracketExpression: (source) => {
+      const id = source.path.map(it => it.$cstNode?.text).join(':')
+      const type = this.bracketManager.type(id)
+      if (type) {
+        return this.classTypeOf(type)
+      }
+      else {
+        return this.classTypeOf('any')
+      }
     },
 
     FunctionExpression: (source) => {

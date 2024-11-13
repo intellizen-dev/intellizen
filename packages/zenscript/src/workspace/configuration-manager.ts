@@ -16,17 +16,27 @@ declare module 'langium' {
 
 export interface ConfigurationManager {
   initialize: (folders: WorkspaceFolder[]) => Promise<void>
+  onLoaded: (listener: LoadedListener) => void
 }
+
+export type LoadedListener = (folders: WorkspaceFolder[]) => Promise<void>
 
 export class ZenScriptConfigurationManager implements ConfigurationManager {
   private readonly fileSystemProvider: FileSystemProvider
+  private readonly loadedListeners: LoadedListener[]
 
   constructor(services: ZenScriptSharedServices) {
     this.fileSystemProvider = services.workspace.FileSystemProvider
+    this.loadedListeners = []
   }
 
   async initialize(folders: WorkspaceFolder[]) {
     await Promise.all(folders.map(folder => this.loadConfig(folder)))
+    await Promise.all(this.loadedListeners.map(listener => listener(folders)))
+  }
+
+  onLoaded(listener: LoadedListener) {
+    this.loadedListeners.push(listener)
   }
 
   private async loadConfig(workspaceFolder: WorkspaceFolder) {

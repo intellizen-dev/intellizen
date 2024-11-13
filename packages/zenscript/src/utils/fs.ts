@@ -48,3 +48,7 @@ export function existsDirectory(dirPath: string): boolean {
 export function existsFile(filePath: string): boolean {
   return existsSync(filePath) && statSync(filePath).isFile()
 }
+
+export function existsFileUri(fileUri: URI): boolean {
+  return existsSync(fileUri.fsPath) && statSync(fileUri.fsPath).isFile()
+}
