@@ -1,6 +1,7 @@
 import type { ExpressionStatement, MemberAccess } from '../../../src/generated/ast'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { ContextCache } from '../../../src/utils/cache'
 import { assertNoErrors, createTestServices, getDocument } from '../../utils'
 
 const services = await createTestServices(__dirname)
@@ -17,7 +18,7 @@ describe(`check dynamic member`, async () => {
 
   it('check inferring dynamic member', () => {
     const bar = expression_justAny_foo_bar.target.ref
-    const type_bar = services.typing.TypeComputer.inferType(bar)
+    const type_bar = services.typing.TypeComputer.inferType(bar, new ContextCache())
     expect(bar).toBeDefined()
     expect(type_bar?.toString()).toBe('any')
   })

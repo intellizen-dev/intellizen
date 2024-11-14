@@ -7,6 +7,7 @@ import { AbstractSemanticTokenProvider } from 'langium/lsp'
 import { SemanticTokenModifiers, SemanticTokenTypes } from 'vscode-languageserver'
 import { isLocation } from '../generated/ast'
 import { isStringType } from '../typing/type-description'
+import { ContextCache } from '../utils/cache'
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], acceptor: SemanticTokenAcceptor) => void }
@@ -221,7 +222,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
           acceptor({
             node: source,
             property: 'target',
-            type: isStringType(this.typeComputer.inferType(source.target.ref)) ? SemanticTokenTypes.string : SemanticTokenTypes.variable,
+            type: isStringType(this.typeComputer.inferType(source.target.ref, new ContextCache())) ? SemanticTokenTypes.string : SemanticTokenTypes.variable,
           })
           break
       }

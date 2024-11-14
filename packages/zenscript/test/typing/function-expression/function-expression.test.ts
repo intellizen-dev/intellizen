@@ -1,6 +1,7 @@
 import type { Assignment, CallExpression, ExpressionStatement, FunctionExpression, VariableDeclaration } from '../../../src/generated/ast'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { ContextCache } from '../../../src/utils/cache'
 import { assertNoErrors, createTestServices, getDocument } from '../../utils'
 
 const services = await createTestServices(__dirname)
@@ -20,8 +21,8 @@ describe('check inferring class lambda declaration', async () => {
     const functionExpression = statement_variable_declaration.initializer as FunctionExpression
     const x = functionExpression.parameters[0]
     const y = functionExpression.parameters[1]
-    const type_x = services.typing.TypeComputer.inferType(x)
-    const type_y = services.typing.TypeComputer.inferType(y)
+    const type_x = services.typing.TypeComputer.inferType(x, new ContextCache())
+    const type_y = services.typing.TypeComputer.inferType(y, new ContextCache())
     expect(type_x?.toString()).toBe('float')
     expect(type_y?.toString()).toBe('double')
   })
@@ -30,8 +31,8 @@ describe('check inferring class lambda declaration', async () => {
     const functionExpression = (statement_assignment.expr as Assignment).right as FunctionExpression
     const u = functionExpression.parameters[0]
     const v = functionExpression.parameters[1]
-    const type_u = services.typing.TypeComputer.inferType(u)
-    const type_v = services.typing.TypeComputer.inferType(v)
+    const type_u = services.typing.TypeComputer.inferType(u, new ContextCache())
+    const type_v = services.typing.TypeComputer.inferType(v, new ContextCache())
     expect(type_u?.toString()).toBe('float')
     expect(type_v?.toString()).toBe('double')
   })
@@ -40,8 +41,8 @@ describe('check inferring class lambda declaration', async () => {
     const functionExpression = (statement_call_expression.expr as CallExpression).arguments[0] as FunctionExpression
     const i = functionExpression.parameters[0]
     const j = functionExpression.parameters[1]
-    const type_i = services.typing.TypeComputer.inferType(i)
-    const type_j = services.typing.TypeComputer.inferType(j)
+    const type_i = services.typing.TypeComputer.inferType(i, new ContextCache())
+    const type_j = services.typing.TypeComputer.inferType(j, new ContextCache())
     expect(type_i?.toString()).toBe('float')
     expect(type_j?.toString()).toBe('double')
   })
@@ -61,21 +62,21 @@ describe('check inferring function type', async () => {
   it('check inferring VariableDeclaration', () => {
     const functionExpression = statement_variable_declaration.initializer as FunctionExpression
     const z = functionExpression.parameters[0]
-    const type_z = services.typing.TypeComputer.inferType(z)
+    const type_z = services.typing.TypeComputer.inferType(z, new ContextCache())
     expect(type_z?.toString()).toBe('int')
   })
 
   it('check inferring Assignment', () => {
     const functionExpression = (statement_assignment.expr as Assignment).right as FunctionExpression
     const w = functionExpression.parameters[0]
-    const type_w = services.typing.TypeComputer.inferType(w)
+    const type_w = services.typing.TypeComputer.inferType(w, new ContextCache())
     expect(type_w?.toString()).toBe('int')
   })
 
   it('check inferring CallExpression', () => {
     const functionExpression = (statement_call_expression.expr as CallExpression).arguments[0] as FunctionExpression
     const k = functionExpression.parameters[0]
-    const type_k = services.typing.TypeComputer.inferType(k)
+    const type_k = services.typing.TypeComputer.inferType(k, new ContextCache())
     expect(type_k?.toString()).toBe('int')
   })
 })
