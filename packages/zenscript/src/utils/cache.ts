@@ -1,5 +1,5 @@
 import type { AstNode, LangiumSharedCoreServices } from 'langium'
-import { ContextCache as LangiumContextCache, stream } from 'langium'
+import { AstUtils, ContextCache as LangiumContextCache, stream } from 'langium'
 
 export class ZenScriptDocumentCache<K, V> extends LangiumContextCache<URI | string, K, V, string> {
   constructor(sharedServices: LangiumSharedCoreServices) {
@@ -12,13 +12,18 @@ export class ZenScriptDocumentCache<K, V> extends LangiumContextCache<URI | stri
           this.clear(document.uri.toString())
         }
       })
+
     }))
   }
 }
 
 export function getAstCache<V>(cache: ZenScriptDocumentCache<AstNode, V>, node: AstNode | undefined, provider: (node: AstNode | undefined) => V): V {
-  const uri = node?.$document?.uri?.toString()
+  if(!node) {
+    return provider(node)
+  }
+  const uri = AstUtils.findRootNode(node)?.$document?.uri?.toString()
   if (!uri) {
+    // return cache.get("builtin", node!, () => provider(node))
     return provider(node)
   }
   return cache.get(uri, node!, () => provider(node))
