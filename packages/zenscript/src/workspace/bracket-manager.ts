@@ -29,7 +29,7 @@ export class ZenScriptBracketManager implements BracketManager {
 
   resolve(id: string) {
     id = this.normalize(id)
-    return this.mirrors.find(mirror => mirror.regex.test(id) && id in mirror.entries)?.entries.get(id)
+    return this.mirrors.find(mirror => mirror.entries.has(id))?.entries.get(id)
   }
 
   type(id: string) {
