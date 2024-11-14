@@ -23,8 +23,12 @@ export function getAstCache<V>(cache: ZenScriptDocumentCache<AstNode, V>, node: 
   }
   const uri = AstUtils.findRootNode(node)?.$document?.uri?.toString()
   if (!uri) {
-    // return cache.get("builtin", node!, () => provider(node))
     return provider(node)
   }
-  return cache.get(uri, node!, () => provider(node))
+  
+  if(!cache.has(uri, node)) {
+    cache.set(uri, node, provider(node))
+  }
+
+  return cache.get(uri, node)!
 }

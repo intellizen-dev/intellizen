@@ -10,7 +10,6 @@ import { existsFileUri } from '../utils/fs'
 
 export interface BracketManager {
   initialize: (folders: WorkspaceFolder[]) => Promise<void>
-  resolveExpr: (bracket: BracketExpression) => BracketEntry | undefined
   resolve: (id: string) => BracketEntry | undefined
   type: (id: string) => string | undefined
 }
@@ -31,18 +30,6 @@ export class ZenScriptBracketManager implements BracketManager {
 
   async initialize(folders: WorkspaceFolder[]) {
     await Promise.all(folders.map(folder => this.loadBrackets(folder.config.extra.brackets)))
-  }
-
-  resolveExpr(bracket: BracketExpression) {
-    const uri = bracket.$document?.uri?.toString()
-    if (!uri) {
-      return this.resolve(getPathAsString(bracket))
-    }
-
-    return this.cache.get(uri, bracket, () => {
-      const id = getPathAsString(bracket)
-      return this.resolve(id)
-    })
   }
 
   resolve(id: string) {

@@ -18,40 +18,17 @@ type NameRuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => string |
 type NameNodeRuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CstNode | undefined }
 
 export class ZenScriptNameProvider extends DefaultNameProvider {
-  private readonly nameCache: ZenScriptDocumentCache<AstNode, string>
-  private readonly nameNodeCache: ZenScriptDocumentCache<AstNode, CstNode>
-  private readonly qualifiedNameCache: ZenScriptDocumentCache<AstNode, string>
-
-  constructor(services: ZenScriptServices) {
-    super()
-    this.nameCache = new ZenScriptDocumentCache(services.shared)
-    this.nameNodeCache = new ZenScriptDocumentCache(services.shared)
-    this.qualifiedNameCache = new ZenScriptDocumentCache(services.shared)
-  }
-
   getName(node: AstNode): string | undefined {
-    return getAstCache(this.nameCache, node, n => this.doGetName(n!))
-  }
-
-  private doGetName(node: AstNode): string | undefined {
     // @ts-expect-error allowed index type
     return (this.nameRules[node.$type] ?? super.getName).call(this, node)
   }
 
   getNameNode(node: AstNode): CstNode | undefined {
-    return getAstCache(this.nameNodeCache, node, n => this.doGetNameNode(n!))
-  }
-
-  private doGetNameNode(node: AstNode): CstNode | undefined {
     // @ts-expect-error allowed index type
     return (this.nameNodeRules[node.$type] ?? super.getNameNode).call(this, node)
   }
 
   getQualifiedName(node: AstNode): string | undefined {
-    return getAstCache(this.qualifiedNameCache, node, n => this.doGetQualifiedName(n!))
-  }
-
-  private doGetQualifiedName(node: AstNode): string | undefined {
     const document = AstUtils.getDocument<Script>(node)
     if (!document) {
       return
