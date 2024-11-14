@@ -312,11 +312,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
       }
 
       const receiverType = this.inferType(source.receiver)
-      const memberType = this.inferType(source.target.ref)
-      if (memberType && isClassType(receiverType)) {
-        return memberType.substituteTypeParameters(receiverType.substitutions)
+      let targetType = this.inferType(source.target.ref)
+      if (targetType && isClassType(receiverType)) {
+        targetType = targetType.substituteTypeParameters(receiverType.substitutions)
       }
-      return memberType
+      return targetType
     },
 
     IndexingExpression: (source) => {
