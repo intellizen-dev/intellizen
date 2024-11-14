@@ -1,6 +1,6 @@
 import type { LangiumDocument, WorkspaceFolder } from 'langium'
 import type { ZenScriptSharedServices } from '../module'
-import type { ZenScriptConfigurationManager } from './configuration-manager'
+import type { ConfigurationManager } from './configuration-manager'
 import { DefaultWorkspaceManager, interruptAndCheck, URI, UriUtils } from 'langium'
 import { CancellationToken } from 'vscode-languageserver'
 import { builtinsPath } from '../resource'
@@ -13,7 +13,7 @@ declare module 'langium' {
 }
 
 export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
-  private readonly configurationManager: ZenScriptConfigurationManager
+  private readonly configurationManager: ConfigurationManager
 
   constructor(services: ZenScriptSharedServices) {
     super(services)

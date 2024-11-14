@@ -39,26 +39,26 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
     this.loadedListeners.push(listener)
   }
 
-  private async loadConfig(workspaceFolder: WorkspaceFolder) {
-    const workspaceUri = URI.parse(workspaceFolder.uri)
-    const configUri = await this.findConfig(workspaceFolder)
+  private async loadConfig(folder: WorkspaceFolder) {
+    const folderUri = URI.parse(folder.uri)
+    const configUri = await this.findConfig(folder)
     const config: WorkspaceConfig = { srcRoots: [], extra: {} }
     if (configUri) {
       try {
         await this.load(config, configUri)
       }
       catch (cause) {
-        console.error(new ConfigError(workspaceFolder, { cause }))
+        console.error(new ConfigError(folder, { cause }))
       }
     }
     else {
-      console.error(new ConfigError(workspaceFolder, { cause: new Error(`Config file "${StringConstants.File.intellizen}" not found.`) }))
+      console.error(new ConfigError(folder, { cause: new Error(`Config file "${StringConstants.File.intellizen}" not found.`) }))
     }
-    await this.makeSureSrcRootsIsNotEmpty(config, workspaceUri)
-    workspaceFolder.config = config
+    await this.makeSureSrcRootsIsNotEmpty(config, folderUri)
+    folder.config = config
   }
 
-  private async load(parsedConfig: WorkspaceConfig, configUri: URI) {
+  private async load(config: WorkspaceConfig, configUri: URI) {
     const content = await this.fileSystemProvider.readFile(configUri)
     const json = JSON.parse(content)
     const resolved = await new Resolver().resolve(json)
@@ -67,14 +67,14 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
     for (const srcRoot of schema.srcRoots) {
       const srcRootPath = resolvePath(configUri.fsPath, '..', srcRoot)
       if (existsDirectory(srcRootPath)) {
-        parsedConfig.srcRoots.push(URI.file(srcRootPath))
+        config.srcRoots.push(URI.file(srcRootPath))
       }
       else {
         console.error(new DirectoryNotFoundError(srcRootPath))
       }
     }
 
-    await this.processExtraFile(parsedConfig)
+    await this.processExtraFile(config)
   }
 
   private async processExtraFile(config: WorkspaceConfig) {
@@ -83,27 +83,27 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
     config.extra.preprocessors = nodes.find(it => isFile(it, StringConstants.File.preprocessors))?.uri
   }
 
-  private async makeSureSrcRootsIsNotEmpty(parsedConfig: WorkspaceConfig, workspaceUri: URI) {
-    if (parsedConfig.srcRoots.length > 0) {
+  private async makeSureSrcRootsIsNotEmpty(config: WorkspaceConfig, workspaceUri: URI) {
+    if (config.srcRoots.length > 0) {
       return
     }
 
     if (StringConstants.Folder.scripts === UriUtils.basename(workspaceUri)) {
-      parsedConfig.srcRoots = [workspaceUri]
+      config.srcRoots = [workspaceUri]
       return
     }
 
     const scriptsUri = await findInside(this.fileSystemProvider, workspaceUri, node => isDirectory(node, StringConstants.Folder.scripts))
     if (scriptsUri) {
-      parsedConfig.srcRoots = [scriptsUri]
+      config.srcRoots = [scriptsUri]
       return
     }
 
-    parsedConfig.srcRoots = [workspaceUri]
+    config.srcRoots = [workspaceUri]
   }
 
-  private async findConfig(workspaceFolder: WorkspaceFolder): Promise<URI | undefined> {
-    const workspaceUri = URI.parse(workspaceFolder.uri)
-    return findInside(this.fileSystemProvider, workspaceUri, node => isFile(node, StringConstants.File.intellizen))
+  private async findConfig(folder: WorkspaceFolder): Promise<URI | undefined> {
+    const folderUri = URI.parse(folder.uri)
+    return findInside(this.fileSystemProvider, folderUri, node => isFile(node, StringConstants.File.intellizen))
   }
 }
