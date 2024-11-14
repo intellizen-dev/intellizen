@@ -7,7 +7,6 @@ export const builtinsPath = resolve(__dirname, 'builtins')
 export const StringConstants = Object.freeze({
   Folder: {
     scripts: 'scripts',
-    dzs_scripts: 'dzs_scripts',
   },
   File: {
     intellizen: 'intellizen.json',
