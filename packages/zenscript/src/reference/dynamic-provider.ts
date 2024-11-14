@@ -47,7 +47,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
         if (isFunctionType(receiverType)) {
           const paramType = receiverType.paramTypes[index]
           if (isClassType(paramType)) {
-            stream(this.memberProvider.getMember(paramType.declaration))
+            stream(this.memberProvider.getMembers(paramType.declaration))
               .map(it => it.node)
               .filter(it => isFunctionDeclaration(it))
               .filter(it => it.prefix === 'static')
@@ -64,7 +64,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
       const dynamics: AstNodeDescription[] = []
 
       // dynamic member
-      const operatorDecl = stream(this.memberProvider.getMember(source.receiver))
+      const operatorDecl = stream(this.memberProvider.getMembers(source.receiver))
         .map(it => it.node)
         .filter(it => isOperatorFunctionDeclaration(it))
         .filter(it => it.parameters.length === 1)

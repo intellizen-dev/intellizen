@@ -10,7 +10,7 @@ import { getClassChain, isStatic } from '../utils/ast'
 import { createSyntheticAstNodeDescription, isSyntheticAstNode } from './synthetic'
 
 export interface MemberProvider {
-  getMember: (source: AstNode | Type | undefined) => AstNodeDescription[]
+  getMembers: (source: AstNode | Type | undefined) => AstNodeDescription[]
 }
 
 type SourceMap = ZenScriptAstType & ZenScriptType & ZenScriptSyntheticAstType
@@ -25,7 +25,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     this.typeComputer = services.typing.TypeComputer
   }
 
-  getMember(source: AstNode | Type | undefined): AstNodeDescription[] {
+  getMembers(source: AstNode | Type | undefined): AstNodeDescription[] {
     // @ts-expect-error allowed index type
     return this.rules[source?.$type]?.call(this, source) ?? []
   }
@@ -53,7 +53,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     ImportDeclaration: (source) => {
-      return this.getMember(source.path.at(-1)?.ref)
+      return this.getMembers(source.path.at(-1)?.ref)
     },
 
     ClassDeclaration: (source) => {
@@ -65,17 +65,17 @@ export class ZenScriptMemberProvider implements MemberProvider {
 
     VariableDeclaration: (source) => {
       const type = this.typeComputer.inferType(source)
-      return this.getMember(type)
+      return this.getMembers(type)
     },
 
     LoopParameter: (source) => {
       const type = this.typeComputer.inferType(source)
-      return this.getMember(type)
+      return this.getMembers(type)
     },
 
     ValueParameter: (source) => {
       const type = this.typeComputer.inferType(source)
-      return this.getMember(type)
+      return this.getMembers(type)
     },
 
     MemberAccess: (source) => {
@@ -85,77 +85,77 @@ export class ZenScriptMemberProvider implements MemberProvider {
       }
 
       if (isSyntheticAstNode(target)) {
-        return this.getMember(target)
+        return this.getMembers(target)
       }
 
       const receiverType = this.typeComputer.inferType(source.receiver)
       if (!receiverType) {
-        return this.getMember(target)
+        return this.getMembers(target)
       }
 
       let type = this.typeComputer.inferType(source)
       if (isClassType(receiverType)) {
         type = type?.substituteTypeParameters(receiverType.substitutions)
       }
-      return this.getMember(type)
+      return this.getMembers(type)
     },
 
     IndexingExpression: (source) => {
       const type = this.typeComputer.inferType(source)
-      return this.getMember(type)
+      return this.getMembers(type)
     },
 
     ReferenceExpression: (source) => {
       if (source.target.$refText === 'this' && isClassDeclaration(source.target.ref)) {
-        return this.getMember(new ClassType(source.target.ref, new Map()))
+        return this.getMembers(new ClassType(source.target.ref, new Map()))
       }
-      return this.getMember(source.target.ref)
+      return this.getMembers(source.target.ref)
     },
 
     CallExpression: (source) => {
       const receiverType = this.typeComputer.inferType(source.receiver)
       if (isFunctionType(receiverType)) {
-        return this.getMember(receiverType.returnType)
+        return this.getMembers(receiverType.returnType)
       }
       if (isAnyType(receiverType)) {
-        return this.getMember(receiverType)
+        return this.getMembers(receiverType)
       }
       return []
     },
 
     BracketExpression: (source) => {
       const type = this.typeComputer.inferType(source)
-      return this.getMember(type)
+      return this.getMembers(type)
     },
 
     FieldDeclaration: (source) => {
       const type = this.typeComputer.inferType(source)
-      return this.getMember(type)
+      return this.getMembers(type)
     },
 
     StringLiteral: (source) => {
       const type = this.typeComputer.inferType(source)
-      return this.getMember(type)
+      return this.getMembers(type)
     },
 
     StringTemplate: (source) => {
       const type = this.typeComputer.inferType(source)
-      return this.getMember(type)
+      return this.getMembers(type)
     },
 
     IntegerLiteral: (source) => {
       const type = this.typeComputer.inferType(source)
-      return this.getMember(type)
+      return this.getMembers(type)
     },
 
     FloatingLiteral: (source) => {
       const type = this.typeComputer.inferType(source)
-      return this.getMember(type)
+      return this.getMembers(type)
     },
 
     BooleanLiteral: (source) => {
       const type = this.typeComputer.inferType(source)
-      return this.getMember(type)
+      return this.getMembers(type)
     },
 
     ClassType: (source) => {
