@@ -147,7 +147,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return
       }
 
-      const operatorDecl = this.memberProvider().getMember(rangeType)
+      const operatorDecl = this.memberProvider().getMembers(rangeType)
         .map(it => it.node)
         .filter(it => isOperatorFunctionDeclaration(it))
         .filter(it => it.op === 'for')
@@ -191,7 +191,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
           return expectingType.paramTypes.at(index)
         }
         else if (isClassType(expectingType)) {
-          const lambdaDecl = this.memberProvider().getMember(expectingType)
+          const lambdaDecl = this.memberProvider().getMembers(expectingType)
             .map(it => it.node)
             .filter(it => isFunctionDeclaration(it))
             .filter(it => it.prefix === 'lambda')
@@ -312,11 +312,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
       }
 
       const receiverType = this.inferType(source.receiver)
-      const memberType = this.inferType(source.target.ref)
-      if (memberType && isClassType(receiverType)) {
-        return memberType.substituteTypeParameters(receiverType.substitutions)
+      let targetType = this.inferType(source.target.ref)
+      if (targetType && isClassType(receiverType)) {
+        targetType = targetType.substituteTypeParameters(receiverType.substitutions)
       }
-      return memberType
+      return targetType
     },
 
     IndexingExpression: (source) => {
@@ -325,7 +325,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return receiverType
       }
 
-      const operatorDecl = this.memberProvider().getMember(source.receiver)
+      const operatorDecl = this.memberProvider().getMembers(source.receiver)
         .map(it => it.node)
         .filter(it => isOperatorFunctionDeclaration(it))
         .filter(it => it.op === '[]')

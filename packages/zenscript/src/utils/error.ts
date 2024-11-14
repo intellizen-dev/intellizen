@@ -1,5 +1,5 @@
 import type { WorkspaceFolder } from 'langium'
-import { StringConstants } from '../workspace/configurations'
+import { StringConstants } from '../resource'
 
 export class ConfigError extends Error {
   constructor(workspaceFolder: WorkspaceFolder, options?: ErrorOptions) {

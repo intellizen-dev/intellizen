@@ -113,7 +113,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     MemberAccess: (source) => {
       const outer = this.dynamicScope(source.container)
-      const members = this.memberProvider.getMember(source.container.receiver)
+      const members = this.memberProvider.getMembers(source.container.receiver)
       return this.createScope(members, outer)
     },
 
@@ -136,7 +136,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       }
       else {
         const prev = source.container.path[source.index - 1].ref
-        const members = this.memberProvider.getMember(prev)
+        const members = this.memberProvider.getMembers(prev)
         return this.createScope(members)
       }
     },

@@ -48,8 +48,9 @@ export class ZenScriptBracketManager implements BracketManager {
     }
 
     const content = await this.fileSystemProvider.readFile(bracketsUri)
-    const json = BracketsJsonSchema.parse(JSON.parse(content))
-    json.forEach((mirror) => {
+    const json = JSON.parse(content)
+    const schema = BracketsJsonSchema.parse(json)
+    schema.forEach((mirror) => {
       const entries = mirror.entries.reduce((map, entry) => {
         const { _id: id, _name: name, ...properties } = entry
         return map.set(id, { name, properties })
