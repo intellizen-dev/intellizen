@@ -1,7 +1,7 @@
 import type { AstNode } from 'langium'
-import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
+import type { BracketExpression, ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import { AstUtils } from 'langium'
-import { isClassDeclaration, isFunctionDeclaration, isScript } from '../generated/ast'
+import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
 
 export function isToplevel(node: AstNode | undefined): boolean {
@@ -46,10 +46,20 @@ export function isImportable(node: AstNode | undefined) {
   }
 }
 
-export function getPathAsString(importDecl: ImportDeclaration, index?: number): string {
-  let names = importDecl.path.map(it => it.$refText)
-  if (index !== undefined) {
-    names = names.slice(0, index + 1)
+export function getPathAsString(importDecl: ImportDeclaration, index?: number): string
+export function getPathAsString(bracket: BracketExpression): string
+export function getPathAsString(astNode: ImportDeclaration | BracketExpression, index?: number): string {
+  if (isImportDeclaration(astNode)) {
+    let names = astNode.path.map(it => it.$refText)
+    if (index !== undefined) {
+      names = names.slice(0, index + 1)
+    }
+    return names.join('.')
   }
-  return names.join('.')
+  else if (isBracketExpression(astNode)) {
+    return astNode.path.map(it => it?.$cstNode?.text).join(':')
+  }
+  else {
+    throw new Error(`Illegal argument: ${astNode}`)
+  }
 }

@@ -3,10 +3,12 @@ import type { InlayHint, InlayHintLabelPart, Location, MarkupContent } from 'vsc
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
+import type { BracketManager } from '../workspace/bracket-manager'
 import { type AstNode, AstUtils, type NameProvider } from 'langium'
 import { AbstractInlayHintProvider } from 'langium/lsp'
 import { InlayHintKind } from 'vscode-languageserver'
 import { isClassType } from '../typing/type-description'
+import { getPathAsString } from '../utils/ast'
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], acceptor: InlayHintAcceptor) => void }
@@ -14,11 +16,13 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], acceptor: Inlay
 export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
   private readonly typeComputer: TypeComputer
   private readonly nameProvider: NameProvider
+  private readonly bracketManager: BracketManager
 
   constructor(services: ZenScriptServices) {
     super()
     this.nameProvider = services.references.NameProvider
     this.typeComputer = services.typing.TypeComputer
+    this.bracketManager = services.workspace.BracketManager
   }
 
   computeInlayHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
@@ -79,6 +83,18 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
 
     ValueParameter: (source, acceptor) => {
       this.acceptTypeHint(source, acceptor)
+    },
+
+    BracketExpression: (source, acceptor) => {
+      const id = getPathAsString(source)
+      const name = this.bracketManager.resolve(id)?.name
+      if (name) {
+        acceptor({
+          position: source.$cstNode!.range.end,
+          label: name,
+          paddingLeft: true,
+        })
+      }
     },
   }
 }
