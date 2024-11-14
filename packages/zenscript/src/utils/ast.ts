@@ -1,4 +1,4 @@
-import type { AstNode, ReferenceInfo } from 'langium'
+import type { AstNode } from 'langium'
 import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import { AstUtils } from 'langium'
 import { isClassDeclaration, isFunctionDeclaration, isScript } from '../generated/ast'
@@ -26,10 +26,6 @@ export function getClassChain(clazz?: ClassDeclaration): ClassDeclaration[] {
   return Array.from(set)
 }
 
-export function getClassMembers(clazz?: ClassDeclaration) {
-  return getClassChain(clazz).flatMap(c => c.members)
-}
-
 export function isStatic(node: AstNode | undefined) {
   return node && 'prefix' in node && node.prefix === 'static'
 }
@@ -48,17 +44,6 @@ export function isImportable(node: AstNode | undefined) {
   else {
     return isStatic(node) || isClassDeclaration(node)
   }
-}
-
-export function toQualifiedName(importDecl: ImportDeclaration, context: ReferenceInfo): string {
-  let names = importDecl.path.map(it => it.$refText)
-  if (context.property === 'refer') {
-    names.push(importDecl.path.at(-1)!.$refText)
-  }
-  else if (context.property === 'path' && context.index !== undefined) {
-    names = names.slice(0, context.index + 1)
-  }
-  return names.join('.')
 }
 
 export function getPathAsString(importDecl: ImportDeclaration, index?: number): string {
