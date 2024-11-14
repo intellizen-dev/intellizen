@@ -7,6 +7,7 @@ import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
 import { type AstNode, stream } from 'langium'
 import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { getAstCache, ZenScriptDocumentCache } from '../utils/cache'
 import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
 
 export interface TypeComputer {
@@ -20,14 +21,20 @@ export class ZenScriptTypeComputer implements TypeComputer {
   private readonly packageManager: PackageManager
   private readonly bracketManager: BracketManager
   private readonly memberProvider: () => MemberProvider
+  private readonly cache: ZenScriptDocumentCache<AstNode, Type | undefined>
 
   constructor(services: ZenScriptServices) {
     this.packageManager = services.workspace.PackageManager
     this.bracketManager = services.workspace.BracketManager
     this.memberProvider = () => services.references.MemberProvider
+    this.cache = new ZenScriptDocumentCache(services.shared)
   }
 
   public inferType(node: AstNode | undefined): Type | undefined {
+    return getAstCache(this.cache, node, n => this.doInferType(n))
+  }
+
+  private doInferType(node: AstNode | undefined): Type | undefined {
     // @ts-expect-error allowed index type
     return this.rules[node?.$type]?.call(this, node)
   }

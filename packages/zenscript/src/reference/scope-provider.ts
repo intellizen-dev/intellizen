@@ -8,6 +8,7 @@ import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
 import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter } from '../generated/ast'
 import { getPathAsString } from '../utils/ast'
+import { ZenScriptDocumentCache } from '../utils/cache'
 import { generateStream } from '../utils/stream'
 import { createSyntheticAstNodeDescription } from './synthetic'
 
@@ -18,15 +19,26 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
   private readonly dynamicProvider: DynamicProvider
+  private readonly cache: ZenScriptDocumentCache<ReferenceInfo, Scope>
 
   constructor(services: ZenScriptServices) {
     super(services)
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
     this.dynamicProvider = services.references.DynamicProvider
+    this.cache = new ZenScriptDocumentCache(services.shared)
   }
 
   override getScope(context: ReferenceInfo): Scope {
+    const uri = context.container.$document?.uri?.toString()
+    if (!uri) {
+      return this.doGetScope(context)
+    }
+
+    return this.cache.get(uri, context, () => this.doGetScope(context))
+  }
+
+  private doGetScope(context: ReferenceInfo): Scope {
     // @ts-expect-error allowed index type
     return this.rules[context.container.$type]?.call(this, context) ?? EMPTY_SCOPE
   }

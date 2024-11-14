@@ -65,7 +65,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     Validator: () => new ZenScriptValidator(),
   },
   references: {
-    NameProvider: () => new ZenScriptNameProvider(),
+    NameProvider: services => new ZenScriptNameProvider(services),
     ScopeComputation: services => new ZenScriptScopeComputation(services),
     ScopeProvider: services => new ZenScriptScopeProvider(services),
     MemberProvider: services => new ZenScriptMemberProvider(services),

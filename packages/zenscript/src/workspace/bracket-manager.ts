@@ -1,12 +1,16 @@
 import type { FileSystemProvider, URI } from 'langium'
 import type { WorkspaceFolder } from 'vscode-languageserver'
+import type { BracketExpression } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { BracketEntry, BracketMirror } from '../resource'
 import { BracketsJsonSchema } from '../resource'
+import { getPathAsString } from '../utils/ast'
+import { ZenScriptDocumentCache } from '../utils/cache'
 import { existsFileUri } from '../utils/fs'
 
 export interface BracketManager {
   initialize: (folders: WorkspaceFolder[]) => Promise<void>
+  resolveExpr: (bracket: BracketExpression) => BracketEntry | undefined
   resolve: (id: string) => BracketEntry | undefined
   type: (id: string) => string | undefined
 }
@@ -14,9 +18,11 @@ export interface BracketManager {
 export class ZenScriptBracketManager implements BracketManager {
   private readonly fileSystemProvider: FileSystemProvider
   private readonly mirrors: BracketMirror[]
+  private readonly cache: ZenScriptDocumentCache<BracketExpression, BracketEntry | undefined>
 
   constructor(services: ZenScriptServices) {
     this.fileSystemProvider = services.shared.workspace.FileSystemProvider
+    this.cache = new ZenScriptDocumentCache(services.shared)
     this.mirrors = []
     services.shared.workspace.ConfigurationManager.onLoaded(async (folders) => {
       await this.initialize(folders)
@@ -25,6 +31,18 @@ export class ZenScriptBracketManager implements BracketManager {
 
   async initialize(folders: WorkspaceFolder[]) {
     await Promise.all(folders.map(folder => this.loadBrackets(folder.config.extra.brackets)))
+  }
+
+  resolveExpr(bracket: BracketExpression) {
+    const uri = bracket.$document?.uri?.toString()
+    if (!uri) {
+      return this.resolve(getPathAsString(bracket))
+    }
+
+    return this.cache.get(uri, bracket, () => {
+      const id = getPathAsString(bracket)
+      return this.resolve(id)
+    })
   }
 
   resolve(id: string) {

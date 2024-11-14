@@ -7,6 +7,7 @@ import { stream } from 'langium'
 import { isClassDeclaration, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
 import { getClassChain, isStatic } from '../utils/ast'
+import { getAstCache, ZenScriptDocumentCache } from '../utils/cache'
 import { createSyntheticAstNodeDescription, isSyntheticAstNode } from './synthetic'
 
 export interface MemberProvider {
@@ -19,13 +20,19 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => AstNodeDescr
 export class ZenScriptMemberProvider implements MemberProvider {
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
+  private readonly cache: ZenScriptDocumentCache<AstNode | Type, AstNodeDescription[]>
 
   constructor(services: ZenScriptServices) {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.typeComputer = services.typing.TypeComputer
+    this.cache = new ZenScriptDocumentCache(services.shared)
   }
 
   getMembers(source: AstNode | Type | undefined): AstNodeDescription[] {
+    return getAstCache(this.cache, source, s => this.doGetMembers(s)) ?? []
+  }
+
+  private doGetMembers(source: AstNode | Type | undefined): AstNodeDescription[] {
     // @ts-expect-error allowed index type
     return this.rules[source?.$type]?.call(this, source) ?? []
   }

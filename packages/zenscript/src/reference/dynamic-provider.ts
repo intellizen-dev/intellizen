@@ -6,6 +6,7 @@ import type { MemberProvider } from './member-provider'
 import { AstUtils, stream } from 'langium'
 import { isCallExpression, isClassDeclaration, isFunctionDeclaration, isOperatorFunctionDeclaration } from '../generated/ast'
 import { isClassType, isFunctionType } from '../typing/type-description'
+import { getAstCache, ZenScriptDocumentCache } from '../utils/cache'
 
 export interface DynamicProvider {
   getDynamics: (source: AstNode) => AstNodeDescription[]
@@ -18,14 +19,20 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
   private readonly memberProvider: MemberProvider
+  private readonly cache: ZenScriptDocumentCache<AstNode, AstNodeDescription[]>
 
   constructor(services: ZenScriptServices) {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.typeComputer = services.typing.TypeComputer
     this.memberProvider = services.references.MemberProvider
+    this.cache = new ZenScriptDocumentCache(services.shared)
   }
 
   getDynamics(source: AstNode): AstNodeDescription[] {
+    return getAstCache(this.cache, source, s => this.doGetDynamics(s!)) ?? []
+  }
+
+  private doGetDynamics(source: AstNode): AstNodeDescription[] {
     // @ts-expect-error allowed index type
     return this.rules[source.$type]?.call(this, source)
   }

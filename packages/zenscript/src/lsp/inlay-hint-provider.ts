@@ -8,7 +8,6 @@ import { type AstNode, AstUtils, type NameProvider } from 'langium'
 import { AbstractInlayHintProvider } from 'langium/lsp'
 import { InlayHintKind } from 'vscode-languageserver'
 import { isClassType } from '../typing/type-description'
-import { getPathAsString } from '../utils/ast'
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], acceptor: InlayHintAcceptor) => void }
@@ -86,8 +85,7 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
     },
 
     BracketExpression: (source, acceptor) => {
-      const id = getPathAsString(source)
-      const name = this.bracketManager.resolve(id)?.name
+      const name = this.bracketManager.resolveExpr(source)?.name
       if (name) {
         acceptor({
           position: source.$cstNode!.range.end,
