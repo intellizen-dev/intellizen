@@ -14,6 +14,7 @@ import { ZenScriptNameProvider } from './reference/name-provider'
 import { ZenScriptScopeComputation } from './reference/scope-computation'
 import { ZenScriptScopeProvider } from './reference/scope-provider'
 import { ZenScriptTypeComputer } from './typing/type-computer'
+import { WorkspaceCache } from './utils/cache'
 import { registerValidationChecks, ZenScriptValidator } from './validation/validator'
 import { ZenScriptBracketManager } from './workspace/bracket-manager'
 import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
@@ -37,6 +38,7 @@ export interface ZenScriptAddedServices {
   workspace: {
     PackageManager: ZenScriptPackageManager
     BracketManager: ZenScriptBracketManager
+    Cache: WorkspaceCache
   }
 }
 
@@ -74,6 +76,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
   workspace: {
     PackageManager: services => new ZenScriptPackageManager(services),
     BracketManager: services => new ZenScriptBracketManager(services),
+    Cache: services => new WorkspaceCache(services.shared),
   },
   parser: {
     TokenBuilder: () => new CustomTokenBuilder(),

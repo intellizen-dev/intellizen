@@ -1,7 +1,6 @@
 import type { MapLiteral, UnquotedString, VariableDeclaration } from '../../../src/generated/ast'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { ContextCache } from '../../../src/utils/cache'
 import { assertNoErrors, createTestServices, getDocument } from '../../utils'
 
 const services = await createTestServices(__dirname)
@@ -18,7 +17,7 @@ describe(`check unquoted string in map literal`, async () => {
 
   it('check inferring unquoted string', () => {
     const unquotedString = expression_map_literal.entries[0].key as UnquotedString
-    const type = services.typing.TypeComputer.inferType(unquotedString, new ContextCache())
+    const type = services.typing.TypeComputer.inferType(unquotedString)
     expect(type?.toString()).toBe('string')
   })
 })

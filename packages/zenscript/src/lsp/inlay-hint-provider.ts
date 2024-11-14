@@ -9,7 +9,6 @@ import { AbstractInlayHintProvider } from 'langium/lsp'
 import { InlayHintKind } from 'vscode-languageserver'
 import { isClassType } from '../typing/type-description'
 import { getPathAsString } from '../utils/ast'
-import { ContextCache } from '../utils/cache'
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], acceptor: InlayHintAcceptor) => void }
@@ -41,7 +40,7 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
       return
     }
 
-    const type = this.typeComputer.inferType(astNode, new ContextCache())
+    const type = this.typeComputer.inferType(astNode)
     if (!type) {
       return
     }

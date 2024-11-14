@@ -2,36 +2,39 @@ import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'la
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
-import type { ContextCache } from '../utils/cache'
+import type { WorkspaceCache } from '../utils/cache'
 import type { MemberProvider } from './member-provider'
 import { AstUtils, stream } from 'langium'
 import { isCallExpression, isClassDeclaration, isFunctionDeclaration, isOperatorFunctionDeclaration } from '../generated/ast'
 import { isClassType, isFunctionType } from '../typing/type-description'
 
 export interface DynamicProvider {
-  getDynamics: (source: AstNode, cache: ContextCache) => AstNodeDescription[]
+  getDynamics: (source: AstNode) => AstNodeDescription[]
 }
 
 type SourceMap = ZenScriptAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], cache: ContextCache) => AstNodeDescription[] }
+type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => AstNodeDescription[] }
 
 export class ZenScriptDynamicProvider implements DynamicProvider {
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
   private readonly memberProvider: MemberProvider
+  private readonly workspaceCache: WorkspaceCache
 
   constructor(services: ZenScriptServices) {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.typeComputer = services.typing.TypeComputer
     this.memberProvider = services.references.MemberProvider
+    this.workspaceCache = services.workspace.Cache
   }
 
-  getDynamics(source: AstNode, cache: ContextCache): AstNodeDescription[] {
+  getDynamics(source: AstNode): AstNodeDescription[] {
+    const cache = this.workspaceCache.get(this)
     if (cache.has(this, source)) {
       return cache.get(this, source)
     }
     // @ts-expect-error allowed index type
-    const dynamics = this.rules[source.$type]?.call(this, source, cache)
+    const dynamics = this.rules[source.$type]?.call(this, source)
     if (dynamics) {
       cache.set(this, source, dynamics)
     }
@@ -39,7 +42,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
   }
 
   private readonly rules: RuleMap = {
-    ReferenceExpression: (source, cache) => {
+    ReferenceExpression: (source) => {
       const dynamics: AstNodeDescription[] = []
 
       // dynamic this
@@ -51,11 +54,11 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
       // dynamic arguments
       if (isCallExpression(source.$container) && source.$containerProperty === 'arguments') {
         const index = source.$containerIndex!
-        const receiverType = this.typeComputer.inferType(source.$container.receiver, cache)
+        const receiverType = this.typeComputer.inferType(source.$container.receiver)
         if (isFunctionType(receiverType)) {
           const paramType = receiverType.paramTypes[index]
           if (isClassType(paramType)) {
-            stream(this.memberProvider.getMembers(paramType.declaration, cache))
+            stream(this.memberProvider.getMembers(paramType.declaration))
               .map(it => it.node)
               .filter(it => isFunctionDeclaration(it))
               .filter(it => it.prefix === 'static')
@@ -68,11 +71,11 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
       return dynamics
     },
 
-    MemberAccess: (source, cache) => {
+    MemberAccess: (source) => {
       const dynamics: AstNodeDescription[] = []
 
       // dynamic member
-      const operatorDecl = stream(this.memberProvider.getMembers(source.receiver, cache))
+      const operatorDecl = stream(this.memberProvider.getMembers(source.receiver))
         .map(it => it.node)
         .filter(it => isOperatorFunctionDeclaration(it))
         .filter(it => it.parameters.length === 1)

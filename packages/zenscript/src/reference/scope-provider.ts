@@ -8,12 +8,11 @@ import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
 import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter } from '../generated/ast'
 import { getPathAsString } from '../utils/ast'
-import { ContextCache } from '../utils/cache'
 import { generateStream } from '../utils/stream'
 import { createSyntheticAstNodeDescription } from './synthetic'
 
 type SourceMap = ZenScriptAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }, cache: ContextCache) => Scope }
+type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => Scope }
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
@@ -29,7 +28,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
   override getScope(info: ReferenceInfo): Scope {
     // @ts-expect-error allowed index type
-    return this.rules[info.container.$type]?.call(this, info, new ContextCache()) ?? EMPTY_SCOPE
+    return this.rules[info.container.$type]?.call(this, info) ?? EMPTY_SCOPE
   }
 
   private lexicalScope(
@@ -45,8 +44,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .reduce((outer, descriptions) => this.createScope(descriptions, outer), outside as Scope)
   }
 
-  private dynamicScope(astNode: AstNode, cache: ContextCache, outside?: Scope) {
-    return this.createScope(this.dynamicProvider.getDynamics(astNode, cache), outside)
+  private dynamicScope(astNode: AstNode, outside?: Scope) {
+    return this.createScope(this.dynamicProvider.getDynamics(astNode), outside)
   }
 
   private globalScope(outside?: Scope) {
@@ -90,11 +89,11 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       return this.createScope(elements)
     },
 
-    ReferenceExpression: (source, cache) => {
+    ReferenceExpression: (source) => {
       let outer: Scope
       outer = this.packageScope()
       outer = this.globalScope(outer)
-      outer = this.dynamicScope(source.container, cache, outer)
+      outer = this.dynamicScope(source.container, outer)
 
       const processor = (desc: AstNodeDescription) => {
         switch (desc.type) {
@@ -112,13 +111,13 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       return this.lexicalScope(source.container, processor, outer)
     },
 
-    MemberAccess: (source, cache) => {
-      const outer = this.dynamicScope(source.container, cache)
-      const members = this.memberProvider.getMembers(source.container.receiver, cache)
+    MemberAccess: (source) => {
+      const outer = this.dynamicScope(source.container)
+      const members = this.memberProvider.getMembers(source.container.receiver)
       return this.createScope(members, outer)
     },
 
-    NamedTypeReference: (source, cache) => {
+    NamedTypeReference: (source) => {
       if (!source.index) {
         const outer = this.classScope()
         const processor = (desc: AstNodeDescription) => {
@@ -137,7 +136,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       }
       else {
         const prev = source.container.path[source.index - 1].ref
-        const members = this.memberProvider.getMembers(prev, cache)
+        const members = this.memberProvider.getMembers(prev)
         return this.createScope(members)
       }
     },

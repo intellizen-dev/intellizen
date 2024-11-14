@@ -1,7 +1,6 @@
 import type { VariableDeclaration } from '../../../src/generated/ast'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { ContextCache } from '../../../src/utils/cache'
 import { assertNoErrors, createTestServices, getDocument } from '../../utils'
 
 const services = await createTestServices(__dirname)
@@ -18,17 +17,17 @@ describe(`check inferring indexing expression`, async () => {
   })
 
   it('check indexing array', () => {
-    const type_d = services.typing.TypeComputer.inferType(statement_val_d, new ContextCache())
+    const type_d = services.typing.TypeComputer.inferType(statement_val_d)
     expect(type_d?.toString()).toBe('double')
   })
 
   it('check indexing list', () => {
-    const type_i = services.typing.TypeComputer.inferType(statement_val_i, new ContextCache())
+    const type_i = services.typing.TypeComputer.inferType(statement_val_i)
     expect(type_i?.toString()).toBe('int')
   })
 
   it('check indexing map', () => {
-    const type_s = services.typing.TypeComputer.inferType(statement_val_s, new ContextCache())
+    const type_s = services.typing.TypeComputer.inferType(statement_val_s)
     expect(type_s?.toString()).toBe('string')
   })
 })
