@@ -271,11 +271,17 @@ export class ZenScriptTypeComputer implements TypeComputer {
     BracketExpression: (source) => {
       const id = source.path.map(it => it.$cstNode?.text).join(':')
       const type = this.bracketManager.type(id)
-      if (type) {
-        return this.classTypeOf(type)
-      }
-      else {
+      if (!type) {
         return this.classTypeOf('any')
+      }
+
+      const types = type.split('&').map(it => this.classTypeOf(it.trim()))
+      switch (types.length) {
+        case 1:
+          return types[0]
+
+        default:
+          return new IntersectionType(types)
       }
     },
 
