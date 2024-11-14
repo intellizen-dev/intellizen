@@ -1,7 +1,6 @@
 import type { HierarchyNode } from '@intellizen/shared'
-import type { AstNode, LangiumDocument } from 'langium'
+import type { AstNode, LangiumDocument, NameProvider } from 'langium'
 import type { ZenScriptServices } from '../module'
-import type { ZenScriptNameProvider } from '../reference/name-provider'
 import { HierarchyTree } from '@intellizen/shared'
 import { AstUtils, DocumentState, stream } from 'langium'
 import { isClassDeclaration } from '../generated/ast'
@@ -14,7 +13,7 @@ export interface PackageManager {
 }
 
 export class ZenScriptPackageManager implements PackageManager {
-  private readonly nameProvider: ZenScriptNameProvider
+  private readonly nameProvider: NameProvider
   private readonly packageTree: HierarchyTree<AstNode>
 
   constructor(services: ZenScriptServices) {
