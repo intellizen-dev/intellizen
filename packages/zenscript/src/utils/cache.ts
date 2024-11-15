@@ -1,7 +1,7 @@
-export class WorkspaceCache {
-  private readonly contexts: WeakMap<object, WeakMap<any, any>> = new WeakMap()
+export class WorkspaceCache<C extends WeakKey = object, K extends WeakKey = object, V = any> {
+  private readonly contexts: WeakMap<C, WeakMap<K, V>> = new WeakMap()
 
-  get(context: object): WeakMap<any, any> {
+  get(context: C): WeakMap<K, V> {
     if (this.contexts.has(context)) {
       return this.contexts.get(context)!
     }
