@@ -1,6 +1,7 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
+import type { WorkspaceCache } from '../utils/cache'
 import type { PackageManager } from '../workspace/package-manager'
 import type { DynamicProvider } from './dynamic-provider'
 import type { MemberProvider } from './member-provider'
@@ -18,17 +19,25 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
   private readonly dynamicProvider: DynamicProvider
+  private readonly workspaceCache: WorkspaceCache
 
   constructor(services: ZenScriptServices) {
     super(services)
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
     this.dynamicProvider = services.references.DynamicProvider
+    this.workspaceCache = services.shared.workspace.Cache
   }
 
   override getScope(info: ReferenceInfo): Scope {
+    const cache = this.workspaceCache.get(this)
+    if (cache.has(this, info)) {
+      return cache.get(this, info)
+    }
     // @ts-expect-error allowed index type
-    return this.rules[info.container.$type]?.call(this, info) ?? EMPTY_SCOPE
+    const scope = this.rules[info.container.$type]?.call(this, info) ?? EMPTY_SCOPE
+    cache.set(this, info, scope)
+    return scope
   }
 
   private lexicalScope(
