@@ -30,13 +30,13 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
 
   getDynamics(source: AstNode): AstNodeDescription[] {
     const cache = this.workspaceCache.get(this)
-    if (cache.has(this, source)) {
-      return cache.get(this, source)
+    if (cache.has(source)) {
+      return cache.get(source)
     }
     // @ts-expect-error allowed index type
     const dynamics = this.rules[source.$type]?.call(this, source)
     if (dynamics) {
-      cache.set(this, source, dynamics)
+      cache.set(source, dynamics)
     }
     return dynamics
   }

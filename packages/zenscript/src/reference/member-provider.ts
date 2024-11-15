@@ -30,14 +30,14 @@ export class ZenScriptMemberProvider implements MemberProvider {
 
   getMembers(source: AstNode | Type | undefined): AstNodeDescription[] {
     const cache = this.workspaceCache.get(this)
-    if (cache.has(this, source)) {
-      return cache.get(this, source)
+    if (cache.has(source)) {
+      return cache.get(source)
     }
 
     // @ts-expect-error allowed index type
     const members = this.rules[source?.$type]?.call(this, source, cache)
     if (members) {
-      cache.set(this, source, members)
+      cache.set(source, members)
     }
     return members
   }

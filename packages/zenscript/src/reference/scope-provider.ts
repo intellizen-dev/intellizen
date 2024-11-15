@@ -31,12 +31,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
   override getScope(info: ReferenceInfo): Scope {
     const cache = this.workspaceCache.get(this)
-    if (cache.has(this, info)) {
-      return cache.get(this, info)
+    if (cache.has(info)) {
+      return cache.get(info)
     }
     // @ts-expect-error allowed index type
     const scope = this.rules[info.container.$type]?.call(this, info) ?? EMPTY_SCOPE
-    cache.set(this, info, scope)
+    cache.set(info, scope)
     return scope
   }
 

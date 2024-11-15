@@ -33,14 +33,14 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
   public inferType(node: AstNode | undefined): Type | undefined {
     const cache = this.workspaceCache.get(this)
-    if (cache.has(this, node)) {
-      return cache.get(this, node)
+    if (cache.has(node)) {
+      return cache.get(node)
     }
 
     // @ts-expect-error allowed index type
     const type = this.rules[node?.$type]?.call(this, node, cache)
     if (type) {
-      cache.set(this, node, type)
+      cache.set(node, type)
     }
     return type
   }

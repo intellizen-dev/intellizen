@@ -1,13 +1,14 @@
-import { ContextCache, SimpleCache } from 'langium'
+export class WorkspaceCache {
+  private readonly contexts: WeakMap<object, WeakMap<any, any>> = new WeakMap()
 
-export class WorkspaceCache extends SimpleCache<object, ContextCache<object, any, any>> {
-  constructor() {
-    super()
-    // @ts-expect-error replace with WeakMap
-    this.cache = new WeakMap()
-  }
-
-  get(key: object) {
-    return super.get(key, () => new ContextCache())
+  get(context: object): WeakMap<any, any> {
+    if (this.contexts.has(context)) {
+      return this.contexts.get(context)!
+    }
+    else {
+      const cache = new WeakMap()
+      this.contexts.set(context, cache)
+      return cache
+    }
   }
 }
