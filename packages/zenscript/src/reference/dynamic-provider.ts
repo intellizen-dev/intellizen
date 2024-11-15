@@ -2,7 +2,6 @@ import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'la
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
-import type { WorkspaceCache } from '../utils/cache'
 import type { MemberProvider } from './member-provider'
 import { AstUtils, stream } from 'langium'
 import { isCallExpression, isClassDeclaration, isFunctionDeclaration, isOperatorFunctionDeclaration } from '../generated/ast'
@@ -19,26 +18,16 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
   private readonly memberProvider: MemberProvider
-  private readonly workspaceCache: WorkspaceCache
 
   constructor(services: ZenScriptServices) {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.typeComputer = services.typing.TypeComputer
     this.memberProvider = services.references.MemberProvider
-    this.workspaceCache = services.shared.workspace.Cache
   }
 
   getDynamics(source: AstNode): AstNodeDescription[] {
-    const cache = this.workspaceCache.get(this)
-    if (cache.has(source)) {
-      return cache.get(source)
-    }
     // @ts-expect-error allowed index type
-    const dynamics = this.rules[source.$type]?.call(this, source)
-    if (dynamics) {
-      cache.set(source, dynamics)
-    }
-    return dynamics
+    return this.rules[source.$type]?.call(this, source)
   }
 
   private readonly rules: RuleMap = {
