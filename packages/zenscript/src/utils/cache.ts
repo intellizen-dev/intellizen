@@ -4,6 +4,9 @@ import { ContextCache, SimpleCache, stream } from 'langium'
 export class WorkspaceCache extends SimpleCache<object, ContextCache<object, any, any>> {
   constructor(services: LangiumSharedCoreServices) {
     super()
+    // @ts-expect-error replace with WeakMap
+    this.cache = new WeakMap()
+
     this.onDispose(services.workspace.DocumentBuilder.onUpdate((changed, deleted) => {
       if (deleted.length > 0) {
         this.clear()
