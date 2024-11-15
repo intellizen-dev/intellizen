@@ -38,7 +38,6 @@ export interface ZenScriptAddedServices {
   workspace: {
     PackageManager: ZenScriptPackageManager
     BracketManager: ZenScriptBracketManager
-    Cache: WorkspaceCache
   }
 }
 
@@ -46,6 +45,7 @@ export interface ZenScriptAddedSharedServices {
   workspace: {
     WorkspaceManager: ZenScriptWorkspaceManager
     ConfigurationManager: ZenScriptConfigurationManager
+    Cache: WorkspaceCache
   }
 }
 
@@ -76,7 +76,6 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
   workspace: {
     PackageManager: services => new ZenScriptPackageManager(services),
     BracketManager: services => new ZenScriptBracketManager(services),
-    Cache: services => new WorkspaceCache(services.shared),
   },
   parser: {
     TokenBuilder: () => new CustomTokenBuilder(),
@@ -96,6 +95,7 @@ export const ZenScriptSharedModule: Module<ZenScriptSharedServices, PartialLangi
   workspace: {
     WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
     ConfigurationManager: services => new ZenScriptConfigurationManager(services),
+    Cache: services => new WorkspaceCache(services),
   },
 }
 

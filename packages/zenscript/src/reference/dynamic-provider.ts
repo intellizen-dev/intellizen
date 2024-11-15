@@ -25,7 +25,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.typeComputer = services.typing.TypeComputer
     this.memberProvider = services.references.MemberProvider
-    this.workspaceCache = services.workspace.Cache
+    this.workspaceCache = services.shared.workspace.Cache
   }
 
   getDynamics(source: AstNode): AstNodeDescription[] {

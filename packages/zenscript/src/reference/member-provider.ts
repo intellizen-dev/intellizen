@@ -25,7 +25,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
   constructor(services: ZenScriptServices) {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.typeComputer = services.typing.TypeComputer
-    this.workspaceCache = services.workspace.Cache
+    this.workspaceCache = services.shared.workspace.Cache
   }
 
   getMembers(source: AstNode | Type | undefined): AstNodeDescription[] {

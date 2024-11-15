@@ -28,7 +28,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     this.packageManager = services.workspace.PackageManager
     this.bracketManager = services.workspace.BracketManager
     this.memberProvider = () => services.references.MemberProvider
-    this.workspaceCache = services.workspace.Cache
+    this.workspaceCache = services.shared.workspace.Cache
   }
 
   public inferType(node: AstNode | undefined): Type | undefined {
