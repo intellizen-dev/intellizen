@@ -38,7 +38,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     }
 
     // @ts-expect-error allowed index type
-    const type = this.rules[node?.$type]?.call(this, node, cache)
+    const type = this.rules[node?.$type]?.call(this, node)
     if (type) {
       cache.set(node!, type)
     }

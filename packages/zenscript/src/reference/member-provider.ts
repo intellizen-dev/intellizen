@@ -35,7 +35,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     }
 
     // @ts-expect-error allowed index type
-    const members = this.rules[source?.$type]?.call(this, source, cache)
+    const members = this.rules[source?.$type]?.call(this, source)
     if (members) {
       cache.set(source!, members)
     }
