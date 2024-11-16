@@ -37,6 +37,7 @@ export class HierarchyNode<V> {
   readonly parent?: HierarchyNode<V>
   readonly children: Map<string, HierarchyNode<V>>
   readonly data: Set<V>
+  syntehticData: V | undefined
 
   constructor(name: string, parent?: HierarchyNode<V>) {
     this.name = name

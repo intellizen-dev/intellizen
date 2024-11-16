@@ -1,33 +1,39 @@
-import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'langium'
+import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, Stream } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
+import type { ZenScriptClassIndex } from '../workspace/class-index'
+import type { PackageManager } from '../workspace/package-manager'
 import type { ZenScriptSyntheticAstType } from './synthetic'
-import { stream } from 'langium'
+import { AstUtils, stream } from 'langium'
 import { isClassDeclaration, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
-import { getClassChain, isStatic } from '../utils/ast'
-import { createSyntheticAstNodeDescription, isSyntheticAstNode } from './synthetic'
+import { getPrecomputedDescription } from '../utils/document'
+import { isSyntheticAstNode } from './synthetic'
 
 export interface MemberProvider {
-  getMembers: (source: AstNode | Type | undefined) => AstNodeDescription[]
+  getMembers: (source: AstNode | Type | undefined) => Stream<AstNodeDescription>
 }
 
 type SourceMap = ZenScriptAstType & ZenScriptType & ZenScriptSyntheticAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => AstNodeDescription[] }
+type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => Stream<AstNodeDescription> }
 
 export class ZenScriptMemberProvider implements MemberProvider {
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
+  private readonly classIndex: ZenScriptClassIndex
+  private readonly packageManager: PackageManager
 
   constructor(services: ZenScriptServices) {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.typeComputer = services.typing.TypeComputer
+    this.classIndex = services.workspace.ClassIndex
+    this.packageManager = services.workspace.PackageManager
   }
 
-  getMembers(source: AstNode | Type | undefined): AstNodeDescription[] {
+  getMembers(source: AstNode | Type | undefined): Stream<AstNodeDescription> {
     // @ts-expect-error allowed index type
-    return this.rules[source?.$type]?.call(this, source) ?? []
+    return this.rules[source?.$type]?.call(this, source) ?? stream()
   }
 
   private readonly rules: RuleMap = {
@@ -35,11 +41,14 @@ export class ZenScriptMemberProvider implements MemberProvider {
       const declarations = stream(source.children.values())
         .filter(it => it.isDataNode())
         .flatMap(it => it.data)
-        .map(it => this.descriptions.createDescription(it, undefined))
+        .map((it) => {
+          const document = AstUtils.getDocument(it)
+          return getPrecomputedDescription(document, it)
+        })
       const packages = stream(source.children.values())
         .filter(it => it.isInternalNode())
-        .map(it => createSyntheticAstNodeDescription('SyntheticHierarchyNode', it.name, it))
-      return stream(declarations, packages).toArray()
+        .map(it => this.packageManager.syntheticDescriptionOf(it))
+      return stream(declarations, packages)
     },
 
     Script: (source) => {
@@ -49,7 +58,11 @@ export class ZenScriptMemberProvider implements MemberProvider {
       source.statements.filter(it => isVariableDeclaration(it))
         .filter(it => it.prefix === 'static')
         .forEach(it => members.push(it))
-      return members.map(it => this.descriptions.createDescription(it, undefined))
+      return stream(members
+        .map((it) => {
+          const document = AstUtils.getDocument(it)
+          return getPrecomputedDescription(document, it)
+        }))
     },
 
     ImportDeclaration: (source) => {
@@ -57,10 +70,9 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     ClassDeclaration: (source) => {
-      return getClassChain(source)
-        .flatMap(it => it.members)
-        .filter(it => isStatic(it))
-        .map(it => this.descriptions.createDescription(it, undefined))
+      const index = this.classIndex.get(source)
+
+      return index.streamDescriptions(true)
     },
 
     VariableDeclaration: (source) => {
@@ -81,7 +93,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     MemberAccess: (source) => {
       const target = source.target.ref
       if (!target) {
-        return []
+        return stream()
       }
 
       if (isSyntheticAstNode(target)) {
@@ -120,7 +132,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       if (isAnyType(receiverType)) {
         return this.getMembers(receiverType)
       }
-      return []
+      return stream()
     },
 
     BracketExpression: (source) => {
@@ -159,10 +171,8 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     ClassType: (source) => {
-      return getClassChain(source.declaration)
-        .flatMap(it => it.members)
-        .filter(it => !isStatic(it))
-        .map(it => this.descriptions.createDescription(it, undefined))
+      const index = this.classIndex.get(source.declaration)
+      return index.streamDescriptions(false)
     },
   }
 }

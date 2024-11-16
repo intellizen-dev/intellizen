@@ -1,14 +1,17 @@
 import type { HierarchyNode } from '@intellizen/shared'
-import type { AstNode, LangiumDocument, NameProvider } from 'langium'
+import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, LangiumDocument, NameProvider } from 'langium'
 import type { ZenScriptServices } from '../module'
 import { HierarchyTree } from '@intellizen/shared'
 import { AstUtils, DocumentState, stream } from 'langium'
 import { isClassDeclaration } from '../generated/ast'
+import { createSyntheticAstNodeDescription } from '../reference/synthetic'
 import { isImportable, isStatic } from '../utils/ast'
 
 export interface PackageManager {
   retrieve: (path: string) => ReadonlySet<AstNode>
   find: (path: string) => HierarchyNode<AstNode> | undefined
+  syntheticDescriptionOf: (node: HierarchyNode<AstNode>) => AstNodeDescription
+
   root: HierarchyNode<AstNode>
 }
 
@@ -16,9 +19,12 @@ export class ZenScriptPackageManager implements PackageManager {
   private readonly nameProvider: NameProvider
   private readonly packageTree: HierarchyTree<AstNode>
 
+  private readonly packageScopes: WeakMap<HierarchyNode<AstNode>, AstNodeDescription>
+
   constructor(services: ZenScriptServices) {
     this.nameProvider = services.references.NameProvider
     this.packageTree = new HierarchyTree()
+    this.packageScopes = new WeakMap()
 
     // insert data once document is indexed content
     services.shared.workspace.DocumentBuilder.onDocumentPhase(DocumentState.IndexedContent, (document) => {
@@ -44,6 +50,20 @@ export class ZenScriptPackageManager implements PackageManager {
 
   get root(): HierarchyNode<AstNode> {
     return this.packageTree.root
+  }
+
+  syntheticDescriptionOf(node: HierarchyNode<AstNode>): AstNodeDescription {
+    if (!node.isInternalNode()) {
+      throw new Error('Cannot create package description for data node')
+    }
+
+    if (this.packageScopes.has(node)) {
+      return this.packageScopes.get(node)!
+    }
+
+    const ret = createSyntheticAstNodeDescription('SyntheticHierarchyNode', node.name, node)
+    this.packageScopes.set(node, ret)
+    return ret
   }
 
   private insert(document: LangiumDocument) {

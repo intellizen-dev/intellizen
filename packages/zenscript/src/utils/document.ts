@@ -1,4 +1,4 @@
-import type { LangiumDocument } from 'langium'
+import type { AstNode, AstNodeDescription, LangiumDocument } from 'langium'
 import type { Script } from '../generated/ast'
 import { substringBeforeLast } from '@intellizen/shared'
 import { UriUtils } from 'langium'
@@ -28,4 +28,25 @@ export function getQualifiedName(document: LangiumDocument<Script>): string | un
   else if (isDzs(document)) {
     return document.parseResult.value.package?.path.join('.') ?? ''
   }
+}
+
+export function getPrecomputedDescription(document: LangiumDocument, astNode: AstNode): AstNodeDescription {
+  const container = astNode.$container
+  if (!container) {
+    throw new Error(`could not find container for node: ${astNode}`)
+  }
+  const precomputed = document.precomputedScopes
+
+  if (!precomputed) {
+    throw new Error(`no precomputed scopes found for document ${document.uri}`)
+  }
+
+  const descriptions = precomputed.get(container)
+  const ret = descriptions?.find(desc => desc.node === astNode)
+
+  if (!ret) {
+    throw new Error(`could not find description for node: ${astNode}`)
+  }
+
+  return ret
 }

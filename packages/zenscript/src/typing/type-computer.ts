@@ -3,10 +3,12 @@ import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { BracketManager } from '../workspace/bracket-manager'
+import type { ZenScriptClassIndex } from '../workspace/class-index'
 import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
-import { type AstNode, stream } from 'langium'
+import { type AstNode, AstUtils, stream } from 'langium'
 import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { ZenScriptDocumentCache } from '../utils/cache'
 import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
 
 export interface TypeComputer {
@@ -20,16 +22,32 @@ export class ZenScriptTypeComputer implements TypeComputer {
   private readonly packageManager: PackageManager
   private readonly bracketManager: BracketManager
   private readonly memberProvider: () => MemberProvider
+  private readonly cache: ZenScriptDocumentCache<AstNode, Type | undefined>
+  private readonly classIndex: ZenScriptClassIndex
 
   constructor(services: ZenScriptServices) {
     this.packageManager = services.workspace.PackageManager
     this.bracketManager = services.workspace.BracketManager
     this.memberProvider = () => services.references.MemberProvider
+    this.cache = new ZenScriptDocumentCache(services.shared)
+    this.classIndex = services.workspace.ClassIndex
   }
 
   public inferType(node: AstNode | undefined): Type | undefined {
-    // @ts-expect-error allowed index type
-    return this.rules[node?.$type]?.call(this, node)
+    if (!node) {
+      return
+    }
+
+    const uri = AstUtils.findRootNode(node).$document?.uri?.toString()
+    if (!uri) {
+      // @ts-expect-error allowed index type
+      return this.rules[node?.$type]?.call(this, node)
+    }
+
+    return this.cache.get(uri, node, () => {
+      // @ts-expect-error allowed index type
+      return this.rules[node?.$type]?.call(this, node)
+    })
   }
 
   private classTypeOf(className: BuiltinTypes | string, substitutions: TypeParameterSubstitutions = new Map()): ClassType {
@@ -147,10 +165,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return
       }
 
-      const operatorDecl = this.memberProvider().getMembers(rangeType)
-        .map(it => it.node)
-        .filter(it => isOperatorFunctionDeclaration(it))
-        .filter(it => it.op === 'for')
+      const operatorDecl = this.classIndex.findOperators(rangeType, 'for')
         .filter(it => it.parameters.length === length)
         .at(0)
 
@@ -195,7 +210,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
             .map(it => it.node)
             .filter(it => isFunctionDeclaration(it))
             .filter(it => it.prefix === 'lambda')
-            .at(0)
+            .head()
           return this.inferType(lambdaDecl?.parameters.at(index))
         }
       }
@@ -325,10 +340,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return receiverType
       }
 
-      const operatorDecl = this.memberProvider().getMembers(source.receiver)
-        .map(it => it.node)
-        .filter(it => isOperatorFunctionDeclaration(it))
-        .filter(it => it.op === '[]')
+      const operatorDecl = this.classIndex.findOperators(receiverType, '[]')
         .at(0)
       let returnType = this.inferType(operatorDecl?.returnTypeRef)
       if (isClassType(receiverType)) {

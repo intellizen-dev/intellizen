@@ -2,9 +2,10 @@ import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'la
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
+import type { ZenScriptClassIndex } from '../workspace/class-index'
 import type { MemberProvider } from './member-provider'
 import { AstUtils, stream } from 'langium'
-import { isCallExpression, isClassDeclaration, isFunctionDeclaration, isOperatorFunctionDeclaration } from '../generated/ast'
+import { isCallExpression, isClassDeclaration, isFunctionDeclaration } from '../generated/ast'
 import { isClassType, isFunctionType } from '../typing/type-description'
 
 export interface DynamicProvider {
@@ -18,11 +19,13 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly typeComputer: TypeComputer
   private readonly memberProvider: MemberProvider
+  private readonly classIndex: ZenScriptClassIndex
 
   constructor(services: ZenScriptServices) {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
     this.typeComputer = services.typing.TypeComputer
     this.memberProvider = services.references.MemberProvider
+    this.classIndex = services.workspace.ClassIndex
   }
 
   getDynamics(source: AstNode): AstNodeDescription[] {
@@ -37,7 +40,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
       // dynamic this
       const classDecl = AstUtils.getContainerOfType(source, isClassDeclaration)
       if (classDecl) {
-        dynamics.push(this.descriptions.createDescription(classDecl, 'this'))
+        dynamics.push(this.classIndex.get(classDecl).thisSymbol)
       }
 
       // dynamic arguments
@@ -48,11 +51,10 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
           const paramType = receiverType.paramTypes[index]
           if (isClassType(paramType)) {
             stream(this.memberProvider.getMembers(paramType.declaration))
-              .map(it => it.node)
-              .filter(it => isFunctionDeclaration(it))
-              .filter(it => it.prefix === 'static')
-              .filter(it => it.parameters.length === 0)
-              .forEach(it => dynamics.push(this.descriptions.createDescription(it, it.name)))
+              .filter(it => isFunctionDeclaration(it.node)
+                && it.node.prefix === 'static'
+                && it.node.parameters.length === 0)
+              .forEach(it => dynamics.push(it))
           }
         }
       }
@@ -63,14 +65,14 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
     MemberAccess: (source) => {
       const dynamics: AstNodeDescription[] = []
 
-      // dynamic member
-      const operatorDecl = stream(this.memberProvider.getMembers(source.receiver))
-        .map(it => it.node)
-        .filter(it => isOperatorFunctionDeclaration(it))
-        .filter(it => it.parameters.length === 1)
-        .find(it => it.op === '.')
-      if (operatorDecl) {
-        dynamics.push(this.descriptions.createDescription(operatorDecl.parameters[0], source.target.$refText))
+      const receiverType = this.typeComputer.inferType(source.receiver)
+
+      if (isClassType(receiverType)) {
+        // dynamic member
+        const operatorDecl = this.classIndex.findOperators(receiverType.declaration, '.').at(0)
+        if (operatorDecl) {
+          dynamics.push(this.descriptions.createDescription(operatorDecl.parameters[0], source.target.$refText))
+        }
       }
 
       return dynamics
