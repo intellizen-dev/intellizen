@@ -1,5 +1,5 @@
 import type { HierarchyNode } from '@intellizen/shared'
-import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, LangiumDocument, NameProvider } from 'langium'
+import type { AstNode, AstNodeDescription, LangiumDocument, NameProvider } from 'langium'
 import type { ZenScriptServices } from '../module'
 import { HierarchyTree } from '@intellizen/shared'
 import { AstUtils, DocumentState, stream } from 'langium'

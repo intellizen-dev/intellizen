@@ -1,4 +1,4 @@
-import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes } from 'langium'
+import type { AstNode, AstNodeDescription, LangiumDocument } from 'langium'
 import type { Script } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { DefaultScopeComputation } from 'langium'
