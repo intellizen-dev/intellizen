@@ -14,7 +14,6 @@ import { ZenScriptNameProvider } from './reference/name-provider'
 import { ZenScriptScopeComputation } from './reference/scope-computation'
 import { ZenScriptScopeProvider } from './reference/scope-provider'
 import { ZenScriptTypeComputer } from './typing/type-computer'
-import { WorkspaceCache } from './utils/cache'
 import { registerValidationChecks, ZenScriptValidator } from './validation/validator'
 import { ZenScriptBracketManager } from './workspace/bracket-manager'
 import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
@@ -45,7 +44,6 @@ export interface ZenScriptAddedSharedServices {
   workspace: {
     WorkspaceManager: ZenScriptWorkspaceManager
     ConfigurationManager: ZenScriptConfigurationManager
-    Cache: WorkspaceCache
   }
 }
 
@@ -95,7 +93,6 @@ export const ZenScriptSharedModule: Module<ZenScriptSharedServices, PartialLangi
   workspace: {
     WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
     ConfigurationManager: services => new ZenScriptConfigurationManager(services),
-    Cache: services => new WorkspaceCache(services),
   },
 }
 

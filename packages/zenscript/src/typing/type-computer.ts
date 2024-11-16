@@ -3,12 +3,12 @@ import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
-import type { WorkspaceCache } from '../utils/cache'
 import type { BracketManager } from '../workspace/bracket-manager'
 import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
 import { stream } from 'langium'
 import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { cache } from '../utils/cache'
 import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
 
 export interface TypeComputer {
@@ -22,27 +22,17 @@ export class ZenScriptTypeComputer implements TypeComputer {
   private readonly packageManager: PackageManager
   private readonly bracketManager: BracketManager
   private readonly memberProvider: () => MemberProvider
-  private readonly workspaceCache: WorkspaceCache
 
   constructor(services: ZenScriptServices) {
     this.packageManager = services.workspace.PackageManager
     this.bracketManager = services.workspace.BracketManager
     this.memberProvider = () => services.references.MemberProvider
-    this.workspaceCache = services.shared.workspace.Cache
   }
 
+  @cache
   public inferType(node: AstNode | undefined): Type | undefined {
-    const cache = this.workspaceCache.get(this)
-    if (cache.has(node!)) {
-      return cache.get(node!)
-    }
-
     // @ts-expect-error allowed index type
-    const type = this.rules[node?.$type]?.call(this, node)
-    if (type) {
-      cache.set(node!, type)
-    }
-    return type
+    return this.rules[node?.$type]?.call(this, node)
   }
 
   private classTypeOf(className: BuiltinTypes | string, substitutions: TypeParameterSubstitutions = new Map()): ClassType {
