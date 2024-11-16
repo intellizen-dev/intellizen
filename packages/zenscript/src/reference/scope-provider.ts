@@ -5,11 +5,12 @@ import type { PackageManager } from '../workspace/package-manager'
 import type { DynamicProvider } from './dynamic-provider'
 import type { MemberProvider } from './member-provider'
 import { substringBeforeLast } from '@intellizen/shared'
-import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
+import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, MapScope, stream, StreamScope } from 'langium'
+
 import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter } from '../generated/ast'
 import { getPathAsString } from '../utils/ast'
+import { getPrecomputedDescription } from '../utils/document'
 import { generateStream } from '../utils/stream'
-import { createSyntheticAstNodeDescription } from './synthetic'
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => Scope }
@@ -18,12 +19,17 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
   private readonly dynamicProvider: DynamicProvider
+  private cachedGlobal: MapScope | undefined
 
   constructor(services: ZenScriptServices) {
     super(services)
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
     this.dynamicProvider = services.references.DynamicProvider
+
+    services.shared.workspace.DocumentBuilder.onUpdate(() => {
+      this.cachedGlobal = undefined
+    })
   }
 
   override getScope(context: ReferenceInfo): Scope {
@@ -41,22 +47,26 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .map(container => precomputed?.get(container))
       .nonNullable()
       .map(descriptions => stream(descriptions).map(processor).nonNullable())
-      .reduce((outer, descriptions) => this.createScope(descriptions, outer), outside as Scope)
+      .reduce((outer, descriptions) => new StreamScope(descriptions, outer), outside as Scope)
   }
 
   private dynamicScope(astNode: AstNode, outside?: Scope) {
     return this.createScope(this.dynamicProvider.getDynamics(astNode), outside)
   }
 
-  private globalScope(outside?: Scope) {
-    return this.createScope(this.indexManager.allElements(), outside)
+  private globalScope() {
+    if (!this.cachedGlobal) {
+      const outside = this.packageScope()
+      this.cachedGlobal = new MapScope(this.indexManager.allElements(), outside)
+    }
+    return this.cachedGlobal
   }
 
   private packageScope(outside?: Scope) {
     const packages = stream(this.packageManager.root.children.values())
       .filter(it => it.isInternalNode())
-      .map(it => createSyntheticAstNodeDescription('SyntheticHierarchyNode', it.name, it))
-    return this.createScope(packages, outside)
+      .map(it => this.packageManager.syntheticDescriptionOf(it))
+    return new StreamScope(packages, outside)
   }
 
   private classScope(outside?: Scope) {
@@ -64,8 +74,47 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .filter(it => it.isDataNode())
       .flatMap(it => it.data)
       .filter(isClassDeclaration)
-      .map(it => this.descriptions.createDescription(it, it.name))
-    return this.createScope(classes, outside)
+      .map((it) => {
+        const document = AstUtils.getDocument(it)
+        return getPrecomputedDescription(document, it)
+      })
+    return new StreamScope(classes, outside)
+  }
+
+  private getImportDescription(importDecl: ImportDeclaration): AstNodeDescription | undefined {
+    const refNode = importDecl.path.at(-1)
+    if (!refNode) {
+      return
+    }
+
+    // access the ref to ensure the lookup of the import
+    const target = refNode?.ref
+    if (!target) {
+      return
+    }
+
+    if (!importDecl.alias) {
+      return refNode?.$nodeDescription
+    }
+
+    const name = importDecl.alias
+
+    const targetDesc = refNode?.$nodeDescription
+    if (!targetDesc) {
+      throw new Error(`could not find description for node: ${target}`)
+    }
+
+    return {
+      node: target,
+      name,
+      get nameSegment() {
+        return targetDesc.nameSegment
+      },
+      selectionSegment: targetDesc.selectionSegment,
+      type: target.$type,
+      documentUri: targetDesc.documentUri,
+      path: targetDesc.path,
+    }
   }
 
   private readonly rules: RuleMap = {
@@ -80,10 +129,13 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       const elements: AstNodeDescription[] = []
       for (const sibling of siblings) {
         if (sibling.isDataNode()) {
-          sibling.data.forEach(it => elements.push(this.descriptions.createDescription(it, sibling.name)))
+          sibling.data.forEach((it) => {
+            const document = AstUtils.getDocument(it)
+            elements.push(getPrecomputedDescription(document, it))
+          })
         }
         else {
-          elements.push(createSyntheticAstNodeDescription('SyntheticHierarchyNode', sibling.name, sibling))
+          elements.push(this.packageManager.syntheticDescriptionOf(sibling))
         }
       }
       return this.createScope(elements)
@@ -91,8 +143,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     ReferenceExpression: (source) => {
       let outer: Scope
-      outer = this.packageScope()
-      outer = this.globalScope(outer)
+      outer = this.globalScope()
       outer = this.dynamicScope(source.container, outer)
 
       const processor = (desc: AstNodeDescription) => {
@@ -101,8 +152,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             return
           case ImportDeclaration: {
             const importDecl = desc.node as ImportDeclaration
-            const ref = importDecl.path.at(-1)?.ref ?? importDecl
-            return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
+            return this.getImportDescription(importDecl) ?? desc
           }
           default:
             return desc
@@ -114,7 +164,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     MemberAccess: (source) => {
       const outer = this.dynamicScope(source.container)
       const members = this.memberProvider.getMembers(source.container.receiver)
-      return this.createScope(members, outer)
+      return new StreamScope(members, outer)
     },
 
     NamedTypeReference: (source) => {
@@ -127,8 +177,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
               return desc
             case ImportDeclaration: {
               const importDecl = desc.node as ImportDeclaration
-              const ref = importDecl.path.at(-1)?.ref ?? importDecl
-              return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
+              return this.getImportDescription(importDecl) ?? desc
             }
           }
         }
@@ -137,7 +186,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       else {
         const prev = source.container.path[source.index - 1].ref
         const members = this.memberProvider.getMembers(prev)
-        return this.createScope(members)
+        return new StreamScope(members)
       }
     },
   }

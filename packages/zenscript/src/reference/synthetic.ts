@@ -10,9 +10,10 @@ export function createSyntheticAstNodeDescription<K extends keyof ZenScriptSynth
   $type: K,
   name: string,
   origin?: ZenScriptSyntheticAstType[K],
+  node?: AstNode,
 ): AstNodeDescription {
   return {
-    node: createSyntheticAstNode($type, origin),
+    node: node ?? createSyntheticAstNode($type, origin),
     type: $type,
     name,
     documentUri: URI.from({ scheme: 'synthetic', path: `/${$type}/${name}` }),
