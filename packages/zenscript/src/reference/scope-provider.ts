@@ -26,9 +26,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     this.dynamicProvider = services.references.DynamicProvider
   }
 
-  override getScope(info: ReferenceInfo): Scope {
+  override getScope(context: ReferenceInfo): Scope {
     // @ts-expect-error allowed index type
-    return this.rules[info.container.$type]?.call(this, info) ?? EMPTY_SCOPE
+    return this.rules[context.container.$type]?.call(this, context) ?? EMPTY_SCOPE
   }
 
   private lexicalScope(

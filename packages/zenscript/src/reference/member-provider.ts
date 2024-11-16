@@ -29,7 +29,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
   @cache
   getMembers(source: AstNode | Type | undefined): AstNodeDescription[] {
     // @ts-expect-error allowed index type
-    return this.rules[source?.$type]?.call(this, source)
+    return this.rules[source?.$type]?.call(this, source) ?? []
   }
 
   private readonly rules: RuleMap = {
