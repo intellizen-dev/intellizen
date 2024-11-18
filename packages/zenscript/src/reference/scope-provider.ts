@@ -1,6 +1,7 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
+import type { ZenScriptDescriptionIndex } from '../workspace/description-index'
 import type { PackageManager } from '../workspace/package-manager'
 import type { DynamicProvider } from './dynamic-provider'
 import type { MemberProvider } from './member-provider'
@@ -18,12 +19,14 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
   private readonly dynamicProvider: DynamicProvider
+  private readonly descriptionIndex: ZenScriptDescriptionIndex
 
   constructor(services: ZenScriptServices) {
     super(services)
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
     this.dynamicProvider = services.references.DynamicProvider
+    this.descriptionIndex = services.workspace.DescriptionIndex
   }
 
   override getScope(context: ReferenceInfo): Scope {
@@ -68,6 +71,22 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return this.createScope(classes, outside)
   }
 
+  private importAlias(importDesc: AstNodeDescription) {
+    const importDecl = importDesc.node as ImportDeclaration
+
+    const targetRef = importDecl.path.at(-1)
+    // call ref to ensure the reference is resolved
+    if (!targetRef?.ref) {
+      return importDesc
+    }
+
+    const targetDesc = importDecl.path.at(-1)?.$nodeDescription ?? importDesc
+    if (!importDecl.alias) {
+      return targetDesc
+    }
+    return this.descriptionIndex.createAliasDescription(targetDesc || importDesc, importDecl.alias)
+  }
+
   private readonly rules: RuleMap = {
     ImportDeclaration: (source) => {
       const path = getPathAsString(source.container, source.index)
@@ -100,9 +119,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
           case TypeParameter:
             return
           case ImportDeclaration: {
-            const importDecl = desc.node as ImportDeclaration
-            const ref = importDecl.path.at(-1)?.ref ?? importDecl
-            return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
+            return this.importAlias(desc)
           }
           default:
             return desc
@@ -126,9 +143,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             case ClassDeclaration:
               return desc
             case ImportDeclaration: {
-              const importDecl = desc.node as ImportDeclaration
-              const ref = importDecl.path.at(-1)?.ref ?? importDecl
-              return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
+              return this.importAlias(desc)
             }
           }
         }

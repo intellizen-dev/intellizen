@@ -9,6 +9,8 @@ export interface DescriptionIndex {
   getPackageDescription: (pkgNode: HierarchyNode<AstNode>) => AstNodeDescription
   getThisDescription: (classDecl: ClassDeclaration) => AstNodeDescription
   createDynamicDescription: (astNode: AstNode, name: string) => AstNodeDescription
+  // create ast node description with alias name, reusing some info, for better performance
+  createAliasDescription: (origin: AstNodeDescription, newName: string) => AstNodeDescription
 }
 
 export class ZenScriptDescriptionIndex implements DescriptionIndex {
@@ -51,5 +53,23 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
 
   createDynamicDescription(astNode: AstNode, name: string): AstNodeDescription {
     return this.descriptions.createDescription(astNode, name)
+  }
+
+  createAliasDescription(origin: AstNodeDescription, newName: string): AstNodeDescription {
+    if (newName === origin.name) {
+      return origin
+    }
+    const { node, selectionSegment, type, documentUri, path } = origin
+    return {
+      node,
+      name: newName,
+      get nameSegment() {
+        return origin.nameSegment
+      },
+      selectionSegment,
+      type,
+      documentUri,
+      path,
+    }
   }
 }
