@@ -1,13 +1,13 @@
 import type { AstNodeDescription } from 'langium'
 import type { CompletionProviderOptions, CompletionValueItem } from 'langium/lsp'
+import type { CompletionItemLabelDetails } from 'vscode-languageserver'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import { DefaultCompletionProvider } from 'langium/lsp'
-import { getPrettyDeclarationText } from '../utils/ast'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
-type RuleMap<T> = { [K in keyof SourceMap]?: (source: SourceMap[K], desc: AstNodeDescription) => T }
+type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], name: string) => CompletionItemLabelDetails | undefined }
 
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   readonly completionOptions: CompletionProviderOptions = {
@@ -23,41 +23,104 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
     // Add additional properties to the completion item
     // @ts-expect-error allowed index type
-    const detail = this.detailRules[nodeDescription.type]?.call(this, nodeDescription.node, nodeDescription)
-    if (detail) {
-      item.detail = detail
+    const details = this.rules[nodeDescription.type]?.call(this, nodeDescription.node, nodeDescription.name)
+    if (details) {
+      item.labelDetails = details
     }
+    item.detail = undefined
 
     return item
   }
 
-  private readonly detailRules: RuleMap<string> = {
-    FunctionDeclaration: (_, desc) => {
-      return `(method) ${getPrettyDeclarationText(desc)}`
+  private readonly rules: RuleMap = {
+    ClassDeclaration: (source, _) => {
+      const packageName = this.nameProvider.getQualifiedName(source.$container)
+      if (!packageName) {
+        return
+      }
+      return {
+        detail: `(${packageName})`,
+      }
+    },
+    FunctionDeclaration: (source, _) => {
+      if (!source) {
+        return
+      }
+      const func = source
+
+      const params = func.parameters.map((it) => {
+        if (it.typeRef && it.typeRef.$cstNode) {
+          return `${it.name} as ${it.typeRef.$cstNode.text}`
+        }
+        return it.name
+      }).join(', ')
+
+      const retType = func.returnTypeRef?.$cstNode?.text
+
+      return {
+        detail: `(${params})`,
+        description: retType,
+      }
     },
 
-    ClassDeclaration: (_, desc) => {
-      return `(class) ${getPrettyDeclarationText(desc)}`
+    ImportDeclaration: (source, _) => {
+      if (!source) {
+        return
+      }
+      return {
+        detail: `(${source.path.slice(0, -1).map(it => it.$refText).join('.')})`,
+      }
+    },
+    VariableDeclaration: (source, _) => {
+      if (!source) {
+        return
+      }
+      const type = source.typeRef?.$cstNode?.text
+
+      return {
+        description: `${type}`,
+      }
     },
 
-    ImportDeclaration: (_, desc) => {
-      return `(module) ${getPrettyDeclarationText(desc)}`
+    ValueParameter: (source, _) => {
+      if (!source) {
+        return
+      }
+      const type = source.typeRef?.$cstNode?.text
+      return {
+        description: `${type}`,
+      }
     },
 
-    VariableDeclaration: (_, desc) => {
-      return `(variable) ${getPrettyDeclarationText(desc)}`
+    FieldDeclaration: (source, _) => {
+      if (!source) {
+        return
+      }
+
+      const type = source.typeRef?.$cstNode?.text
+      return {
+        description: `${type}`,
+      }
     },
 
-    ValueParameter: (_, desc) => {
-      return `(parameter) ${getPrettyDeclarationText(desc)}`
-    },
+    SyntheticHierarchyNode: (source, name) => {
+      if (!source) {
+        return
+      }
+      const qualifiedName = [name]
+      let parent = source.parent
+      while (parent) {
+        if (parent.name) {
+          qualifiedName.unshift(parent.name)
+        }
+        parent = parent.parent
+      }
 
-    SyntheticHierarchyNode: (_, desc) => {
-      return `(module) ${getPrettyDeclarationText(desc)}`
-    },
-
-    FieldDeclaration: (_, desc) => {
-      return `(field) ${getPrettyDeclarationText(desc)}`
+      if (qualifiedName.length > 1) {
+        return {
+          detail: `(${qualifiedName.join('.')})`,
+        }
+      }
     },
   }
 }

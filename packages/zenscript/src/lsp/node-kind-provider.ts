@@ -1,8 +1,11 @@
+import type { AstNode, AstNodeDescription } from 'langium'
 import type { NodeKindProvider } from 'langium/lsp'
-import type { ZenScriptAstType } from '../generated/ast'
+import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
-import { type AstNode, type AstNodeDescription, isAstNodeDescription } from 'langium'
+import { isAstNodeDescription } from 'langium'
 import { CompletionItemKind, SymbolKind } from 'vscode-languageserver'
+import { isClassDeclaration, isConstructorDeclaration } from '../generated/ast'
+
 import { isConst } from '../utils/ast'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
@@ -24,8 +27,20 @@ export class ZenScriptNodeKindProvider implements NodeKindProvider {
   }
 
   private readonly symbolRules: RuleMap<SymbolKind> = {
-    FunctionDeclaration: () => SymbolKind.Function,
-    ClassDeclaration: () => SymbolKind.Class,
+    FunctionDeclaration: (decl) => {
+      const node = isAstNodeDescription(decl) ? decl.node : decl
+      if (isClassDeclaration(node?.$container)) {
+        return SymbolKind.Method
+      }
+      return SymbolKind.Function
+    },
+    ClassDeclaration: (decl) => {
+      const node = isAstNodeDescription(decl) ? decl.node : decl
+      if ((node as ClassDeclaration).members.find(it => isConstructorDeclaration(it))) {
+        return SymbolKind.Class
+      }
+      return SymbolKind.Interface
+    },
     FieldDeclaration: () => SymbolKind.Field,
     ExpandFunctionDeclaration: () => SymbolKind.Function,
     LoopParameter: () => SymbolKind.Variable,
@@ -45,8 +60,20 @@ export class ZenScriptNodeKindProvider implements NodeKindProvider {
   }
 
   private readonly completionItemRules: RuleMap<CompletionItemKind> = {
-    FunctionDeclaration: () => CompletionItemKind.Function,
-    ClassDeclaration: () => CompletionItemKind.Class,
+    FunctionDeclaration: (decl) => {
+      const node = isAstNodeDescription(decl) ? decl.node : decl
+      if (isClassDeclaration(node?.$container)) {
+        return CompletionItemKind.Method
+      }
+      return CompletionItemKind.Function
+    },
+    ClassDeclaration: (decl) => {
+      const node = isAstNodeDescription(decl) ? decl.node : decl
+      if ((node as ClassDeclaration).members.find(it => isConstructorDeclaration(it))) {
+        return CompletionItemKind.Class
+      }
+      return CompletionItemKind.Interface
+    },
     FieldDeclaration: () => CompletionItemKind.Field,
     ExpandFunctionDeclaration: () => CompletionItemKind.Function,
     LoopParameter: () => CompletionItemKind.Variable,
