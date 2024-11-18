@@ -21,7 +21,6 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
   readonly astDescriptions: WeakMap<AstNode, AstNodeDescription>
   readonly pkgDescriptions: WeakMap<HierarchyNode<AstNode>, AstNodeDescription>
   readonly thisDescriptions: WeakMap<ClassDeclaration, AstNodeDescription>
-  readonly importDescriptions: WeakMap<ImportDeclaration, AstNodeDescription[]>
 
   private readonly packageManager: ZenScriptPackageManager
 
@@ -31,7 +30,6 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
     this.astDescriptions = new WeakMap()
     this.pkgDescriptions = new WeakMap()
     this.thisDescriptions = new WeakMap()
-    this.importDescriptions = new WeakMap()
     this.packageManager = services.workspace.PackageManager
   }
 
@@ -64,39 +62,34 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
   }
 
   createImportedDescription(importDecl: ImportDeclaration): AstNodeDescription[] {
-    if (!this.importDescriptions.has(importDecl)) {
-      const ref = importDecl.path.at(-1)?.ref
+    const ref = importDecl.path.at(-1)?.ref
+    if (!ref) {
+      return [this.getDescription(importDecl)]
+    }
+    const alias = importDecl.alias
 
-      const alias = importDecl.alias
-
-      // handle import overloading
-      if (isFunctionDeclaration(ref)) {
-        // Find function with same name in the same package
-        const parentRef = importDecl.path.at(-2)?.ref
-        if (!parentRef) {
-          return []
-        }
-
-        if (isClassDeclaration(parentRef)) {
-          const result = stream(parentRef.members)
-            .filter(it => isFunctionDeclaration(it))
-            .filter(it => it.name === ref.name)
-            .filter(it => isStatic(it))
-            .map(it => this.getDescription(it))
-            .map(it => alias ? this.aliasDescription(it, alias) : it)
-            .toArray()
-
-          this.importDescriptions.set(importDecl, result)
-          return result
-        }
+    // handle import overloading
+    if (isFunctionDeclaration(ref)) {
+      // Find function with same name in the same package
+      const parentRef = importDecl.path.at(-2)?.ref
+      if (!parentRef) {
+        return []
       }
 
-      const targetDesc = importDecl.path.at(-1)?.$nodeDescription || this.descriptions.createDescription(importDecl, this.nameProvider.getName(importDecl))
-      const result = [alias ? this.aliasDescription(targetDesc, alias) : targetDesc]
-      this.importDescriptions.set(importDecl, result)
+      if (isClassDeclaration(parentRef)) {
+        const result = stream(parentRef.members)
+          .filter(it => isFunctionDeclaration(it))
+          .filter(it => it.name === ref.name)
+          .filter(it => isStatic(it))
+          .map(it => this.getDescription(it))
+          .map(it => alias ? this.aliasDescription(it, alias) : it)
+          .toArray()
+        return result
+      }
     }
 
-    return this.importDescriptions.get(importDecl)!
+    const targetDesc = importDecl.path.at(-1)?.$nodeDescription || this.descriptions.createDescription(importDecl, this.nameProvider.getName(importDecl))
+    return [alias ? this.aliasDescription(targetDesc, alias) : targetDesc]
   }
 
   private aliasDescription(desc: AstNodeDescription, alias: string): AstNodeDescription {

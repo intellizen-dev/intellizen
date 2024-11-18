@@ -168,7 +168,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             case ClassDeclaration:
               return desc
             case ImportDeclaration: {
-              return this.descriptionIndex.createImportedDescription(desc.node as ImportDeclaration).at(0)
+              return this.descriptionIndex.createImportedDescription(desc.node as ImportDeclaration).at(0) || desc
             }
           }
         }
