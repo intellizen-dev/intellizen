@@ -1,6 +1,7 @@
 import type { AstNode, AstNodeDescription } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
+import type { ClassHierarchy } from '../typing/class-hierarchy'
 import type { TypeComputer } from '../typing/type-computer'
 import type { DescriptionIndex } from '../workspace/description-index'
 import type { ZenScriptSyntheticAstType } from './synthetic'
@@ -20,10 +21,12 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => AstNodeDescr
 export class ZenScriptMemberProvider implements MemberProvider {
   private readonly descriptionIndex: DescriptionIndex
   private readonly typeComputer: TypeComputer
+  private readonly classHierarchy: ClassHierarchy
 
   constructor(services: ZenScriptServices) {
     this.descriptionIndex = services.workspace.DescriptionIndex
     this.typeComputer = services.typing.TypeComputer
+    this.classHierarchy = services.typing.ClassHierarchy
   }
 
   getMembers(source: AstNode | Type | undefined): AstNodeDescription[] {
@@ -58,10 +61,10 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     ClassDeclaration: (source) => {
-      return getClassChain(source)
-        .flatMap(it => it.members)
-        .filter(it => isStatic(it))
+      return this.classHierarchy.streamDeclaredMembers(source)
+        .filter(isStatic)
         .map(it => this.descriptionIndex.getDescription(it))
+        .toArray()
     },
 
     VariableDeclaration: (source) => {
@@ -160,6 +163,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     ClassType: (source) => {
+      // TODO: FIXME
       return getClassChain(source.declaration)
         .flatMap(it => it.members)
         .filter(it => !isStatic(it))
