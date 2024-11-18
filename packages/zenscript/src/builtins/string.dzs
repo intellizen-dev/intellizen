@@ -84,4 +84,6 @@ zenClass string {
     function lastIndexOf(needle as string, fromIndex as int) as int;
 
     function split(separator as string, maximum as int = 0) as [string];
+
+    operator as() as bool, byte, int, short, long, float, double
 }

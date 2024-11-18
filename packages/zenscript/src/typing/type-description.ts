@@ -24,6 +24,10 @@ export abstract class Type {
 
   abstract substituteTypeParameters(substitutions: TypeParameterSubstitutions): Type
   abstract toString(): string
+
+  equals(other: Type): boolean {
+    return this.$type === other.$type
+  }
 }
 
 export abstract class NamedType<D extends Declaration> extends Type {
@@ -32,6 +36,10 @@ export abstract class NamedType<D extends Declaration> extends Type {
   protected constructor($type: keyof ZenScriptType, declaration: D) {
     super($type)
     this.declaration = declaration
+  }
+
+  override equals(other: Type): boolean {
+    return super.equals(other) && this.declaration === (other as NamedType<D>).declaration
   }
 }
 
@@ -56,6 +64,23 @@ export class ClassType extends NamedType<ClassDeclaration> {
     }
     return result
   }
+
+  override equals(other: Type): boolean {
+    if (!super.equals(other)) {
+      return false
+    }
+    if (!isClassType(other) || this.substitutions.size !== other.substitutions.size) {
+      return false
+    }
+
+    for (const [key, value] of this.substitutions) {
+      if (!other.substitutions.has(key) || !value.equals(other.substitutions.get(key)!)) {
+        return false
+      }
+    }
+
+    return true
+  }
 }
 
 export class TypeVariable extends NamedType<TypeParameter> {
@@ -69,6 +94,10 @@ export class TypeVariable extends NamedType<TypeParameter> {
 
   override toString(): string {
     return this.declaration.name
+  }
+
+  override equals(other: Type): boolean {
+    return super.equals(other) && isTypeVariable(other)
   }
 }
 
@@ -96,6 +125,21 @@ export class FunctionType extends Type {
     result += this.returnType.toString()
     return result
   }
+
+  override equals(other: Type): boolean {
+    if (!super.equals(other) || !isFunctionType(other)) {
+      return false
+    }
+    if (this.paramTypes.length !== other.paramTypes.length) {
+      return false
+    }
+    for (let i = 0; i < this.paramTypes.length; i++) {
+      if (!this.paramTypes[i].equals(other.paramTypes[i])) {
+        return false
+      }
+    }
+    return this.returnType.equals(other.returnType)
+  }
 }
 
 export class UnionType extends Type {
@@ -111,6 +155,21 @@ export class UnionType extends Type {
 
   override toString(): string {
     return this.types.map(it => it.toString()).join(' | ')
+  }
+
+  override equals(other: Type): boolean {
+    if (!super.equals(other) || !isUnionType(other)) {
+      return false
+    }
+    if (this.types.length !== other.types.length) {
+      return false
+    }
+    for (let i = 0; i < this.types.length; i++) {
+      if (!this.types[i].equals(other.types[i])) {
+        return false
+      }
+    }
+    return true
   }
 }
 
@@ -128,6 +187,21 @@ export class IntersectionType extends Type {
   override toString(): string {
     return this.types.map(it => it.toString()).join(' & ')
   }
+
+  override equals(other: Type): boolean {
+    if (!super.equals(other) || !isIntersectionType(other)) {
+      return false
+    }
+    if (this.types.length !== other.types.length) {
+      return false
+    }
+    for (let i = 0; i < this.types.length; i++) {
+      if (!this.types[i].equals(other.types[i])) {
+        return false
+      }
+    }
+    return true
+  }
 }
 
 export class CompoundType extends Type {
@@ -143,6 +217,21 @@ export class CompoundType extends Type {
 
   override toString(): string {
     return this.types.map(it => it.toString()).join(', ')
+  }
+
+  override equals(other: Type): boolean {
+    if (!super.equals(other) || !isCompoundType(other)) {
+      return false
+    }
+    if (this.types.length !== other.types.length) {
+      return false
+    }
+    for (let i = 0; i < this.types.length; i++) {
+      if (!this.types[i].equals(other.types[i])) {
+        return false
+      }
+    }
+    return true
   }
 }
 // endregion
@@ -218,5 +307,9 @@ export function isIntersectionType(type: unknown): type is IntersectionType {
 
 export function isTypeVariable(type: unknown): type is TypeVariable {
   return type instanceof TypeVariable
+}
+
+export function isCompoundType(type: unknown): type is CompoundType {
+  return type instanceof CompoundType
 }
 // endregion

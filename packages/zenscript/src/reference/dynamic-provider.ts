@@ -1,6 +1,7 @@
 import type { AstNode, AstNodeDescription } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
+import type { ZenScriptOverloadResolver } from '../typing/overload-resolver'
 import type { TypeComputer } from '../typing/type-computer'
 import type { DescriptionIndex } from '../workspace/description-index'
 import type { MemberProvider } from './member-provider'
@@ -19,11 +20,13 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
   private readonly descriptionIndex: DescriptionIndex
   private readonly typeComputer: TypeComputer
   private readonly memberProvider: MemberProvider
+  private readonly overloadResolver: ZenScriptOverloadResolver
 
   constructor(services: ZenScriptServices) {
     this.descriptionIndex = services.workspace.DescriptionIndex
     this.typeComputer = services.typing.TypeComputer
     this.memberProvider = services.references.MemberProvider
+    this.overloadResolver = services.typing.OverloadResolver
   }
 
   getDynamics(source: AstNode): AstNodeDescription[] {
@@ -44,9 +47,12 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
       // dynamic arguments
       if (isCallExpression(source.$container) && source.$containerProperty === 'arguments') {
         const index = source.$containerIndex!
-        const receiverType = this.typeComputer.inferType(source.$container.receiver)
-        if (isFunctionType(receiverType)) {
-          const paramType = receiverType.paramTypes[index]
+
+        // prevent circular ref resolve, manually infer type
+
+        const callType = this.overloadResolver.predictCallType(source.$container)
+        if (isFunctionType(callType)) {
+          const paramType = callType.paramTypes[index]
           if (isClassType(paramType)) {
             stream(this.memberProvider.getMembers(paramType.declaration))
               .map(it => it.node)

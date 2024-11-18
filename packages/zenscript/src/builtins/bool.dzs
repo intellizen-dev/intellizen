@@ -1,1 +1,3 @@
-zenClass bool
+zenClass bool {
+    operator as() as string
+}

@@ -1,10 +1,14 @@
+import type { AstNode, LangiumDocument } from 'langium'
 import type { SemanticTokenAcceptor } from 'langium/lsp'
+import type { CancellationToken } from 'vscode-languageserver'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
+
 import type { TypeComputer } from '../typing/type-computer'
-import { type AstNode, CstUtils, stream } from 'langium'
+
+import { AstUtils, CstUtils, interruptAndCheck, stream } from 'langium'
 import { AbstractSemanticTokenProvider } from 'langium/lsp'
-import { SemanticTokenModifiers, SemanticTokenTypes } from 'vscode-languageserver'
+import { LSPErrorCodes, ResponseError, SemanticTokenModifiers, SemanticTokenTypes } from 'vscode-languageserver'
 import { isLocation } from '../generated/ast'
 import { isStringType } from '../typing/type-description'
 
@@ -21,7 +25,27 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
     this.typeComputer = services.typing.TypeComputer
   }
 
-  override highlightElement(node: AstNode, acceptor: SemanticTokenAcceptor): void {
+  protected async computeHighlighting(document: LangiumDocument, acceptor: SemanticTokenAcceptor, cancelToken: CancellationToken): Promise<void> {
+    const root = document.parseResult.value
+    const treeIterator = AstUtils.streamAst(root, { range: this.currentRange }).iterator()
+    let result: IteratorResult<AstNode>
+    do {
+      result = treeIterator.next()
+      if (!result.done) {
+        const prevState = document.state
+        await interruptAndCheck(cancelToken)
+        if (prevState > document.state) {
+          throw new ResponseError(LSPErrorCodes.ContentModified, 'Document was modified during semantic token computation')
+        }
+        const node = result.value
+        if (this.highlightElement(node, acceptor) === 'prune') {
+          treeIterator.prune()
+        }
+      }
+    } while (!result.done)
+  }
+
+  override highlightElement(node: AstNode, acceptor: SemanticTokenAcceptor): void | 'prune' {
     // @ts-expect-error allowed index type
     this.rules[node.$type]?.call(this, node, acceptor)
   }
