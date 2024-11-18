@@ -14,9 +14,9 @@ export interface DescriptionIndex {
 export class ZenScriptDescriptionIndex implements DescriptionIndex {
   private readonly descriptions: AstNodeDescriptionProvider
 
-  private readonly astDescriptions: WeakMap<AstNode, AstNodeDescription>
-  private readonly pkgDescriptions: WeakMap<HierarchyNode<AstNode>, AstNodeDescription>
-  private readonly thisDescriptions: WeakMap<ClassDeclaration, AstNodeDescription>
+  readonly astDescriptions: WeakMap<AstNode, AstNodeDescription>
+  readonly pkgDescriptions: WeakMap<HierarchyNode<AstNode>, AstNodeDescription>
+  readonly thisDescriptions: WeakMap<ClassDeclaration, AstNodeDescription>
 
   constructor(services: ZenScriptServices) {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
