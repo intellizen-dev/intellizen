@@ -1,7 +1,8 @@
-import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'langium'
+import type { AstNode, AstNodeDescription } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
+import type { DescriptionIndex } from '../workspace/description-index'
 import type { MemberProvider } from './member-provider'
 import { AstUtils, stream } from 'langium'
 import { isCallExpression, isClassDeclaration, isFunctionDeclaration, isOperatorFunctionDeclaration } from '../generated/ast'
@@ -15,12 +16,12 @@ type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => AstNodeDescription[] }
 
 export class ZenScriptDynamicProvider implements DynamicProvider {
-  private readonly descriptions: AstNodeDescriptionProvider
+  private readonly descriptionIndex: DescriptionIndex
   private readonly typeComputer: TypeComputer
   private readonly memberProvider: MemberProvider
 
   constructor(services: ZenScriptServices) {
-    this.descriptions = services.workspace.AstNodeDescriptionProvider
+    this.descriptionIndex = services.workspace.DescriptionIndex
     this.typeComputer = services.typing.TypeComputer
     this.memberProvider = services.references.MemberProvider
   }
@@ -37,7 +38,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
       // dynamic this
       const classDecl = AstUtils.getContainerOfType(source, isClassDeclaration)
       if (classDecl) {
-        dynamics.push(this.descriptions.createDescription(classDecl, 'this'))
+        dynamics.push(this.descriptionIndex.getThisDescription(classDecl))
       }
 
       // dynamic arguments
@@ -52,7 +53,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
               .filter(it => isFunctionDeclaration(it))
               .filter(it => it.prefix === 'static')
               .filter(it => it.parameters.length === 0)
-              .forEach(it => dynamics.push(this.descriptions.createDescription(it, it.name)))
+              .forEach(it => dynamics.push(this.descriptionIndex.getDescription(it)))
           }
         }
       }
@@ -70,7 +71,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
         .filter(it => it.parameters.length === 1)
         .find(it => it.op === '.')
       if (operatorDecl) {
-        dynamics.push(this.descriptions.createDescription(operatorDecl.parameters[0], source.target.$refText))
+        dynamics.push(this.descriptionIndex.createDynamicDescription(operatorDecl.parameters[0], source.target.$refText))
       }
 
       return dynamics
