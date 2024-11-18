@@ -47,13 +47,13 @@ export class ZenScriptNameProvider extends DefaultNameProvider {
     Script: source => source.$document ? getName(source.$document) : undefined,
     ImportDeclaration: source => source.alias || source.path.at(-1)?.$refText,
     FunctionDeclaration: source => source.name || 'lambda function',
-    ConstructorDeclaration: _ => 'zenConstructor',
+    ConstructorDeclaration: source => isClassDeclaration(source.$container) ? source.$container.name : 'constructor',
     OperatorFunctionDeclaration: source => source.op,
   }
 
   private readonly nameNodeRules: NameNodeRuleMap = {
     ImportDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'alias'),
-    ConstructorDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'zenConstructor'),
+    ConstructorDeclaration: source => GrammarUtils.findNodeForKeyword(source.$cstNode, 'zenConstructor'),
     OperatorFunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'op'),
   }
 }

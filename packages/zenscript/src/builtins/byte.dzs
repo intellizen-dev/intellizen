@@ -1,1 +1,3 @@
-zenClass byte
+zenClass byte {
+    operator as() as short, int, long, float, double, string
+}
