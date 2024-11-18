@@ -70,22 +70,6 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return this.createScope(classes, outside)
   }
 
-  private importAlias(importDesc: AstNodeDescription) {
-    const importDecl = importDesc.node as ImportDeclaration
-
-    const targetRef = importDecl.path.at(-1)
-    // call ref to ensure the reference is resolved
-    if (!targetRef?.ref) {
-      return importDesc
-    }
-
-    const targetDesc = importDecl.path.at(-1)?.$nodeDescription ?? importDesc
-    if (!importDecl.alias) {
-      return targetDesc
-    }
-    return this.descriptionIndex.createAliasDescription(targetDesc || importDesc, importDecl.alias)
-  }
-
   private readonly rules: RuleMap = {
     ImportDeclaration: (source) => {
       const path = getPathAsString(source.container, source.index)
@@ -118,7 +102,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
           case TypeParameter:
             return
           case ImportDeclaration: {
-            return this.importAlias(desc)
+            return this.descriptionIndex.createImportedDescription(desc.node as ImportDeclaration)
           }
           default:
             return desc
@@ -142,7 +126,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             case ClassDeclaration:
               return desc
             case ImportDeclaration: {
-              return this.importAlias(desc)
+              return this.descriptionIndex.createImportedDescription(desc.node as ImportDeclaration)
             }
           }
         }

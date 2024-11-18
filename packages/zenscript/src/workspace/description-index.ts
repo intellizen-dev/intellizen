@@ -1,6 +1,6 @@
 import type { HierarchyNode } from '@intellizen/shared'
 import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'langium'
-import type { ClassDeclaration } from '../generated/ast'
+import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { createSyntheticAstNodeDescription } from '../reference/synthetic'
 
@@ -9,7 +9,7 @@ export interface DescriptionIndex {
   getPackageDescription: (pkgNode: HierarchyNode<AstNode>) => AstNodeDescription
   getThisDescription: (classDecl: ClassDeclaration) => AstNodeDescription
   createDynamicDescription: (astNode: AstNode, name: string) => AstNodeDescription
-  createAliasDescription: (origin: AstNodeDescription, alias: string) => AstNodeDescription
+  createImportedDescription: (importDecl: ImportDeclaration) => AstNodeDescription
 }
 
 export class ZenScriptDescriptionIndex implements DescriptionIndex {
@@ -54,7 +54,8 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
     return this.descriptions.createDescription(astNode, name)
   }
 
-  createAliasDescription(origin: AstNodeDescription, alias: string): AstNodeDescription {
-    return Object.assign({ name: alias }, origin)
+  createImportedDescription(importDecl: ImportDeclaration): AstNodeDescription {
+    const ref = importDecl.path.at(-1)?.ref ?? importDecl
+    return this.descriptions.createDescription(ref, undefined)
   }
 }
