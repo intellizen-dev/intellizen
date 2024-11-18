@@ -10,7 +10,6 @@ import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
 import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter } from '../generated/ast'
 import { getPathAsString } from '../utils/ast'
 import { generateStream } from '../utils/stream'
-import { createSyntheticAstNodeDescription } from './synthetic'
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => Scope }
@@ -58,7 +57,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private packageScope(outside?: Scope) {
     const packages = stream(this.packageManager.root.children.values())
       .filter(it => it.isInternalNode())
-      .map(it => createSyntheticAstNodeDescription('SyntheticHierarchyNode', it.name, it))
+      .map(it => this.descriptionIndex.getPackageDescription(it))
     return this.createScope(packages, outside)
   }
 
@@ -67,7 +66,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .filter(it => it.isDataNode())
       .flatMap(it => it.data)
       .filter(isClassDeclaration)
-      .map(it => this.descriptions.createDescription(it, it.name))
+      .map(it => this.descriptionIndex.getDescription(it))
     return this.createScope(classes, outside)
   }
 
@@ -99,10 +98,10 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       const elements: AstNodeDescription[] = []
       for (const sibling of siblings) {
         if (sibling.isDataNode()) {
-          sibling.data.forEach(it => elements.push(this.descriptions.createDescription(it, sibling.name)))
+          sibling.data.forEach(it => elements.push(this.descriptionIndex.getDescription(it)))
         }
         else {
-          elements.push(createSyntheticAstNodeDescription('SyntheticHierarchyNode', sibling.name, sibling))
+          elements.push(this.descriptionIndex.getPackageDescription(sibling))
         }
       }
       return this.createScope(elements)
