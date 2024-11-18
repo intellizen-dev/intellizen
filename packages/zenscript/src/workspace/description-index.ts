@@ -1,5 +1,5 @@
 import type { HierarchyNode } from '@intellizen/shared'
-import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider } from 'langium'
+import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, NameProvider } from 'langium'
 import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { createSyntheticAstNodeDescription } from '../reference/synthetic'
@@ -14,6 +14,7 @@ export interface DescriptionIndex {
 
 export class ZenScriptDescriptionIndex implements DescriptionIndex {
   private readonly descriptions: AstNodeDescriptionProvider
+  private readonly nameProvider: NameProvider
 
   readonly astDescriptions: WeakMap<AstNode, AstNodeDescription>
   readonly pkgDescriptions: WeakMap<HierarchyNode<AstNode>, AstNodeDescription>
@@ -21,6 +22,7 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
 
   constructor(services: ZenScriptServices) {
     this.descriptions = services.workspace.AstNodeDescriptionProvider
+    this.nameProvider = services.references.NameProvider
     this.astDescriptions = new WeakMap()
     this.pkgDescriptions = new WeakMap()
     this.thisDescriptions = new WeakMap()
@@ -56,6 +58,6 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
 
   createImportedDescription(importDecl: ImportDeclaration): AstNodeDescription {
     const ref = importDecl.path.at(-1)?.ref ?? importDecl
-    return this.descriptions.createDescription(ref, undefined)
+    return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
   }
 }
