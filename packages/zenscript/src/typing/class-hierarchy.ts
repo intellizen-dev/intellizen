@@ -10,15 +10,19 @@ export interface ClassHierarchy {
 
 export class ZenScriptClassHierarchy implements ClassHierarchy {
   streamClassChain(classDecl: ClassDeclaration): Stream<ClassDeclaration> {
+    const visited = new Set<ClassDeclaration>()
     return stream(function *() {
       const deque = [classDecl]
       while (deque.length) {
         const head = deque.shift()!
-        yield head
-        classDecl?.superTypes
-          .map(it => it.path.at(-1)?.ref)
-          .filter(isClassDeclaration)
-          .forEach(it => deque.push(it))
+        if (!visited.has(head)) {
+          visited.add(head)
+          yield head
+          head.superTypes
+            .map(it => it.path.at(-1)?.ref)
+            .filter(isClassDeclaration)
+            .forEach(it => deque.push(it))
+        }
       }
     }())
   }
