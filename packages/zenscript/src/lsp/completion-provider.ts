@@ -33,29 +33,24 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   private readonly rules: RuleMap = {
-    ClassDeclaration: (source, _) => {
-      const packageName = this.nameProvider.getQualifiedName(source.$container)
-      if (!packageName) {
-        return
-      }
-      return {
-        detail: `(${packageName})`,
+    ClassDeclaration: (source) => {
+      const qualifiedName = this.nameProvider.getQualifiedName(source)
+      if (qualifiedName) {
+        return {
+          detail: `(${qualifiedName})`,
+        }
       }
     },
-    FunctionDeclaration: (source, _) => {
-      if (!source) {
-        return
-      }
-      const func = source
 
-      const params = func.parameters.map((it) => {
+    FunctionDeclaration: (source) => {
+      const params = source.parameters.map((it) => {
         if (it.typeRef && it.typeRef.$cstNode) {
           return `${it.name} as ${it.typeRef.$cstNode.text}`
         }
         return it.name
       }).join(', ')
 
-      const retType = func.returnTypeRef?.$cstNode?.text
+      const retType = source.returnTypeRef?.$cstNode?.text
 
       return {
         detail: `(${params})`,
@@ -63,26 +58,20 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       }
     },
 
-    ImportDeclaration: (source, _) => {
-      if (!source) {
-        return
-      }
+    ImportDeclaration: (source) => {
       return {
         detail: `(${source.path.slice(0, -1).map(it => it.$refText).join('.')})`,
       }
     },
-    VariableDeclaration: (source, _) => {
-      if (!source) {
-        return
-      }
-      const type = source.typeRef?.$cstNode?.text
 
+    VariableDeclaration: (source) => {
+      const type = source.typeRef?.$cstNode?.text
       return {
         description: `${type}`,
       }
     },
 
-    ValueParameter: (source, _) => {
+    ValueParameter: (source) => {
       if (!source) {
         return
       }
@@ -92,11 +81,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       }
     },
 
-    FieldDeclaration: (source, _) => {
-      if (!source) {
-        return
-      }
-
+    FieldDeclaration: (source) => {
       const type = source.typeRef?.$cstNode?.text
       return {
         description: `${type}`,
@@ -104,9 +89,6 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     },
 
     SyntheticHierarchyNode: (source, name) => {
-      if (!source) {
-        return
-      }
       const qualifiedName = [name]
       let parent = source.parent
       while (parent) {
