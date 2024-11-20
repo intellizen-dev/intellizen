@@ -1,46 +1,30 @@
 import type { AstNode, AstNodeDescription } from 'langium'
-import type { NodeKindProvider } from 'langium/lsp'
-import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
+import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import { isAstNodeDescription } from 'langium'
+import { DefaultNodeKindProvider } from 'langium/lsp'
 import { CompletionItemKind, SymbolKind } from 'vscode-languageserver'
-import { isClassDeclaration, isConstructorDeclaration } from '../generated/ast'
-
 import { isConst } from '../utils/ast'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
-type RuleMap<T> = { [K in keyof SourceMap]?: (source: SourceMap[K]) => T }
+type RuleMap<R> = { [K in keyof SourceMap]?: (source: SourceMap[K]) => R }
 
-export class ZenScriptNodeKindProvider implements NodeKindProvider {
-  getSymbolKind(node: AstNode | AstNodeDescription): SymbolKind {
-    const type = isAstNodeDescription(node) ? node.type : node.$type
-    const source = isAstNodeDescription(node) ? node.node : node
+export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
+  override getSymbolKind(node: AstNode | AstNodeDescription): SymbolKind {
+    const source = toAstNode(node)
     // @ts-expect-error allowed index type
-    return this.symbolRules[type]?.call(this, source) ?? SymbolKind.Field
+    return this.symbolRules[source?.$type]?.call(this, source) ?? super.getSymbolKind(node)
   }
 
-  getCompletionItemKind(node: AstNode | AstNodeDescription): CompletionItemKind {
-    const type = isAstNodeDescription(node) ? node.type : node.$type
-    const source = isAstNodeDescription(node) ? node.node : node
+  override getCompletionItemKind(node: AstNode | AstNodeDescription): CompletionItemKind {
+    const source = toAstNode(node)
     // @ts-expect-error allowed index type
-    return this.completionItemRules[type]?.call(this, source) ?? CompletionItemKind.Reference
+    return this.completionItemRules[source?.$type]?.call(this, source) ?? super.getCompletionItemKind(node)
   }
 
   private readonly symbolRules: RuleMap<SymbolKind> = {
-    FunctionDeclaration: (decl) => {
-      const node = isAstNodeDescription(decl) ? decl.node : decl
-      if (isClassDeclaration(node?.$container)) {
-        return SymbolKind.Method
-      }
-      return SymbolKind.Function
-    },
-    ClassDeclaration: (decl) => {
-      const node = isAstNodeDescription(decl) ? decl.node : decl
-      if ((node as ClassDeclaration).members.find(it => isConstructorDeclaration(it))) {
-        return SymbolKind.Class
-      }
-      return SymbolKind.Interface
-    },
+    FunctionDeclaration: () => SymbolKind.Function,
+    ClassDeclaration: () => SymbolKind.Class,
     FieldDeclaration: () => SymbolKind.Field,
     ExpandFunctionDeclaration: () => SymbolKind.Function,
     LoopParameter: () => SymbolKind.Variable,
@@ -51,29 +35,12 @@ export class ZenScriptNodeKindProvider implements NodeKindProvider {
     TypeParameter: () => SymbolKind.TypeParameter,
     ValueParameter: () => SymbolKind.Property,
     SyntheticHierarchyNode: () => SymbolKind.Module,
-    VariableDeclaration: (node) => {
-      if (isConst(node)) {
-        return SymbolKind.Constant
-      }
-      return SymbolKind.Variable
-    },
+    VariableDeclaration: source => isConst(source) ? SymbolKind.Constant : SymbolKind.Variable,
   }
 
   private readonly completionItemRules: RuleMap<CompletionItemKind> = {
-    FunctionDeclaration: (decl) => {
-      const node = isAstNodeDescription(decl) ? decl.node : decl
-      if (isClassDeclaration(node?.$container)) {
-        return CompletionItemKind.Method
-      }
-      return CompletionItemKind.Function
-    },
-    ClassDeclaration: (decl) => {
-      const node = isAstNodeDescription(decl) ? decl.node : decl
-      if ((node as ClassDeclaration).members.find(it => isConstructorDeclaration(it))) {
-        return CompletionItemKind.Class
-      }
-      return CompletionItemKind.Interface
-    },
+    FunctionDeclaration: () => CompletionItemKind.Function,
+    ClassDeclaration: () => CompletionItemKind.Class,
     FieldDeclaration: () => CompletionItemKind.Field,
     ExpandFunctionDeclaration: () => CompletionItemKind.Function,
     LoopParameter: () => CompletionItemKind.Variable,
@@ -84,13 +51,10 @@ export class ZenScriptNodeKindProvider implements NodeKindProvider {
     TypeParameter: () => CompletionItemKind.TypeParameter,
     ValueParameter: () => CompletionItemKind.Property,
     SyntheticHierarchyNode: () => CompletionItemKind.Module,
-    VariableDeclaration: (decl) => {
-      const node = isAstNodeDescription(decl) ? decl.node : decl
-      if (isConst(node)) {
-        return CompletionItemKind.Constant
-      }
-      return CompletionItemKind.Variable
-    },
-
+    VariableDeclaration: source => isConst(source) ? CompletionItemKind.Constant : CompletionItemKind.Variable,
   }
+}
+
+function toAstNode(node: AstNode | AstNodeDescription): AstNode | undefined {
+  return isAstNodeDescription(node) ? node.node : node
 }
