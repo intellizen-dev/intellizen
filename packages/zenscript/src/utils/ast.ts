@@ -34,7 +34,7 @@ export function isGlobal(node: AstNode | undefined) {
   return node && 'prefix' in node && node.prefix === 'global'
 }
 
-export function isConst(node: AstNode | undefined) {
+export function isVal(node: AstNode | undefined) {
   return node && 'prefix' in node && node.prefix === 'val'
 }
 
