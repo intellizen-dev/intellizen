@@ -6,9 +6,10 @@ import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import { DefaultCompletionProvider } from 'langium/lsp'
 import { toAstNode } from '../utils/ast'
+import { generateStream } from '../utils/stream'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
-type RuleMap<R> = { [K in keyof SourceMap]?: (source: SourceMap[K], name: string) => R | undefined }
+type RuleMap<R> = { [K in keyof SourceMap]?: (source: SourceMap[K]) => R | undefined }
 
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   readonly completionOptions: CompletionProviderOptions = {
@@ -35,11 +36,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
   private readonly labelDetailRules: RuleMap<CompletionItemLabelDetails> = {
     ClassDeclaration: (source) => {
-      const qualifiedName = this.nameProvider.getQualifiedName(source)
-      if (qualifiedName) {
-        return {
-          detail: `(${qualifiedName})`,
-        }
+      return {
+        description: this.nameProvider.getQualifiedName(source),
       }
     },
 
@@ -61,45 +59,38 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
     ImportDeclaration: (source) => {
       return {
-        detail: `(${source.path.slice(0, -1).map(it => it.$refText).join('.')})`,
+        detail: `${source.path.slice(0, -1).map(it => it.$refText).join('.')}`,
       }
     },
 
     VariableDeclaration: (source) => {
-      const type = source.typeRef?.$cstNode?.text
       return {
-        description: `${type}`,
+        description: source.typeRef?.$cstNode?.text,
       }
     },
 
     ValueParameter: (source) => {
-      const type = source.typeRef?.$cstNode?.text
       return {
-        description: `${type}`,
+        description: source.typeRef?.$cstNode?.text,
       }
     },
 
     FieldDeclaration: (source) => {
-      const type = source.typeRef?.$cstNode?.text
       return {
-        description: `${type}`,
+        description: source.typeRef?.$cstNode?.text,
       }
     },
 
-    SyntheticHierarchyNode: (source, name) => {
-      const qualifiedName = [name]
-      let parent = source.parent
-      while (parent) {
-        if (parent.name) {
-          qualifiedName.unshift(parent.name)
-        }
-        parent = parent.parent
-      }
+    SyntheticHierarchyNode: (source) => {
+      const qualifiedName = generateStream(source, it => it.parent)
+        .filter(it => it.parent !== undefined)
+        .map(it => it.name)
+        .toArray()
+        .reverse()
+        .join('.')
 
-      if (qualifiedName.length > 1) {
-        return {
-          detail: `(${qualifiedName.join('.')})`,
-        }
+      return {
+        description: qualifiedName,
       }
     },
   }
