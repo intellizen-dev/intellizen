@@ -16,3 +16,8 @@ export interface TypeConversion {
 export interface SubType {
   isSubType: (subType: Type, superType: Type) => boolean
 }
+
+export interface TypeDisplaying {
+  toString: (type: Type) => string
+  toSimpleString: (type: Type) => string
+}
