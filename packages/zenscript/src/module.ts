@@ -87,7 +87,6 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     CompletionProvider: services => new ZenScriptCompletionProvider(services),
     InlayHintProvider: services => new ZenScriptInlayHintProvider(services),
     SemanticTokenProvider: services => new ZenScriptSemanticTokenProvider(services),
-
   },
 }
 

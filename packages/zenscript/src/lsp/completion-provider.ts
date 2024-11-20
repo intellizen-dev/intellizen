@@ -5,9 +5,10 @@ import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import { DefaultCompletionProvider } from 'langium/lsp'
+import { toAstNode } from '../utils/ast'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], name: string) => CompletionItemLabelDetails | undefined }
+type RuleMap<R> = { [K in keyof SourceMap]?: (source: SourceMap[K], name: string) => R | undefined }
 
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   readonly completionOptions: CompletionProviderOptions = {
@@ -20,19 +21,19 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
   protected override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
     const item = super.createReferenceCompletionItem(nodeDescription)
-
-    // Add additional properties to the completion item
-    // @ts-expect-error allowed index type
-    const details = this.rules[nodeDescription.type]?.call(this, nodeDescription.node, nodeDescription.name)
-    if (details) {
-      item.labelDetails = details
-    }
     item.detail = undefined
+
+    const source = toAstNode(nodeDescription)
+    // @ts-expect-error allowed index type
+    const labelDetail = this.labelDetailRules[source.$type]?.call(this, source)
+    if (labelDetail) {
+      item.labelDetails = labelDetail
+    }
 
     return item
   }
 
-  private readonly rules: RuleMap = {
+  private readonly labelDetailRules: RuleMap<CompletionItemLabelDetails> = {
     ClassDeclaration: (source) => {
       const qualifiedName = this.nameProvider.getQualifiedName(source)
       if (qualifiedName) {

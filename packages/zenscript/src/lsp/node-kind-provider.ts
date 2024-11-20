@@ -1,10 +1,9 @@
 import type { AstNode, AstNodeDescription } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
-import { isAstNodeDescription } from 'langium'
 import { DefaultNodeKindProvider } from 'langium/lsp'
 import { CompletionItemKind, SymbolKind } from 'vscode-languageserver'
-import { isConst } from '../utils/ast'
+import { isConst, toAstNode } from '../utils/ast'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
 type RuleMap<R> = { [K in keyof SourceMap]?: (source: SourceMap[K]) => R }
@@ -53,8 +52,4 @@ export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
     SyntheticHierarchyNode: () => CompletionItemKind.Module,
     VariableDeclaration: source => isConst(source) ? CompletionItemKind.Constant : CompletionItemKind.Variable,
   }
-}
-
-function toAstNode(node: AstNode | AstNodeDescription): AstNode | undefined {
-  return isAstNodeDescription(node) ? node.node : node
 }
