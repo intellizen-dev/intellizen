@@ -1,12 +1,12 @@
 import type { Type } from './type-description'
 
-export interface TypeEquality {
-  areTypesEqual: (first: Type, second: Type) => boolean
+export interface TypeAssignability {
+  // target := source
+  isAssignable: (target: Type, source: Type) => boolean
 }
 
-export interface TypeAssignability {
-  // target := source;
-  isAssignable: (target: Type, source: Type) => boolean
+export interface TypeEquality {
+  areTypesEqual: (first: Type, second: Type) => boolean
 }
 
 export interface TypeConversion {
@@ -22,14 +22,29 @@ export interface TypeDisplaying {
   toSimpleString: (type: Type) => string
 }
 
-export type TypeFeatures = TypeEquality & TypeAssignability & TypeConversion & SubType & TypeDisplaying
+export type TypeFeatures = TypeAssignability & TypeEquality & TypeConversion & SubType & TypeDisplaying
 
 export class ZenScriptTypeFeatures implements TypeFeatures {
-  areTypesEqual(first: Type, second: Type): boolean {
+  isAssignable(target: Type, source: Type): boolean {
+    // 1. are both types equal?
+    if (this.areTypesEqual(source, target)) {
+      return true
+    }
+
+    // 2. implicit conversion from source to target possible?
+    if (this.isConvertible(source, target)) {
+      return true
+    }
+
+    // 3. is the source a subtype of the target?
+    if (this.isSubType(source, target)) {
+      return true
+    }
+
     return false
   }
 
-  isAssignable(target: Type, source: Type): boolean {
+  areTypesEqual(first: Type, second: Type): boolean {
     return false
   }
 
