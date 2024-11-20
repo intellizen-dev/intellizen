@@ -20,17 +20,17 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   protected override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
-    const item = super.createReferenceCompletionItem(nodeDescription)
-    item.detail = undefined
-
     const source = toAstNode(nodeDescription)
     // @ts-expect-error allowed index type
-    const labelDetail = this.labelDetailRules[source.$type]?.call(this, source)
-    if (labelDetail) {
-      item.labelDetails = labelDetail
-    }
+    const labelDetails = this.labelDetailRules[source.$type]?.call(this, source)
+    const kind = this.nodeKindProvider.getCompletionItemKind(nodeDescription)
 
-    return item
+    return {
+      nodeDescription,
+      kind,
+      labelDetails,
+      sortText: '0',
+    }
   }
 
   private readonly labelDetailRules: RuleMap<CompletionItemLabelDetails> = {
@@ -73,9 +73,6 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     },
 
     ValueParameter: (source) => {
-      if (!source) {
-        return
-      }
       const type = source.typeRef?.$cstNode?.text
       return {
         description: `${type}`,
