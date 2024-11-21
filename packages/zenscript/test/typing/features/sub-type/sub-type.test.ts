@@ -5,7 +5,7 @@ import { assertNoErrors, createTestServices, getDocument } from '../../../utils'
 
 const services = await createTestServices(__dirname)
 
-describe(`check inferring indexing expression`, async () => {
+describe(`check sub-typing features`, async () => {
   const document_classes_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'classes.dzs'))
   const script_classes_zs = document_classes_zs.parseResult.value
   const class_Shape = script_classes_zs.classes[0]
