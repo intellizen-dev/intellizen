@@ -1,10 +1,24 @@
 {
-  "name": "@intellizen/vscode-extension",
+  "version": "0.0.0",
+  "name": "intellizen",
+  "displayName": "IntelliZen",
+  "description": "A extension with ZenScript(Based CraftTweaker) for VSCode",
+  "author": "intellizen-dev",
+  "publisher": "intellizen-dev",
+  "license": "MIT",
+  "homepage": "https://github.com/intellizen-dev/intellizen#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/intellizen-dev/intellizen"
+  },
+  "bugs": {
+    "url": "https://github.com/intellizen-dev/intellizen/issues"
+  },
   "type": "module",
   "main": "../../out/extension/main.cjs",
   "files": [
     "LICENSE",
-    "out/*",
+    "out/**/*",
     "syntaxes"
   ],
   "engines": {
