@@ -24,9 +24,6 @@
   "engines": {
     "vscode": "^1.92.0"
   },
-  "activationEvents": [
-    "onLanguage:zenscript"
-  ],
   "contributes": {
     "languages": [
       {
