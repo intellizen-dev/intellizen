@@ -4,6 +4,7 @@ import type { TypeComputer } from './type-computer'
 import type { Type, ZenScriptType } from './type-description'
 import { stream } from 'langium'
 import { isOperatorFunctionDeclaration } from '../generated/ast'
+import { getClassChain } from '../utils/ast'
 import { isClassType, isCompoundType, isFunctionType, isIntersectionType, isTypeVariable, isUnionType } from './type-description'
 
 export interface TypeAssignability {
@@ -32,7 +33,7 @@ export type TypeFeatures = TypeAssignability & TypeEquality & TypeConversion & S
 
 type SourceMap = ZenScriptType
 type RuleMap<R> = { [K in keyof SourceMap]: (source: SourceMap[K]) => R }
-type BiRuleMap<R> = { [K in keyof SourceMap]: (self: SourceMap[K], other: Type) => R }
+type BiRuleMap<R> = { [K in keyof SourceMap]?: (self: SourceMap[K], other: Type) => R }
 
 export class ZenScriptTypeFeatures implements TypeFeatures {
   private readonly typeComputer: TypeComputer
@@ -115,7 +116,7 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
   }
 
   isConvertible(from: Type, to: Type): boolean {
-    return this.typeConversionRules[from.$type].call(this, from, to)
+    return this.typeConversionRules[from.$type].call(this, from, to) ?? false
   }
 
   private readonly typeConversionRules: BiRuleMap<boolean> = {
@@ -132,26 +133,36 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     CompoundType: (from, to) => {
       return from.types.some(it => this.isAssignable(to, it))
     },
-
-    FunctionType: () => {
-      return false
-    },
-
-    TypeVariable: () => {
-      return false
-    },
-
-    UnionType: () => {
-      return false
-    },
-
-    IntersectionType: () => {
-      return false
-    },
   }
 
   isSubType(subType: Type, superType: Type): boolean {
+    // ask the subtype
+    if (this.subTypeRules[subType.$type].call(this, subType, superType)) {
+      return true
+    }
+
+    // ask the supertype
+    else if (this.superTypeRules[superType.$type].call(this, superType, subType)) {
+      return true
+    }
+
     return false
+  }
+
+  private readonly subTypeRules: BiRuleMap<boolean> = {
+    ClassType: (subType, superType) => {
+      return isClassType(superType) && getClassChain(superType.declaration).includes(subType.declaration)
+    },
+  }
+
+  private readonly superTypeRules: BiRuleMap<boolean> = {
+    ClassType: (superType, subType) => {
+      return isClassType(subType) && getClassChain(subType.declaration).includes(superType.declaration)
+    },
+
+    IntersectionType: (superType, subType) => {
+      return superType.types.some(it => this.isSubType(subType, it))
+    },
   }
 
   toString(type: Type): string {
