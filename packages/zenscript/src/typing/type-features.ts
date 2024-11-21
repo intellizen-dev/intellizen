@@ -1,5 +1,6 @@
 import type { Type, ZenScriptType } from './type-description'
 import { stream } from 'langium'
+import { isClassType, isCompoundType, isFunctionType, isIntersectionType, isTypeVariable, isUnionType } from './type-description'
 
 export interface TypeAssignability {
   // target := source
@@ -27,6 +28,7 @@ export type TypeFeatures = TypeAssignability & TypeEquality & TypeConversion & S
 
 type SourceMap = ZenScriptType
 type RuleMap<R> = { [K in keyof SourceMap]: (source: SourceMap[K]) => R }
+type BiRuleMap<R> = { [K in keyof SourceMap]: (self: SourceMap[K], other: Type) => R }
 
 export class ZenScriptTypeFeatures implements TypeFeatures {
   isAssignable(target: Type, source: Type): boolean {
@@ -36,12 +38,12 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     }
 
     // 2. implicit conversion from source to target possible?
-    if (this.isConvertible(source, target)) {
+    else if (this.isConvertible(source, target)) {
       return true
     }
 
     // 3. is the source a subtype of the target?
-    if (this.isSubType(source, target)) {
+    else if (this.isSubType(source, target)) {
       return true
     }
 
@@ -49,7 +51,55 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
   }
 
   areTypesEqual(first: Type, second: Type): boolean {
+    if (first === second) {
+      return true
+    }
+
+    // ask the first type
+    else if (this.typeEqualityRules[first.$type].call(this, second)) {
+      return true
+    }
+
+    // ask the second type
+    else if (this.typeEqualityRules[second.$type].call(this, first)) {
+      return true
+    }
+
     return false
+  }
+
+  private readonly typeEqualityRules: BiRuleMap<boolean> = {
+    ClassType: (self, other) => {
+      return isClassType(other) && self.declaration === other.declaration
+    },
+
+    FunctionType: (self, other) => {
+      return isFunctionType(other)
+        && this.areTypesEqual(self.returnType, other.returnType)
+        && self.paramTypes.every((it, index) => this.areTypesEqual(it, other.paramTypes[index]))
+    },
+
+    TypeVariable: (self, other) => {
+      return isTypeVariable(other) && self.declaration === other.declaration
+    },
+
+    UnionType: (self, other) => {
+      return isUnionType(other)
+        && self.types.length === other.types.length
+        && self.types.every((it, index) => this.areTypesEqual(it, other.types[index]))
+    },
+
+    IntersectionType: (self, other) => {
+      return isIntersectionType(other)
+        && self.types.length === other.types.length
+        && self.types.every((it, index) => this.areTypesEqual(it, other.types[index]))
+    },
+
+    CompoundType: (self, other) => {
+      return isCompoundType(other)
+        && self.types.length === other.types.length
+        && self.types.every((it, index) => this.areTypesEqual(it, other.types[index]))
+    },
   }
 
   isConvertible(from: Type, to: Type): boolean {
