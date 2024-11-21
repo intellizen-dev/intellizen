@@ -1,5 +1,9 @@
+import type { ZenScriptServices } from '../module'
+import type { MemberProvider } from '../reference/member-provider'
+import type { TypeComputer } from './type-computer'
 import type { Type, ZenScriptType } from './type-description'
 import { stream } from 'langium'
+import { isOperatorFunctionDeclaration } from '../generated/ast'
 import { isClassType, isCompoundType, isFunctionType, isIntersectionType, isTypeVariable, isUnionType } from './type-description'
 
 export interface TypeAssignability {
@@ -31,6 +35,14 @@ type RuleMap<R> = { [K in keyof SourceMap]: (source: SourceMap[K]) => R }
 type BiRuleMap<R> = { [K in keyof SourceMap]: (self: SourceMap[K], other: Type) => R }
 
 export class ZenScriptTypeFeatures implements TypeFeatures {
+  private readonly typeComputer: TypeComputer
+  private readonly memberProvider: MemberProvider
+
+  constructor(services: ZenScriptServices) {
+    this.typeComputer = services.typing.TypeComputer
+    this.memberProvider = services.references.MemberProvider
+  }
+
   isAssignable(target: Type, source: Type): boolean {
     // 1. are both types equal?
     if (this.areTypesEqual(source, target)) {
@@ -103,7 +115,39 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
   }
 
   isConvertible(from: Type, to: Type): boolean {
-    return false
+    return this.typeConversionRules[from.$type].call(this, from, to)
+  }
+
+  private readonly typeConversionRules: BiRuleMap<boolean> = {
+    ClassType: (from, to) => {
+      return stream(this.memberProvider.getMembers(from))
+        .map(it => it.node)
+        .filter(isOperatorFunctionDeclaration)
+        .filter(it => it.op === 'as')
+        .map(it => this.typeComputer.inferType(it.returnTypeRef))
+        .nonNullable()
+        .some(it => this.isAssignable(to, it))
+    },
+
+    CompoundType: (from, to) => {
+      return from.types.some(it => this.isAssignable(to, it))
+    },
+
+    FunctionType: () => {
+      return false
+    },
+
+    TypeVariable: () => {
+      return false
+    },
+
+    UnionType: () => {
+      return false
+    },
+
+    IntersectionType: () => {
+      return false
+    },
   }
 
   isSubType(subType: Type, superType: Type): boolean {
