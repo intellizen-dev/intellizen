@@ -6,7 +6,7 @@
       "grammar": "src/zenscript.langium",
       "fileExtensions": [".zs", ".dzs"],
       "textMate": {
-        "out": "../../syntaxes/zenscript.tmLanguage.json"
+        "out": "../vscode-extension/syntaxes/zenscript.tmLanguage.json"
       }
     }
   ],

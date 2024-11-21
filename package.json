@@ -17,43 +17,8 @@
   "bugs": {
     "url": "https://github.com/intellizen-dev/intellizen/issues"
   },
-  "main": "./out/extension/main.cjs",
-  "files": [
-    "LICENSE",
-    "out/*",
-    "syntaxes"
-  ],
-  "engines": {
-    "vscode": "^1.92.0"
-  },
-  "activationEvents": [
-    "onLanguage:zenscript"
-  ],
-  "contributes": {
-    "languages": [
-      {
-        "id": "zenscript",
-        "aliases": [
-          "ZenScript",
-          "zenscript"
-        ],
-        "extensions": [
-          ".zs",
-          ".dzs"
-        ],
-        "configuration": "./language-configuration.json"
-      }
-    ],
-    "grammars": [
-      {
-        "language": "zenscript",
-        "scopeName": "source.zenscript",
-        "path": "syntaxes/zenscript.tmLanguage.json"
-      }
-    ]
-  },
   "scripts": {
-    "dev": "cross-env NODE_ENV=development 'conc \"turbo langium:generate:watch\" \"turbo dev\"'",
+    "dev": "cross-env NODE_ENV=development conc \"turbo langium:generate:watch\" \"turbo dev\"",
     "build": "turbo build",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --cache --fix",

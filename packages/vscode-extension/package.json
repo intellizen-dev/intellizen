@@ -1,6 +1,41 @@
 {
   "name": "@intellizen/vscode-extension",
   "type": "module",
+  "main": "../../out/extension/main.cjs",
+  "files": [
+    "LICENSE",
+    "out/*",
+    "syntaxes"
+  ],
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "activationEvents": [
+    "onLanguage:zenscript"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "zenscript",
+        "aliases": [
+          "ZenScript",
+          "zenscript"
+        ],
+        "extensions": [
+          ".zs",
+          ".dzs"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "zenscript",
+        "scopeName": "source.zenscript",
+        "path": "syntaxes/zenscript.tmLanguage.json"
+      }
+    ]
+  },
   "scripts": {
     "dev": "pnpm build --watch",
     "build": "tsup"
