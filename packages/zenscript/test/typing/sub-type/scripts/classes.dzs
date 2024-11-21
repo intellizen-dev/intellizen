@@ -1,0 +1,3 @@
+zenClass Shape {}
+zenClass Circle extends Shape {}
+zenClass Rectangle extends Shape {}
