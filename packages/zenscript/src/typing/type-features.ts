@@ -25,8 +25,8 @@ export interface SubType {
 }
 
 export interface TypeDisplaying {
-  toString: (type: Type) => string
-  toSimpleString: (type: Type) => string
+  asString: (type: Type) => string
+  asSimpleString: (type: Type) => string
 }
 
 export type TypeFeatures = TypeAssignability & TypeEquality & TypeConversion & SubType & TypeDisplaying
@@ -169,17 +169,17 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     },
   }
 
-  toString(type: Type): string {
+  asString(type: Type): string {
     // @ts-expect-error allowed index type
-    return this.toStringRules[type.$type].call(this, type)
+    return this.asStringRules[type.$type].call(this, type)
   }
 
-  private readonly toStringRules: RuleMap<string> = {
+  private readonly asStringRules: RuleMap<string> = {
     ClassType: (source) => {
       let result = source.declaration.name
       if (source.substitutions.size) {
         result += '<'
-        result += stream(source.substitutions.values()).map(this.toString).join(', ')
+        result += stream(source.substitutions.values()).map(this.asString).join(', ')
         result += '>'
       }
       return result
@@ -188,30 +188,30 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     FunctionType: (source) => {
       let result = 'function('
       if (source.paramTypes.length) {
-        result += source.paramTypes.map(this.toString).join(',')
+        result += source.paramTypes.map(this.asString).join(',')
       }
       result += ')'
-      result += this.toString(source.returnType)
+      result += this.asString(source.returnType)
       return result
     },
 
     TypeVariable: source => source.declaration.name,
-    UnionType: source => source.types.map(this.toString).join(' | '),
-    IntersectionType: source => source.types.map(this.toString).join(' & '),
-    CompoundType: source => source.types.map(this.toString).join(', '),
+    UnionType: source => source.types.map(this.asString).join(' | '),
+    IntersectionType: source => source.types.map(this.asString).join(' & '),
+    CompoundType: source => source.types.map(this.asString).join(', '),
   }
 
-  toSimpleString(type: Type): string {
+  asSimpleString(type: Type): string {
     // @ts-expect-error allowed index type
-    return this.toSimpleStringRules[type.$type].call(this, type)
+    return this.asSimpleStringRules[type.$type].call(this, type)
   }
 
-  private readonly toSimpleStringRules: RuleMap<string> = {
+  private readonly asSimpleStringRules: RuleMap<string> = {
     ClassType: (source) => {
       let result = source.declaration.name
       if (source.substitutions.size) {
         result += '<'
-        result += stream(source.substitutions.values()).map(this.toSimpleString).join(', ')
+        result += stream(source.substitutions.values()).map(this.asSimpleString).join(', ')
         result += '>'
       }
       return result
@@ -220,16 +220,16 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     FunctionType: (source) => {
       let result = 'function('
       if (source.paramTypes.length) {
-        result += source.paramTypes.map(it => this.toSimpleString(it)).join(',')
+        result += source.paramTypes.map(it => this.asSimpleString(it)).join(',')
       }
       result += ')'
-      result += this.toSimpleString(source.returnType)
+      result += this.asSimpleString(source.returnType)
       return result
     },
 
     TypeVariable: source => source.declaration.name,
-    UnionType: source => source.types.map(this.toSimpleString).join(' | '),
-    IntersectionType: source => source.types.map(this.toSimpleString).join(' & '),
-    CompoundType: source => source.types.map(this.toSimpleString).join(', '),
+    UnionType: source => source.types.map(this.asSimpleString).join(' | '),
+    IntersectionType: source => source.types.map(this.asSimpleString).join(' & '),
+    CompoundType: source => source.types.map(this.asSimpleString).join(', '),
   }
 }
