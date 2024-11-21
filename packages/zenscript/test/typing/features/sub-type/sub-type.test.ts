@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { ClassType } from '../../../src/typing/type-description'
-import { assertNoErrors, createTestServices, getDocument } from '../../utils'
+import { ClassType } from '../../../../src/typing/type-description'
+import { assertNoErrors, createTestServices, getDocument } from '../../../utils'
 
 const services = await createTestServices(__dirname)
 
