@@ -24,16 +24,10 @@ export interface SubType {
   isSubType: (subType: Type, superType: Type) => boolean
 }
 
-export interface TypeDisplaying {
-  asString: (type: Type) => string
-  asSimpleString: (type: Type) => string
-}
-
-export type TypeFeatures = TypeAssignability & TypeEquality & TypeConversion & SubType & TypeDisplaying
+export type TypeFeatures = TypeAssignability & TypeEquality & TypeConversion & SubType
 
 type SourceMap = ZenScriptType
-type RuleMap<R> = { [K in keyof SourceMap]: (source: SourceMap[K]) => R }
-type BiRuleMap<R> = { [K in keyof SourceMap]?: (self: SourceMap[K], other: Type) => R }
+type RuleMap<R> = { [K in keyof SourceMap]?: (self: SourceMap[K], other: Type) => R }
 
 export class ZenScriptTypeFeatures implements TypeFeatures {
   private readonly typeComputer: TypeComputer
@@ -81,7 +75,7 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     return false
   }
 
-  private readonly typeEqualityRules: BiRuleMap<boolean> = {
+  private readonly typeEqualityRules: RuleMap<boolean> = {
     ClassType: (self, other) => {
       return isClassType(other) && self.declaration === other.declaration
     },
@@ -119,7 +113,7 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     return this.typeConversionRules[from.$type].call(this, from, to) ?? false
   }
 
-  private readonly typeConversionRules: BiRuleMap<boolean> = {
+  private readonly typeConversionRules: RuleMap<boolean> = {
     ClassType: (from, to) => {
       if (isAnyType(from) || isAnyType(to)) {
         return true
@@ -153,13 +147,13 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     return false
   }
 
-  private readonly subTypeRules: BiRuleMap<boolean> = {
+  private readonly subTypeRules: RuleMap<boolean> = {
     ClassType: (subType, superType) => {
       return isClassType(superType) && getClassChain(superType.declaration).includes(subType.declaration)
     },
   }
 
-  private readonly superTypeRules: BiRuleMap<boolean> = {
+  private readonly superTypeRules: RuleMap<boolean> = {
     ClassType: (superType, subType) => {
       return isClassType(subType) && getClassChain(subType.declaration).includes(superType.declaration)
     },
@@ -167,69 +161,5 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     IntersectionType: (superType, subType) => {
       return superType.types.some(it => this.isSubType(subType, it))
     },
-  }
-
-  asString(type: Type): string {
-    // @ts-expect-error allowed index type
-    return this.asStringRules[type.$type].call(this, type)
-  }
-
-  private readonly asStringRules: RuleMap<string> = {
-    ClassType: (source) => {
-      let result = source.declaration.name
-      if (source.substitutions.size) {
-        result += '<'
-        result += stream(source.substitutions.values()).map(this.asString).join(', ')
-        result += '>'
-      }
-      return result
-    },
-
-    FunctionType: (source) => {
-      let result = 'function('
-      if (source.paramTypes.length) {
-        result += source.paramTypes.map(this.asString).join(',')
-      }
-      result += ')'
-      result += this.asString(source.returnType)
-      return result
-    },
-
-    TypeVariable: source => source.declaration.name,
-    UnionType: source => source.types.map(this.asString).join(' | '),
-    IntersectionType: source => source.types.map(this.asString).join(' & '),
-    CompoundType: source => source.types.map(this.asString).join(', '),
-  }
-
-  asSimpleString(type: Type): string {
-    // @ts-expect-error allowed index type
-    return this.asSimpleStringRules[type.$type].call(this, type)
-  }
-
-  private readonly asSimpleStringRules: RuleMap<string> = {
-    ClassType: (source) => {
-      let result = source.declaration.name
-      if (source.substitutions.size) {
-        result += '<'
-        result += stream(source.substitutions.values()).map(this.asSimpleString).join(', ')
-        result += '>'
-      }
-      return result
-    },
-
-    FunctionType: (source) => {
-      let result = 'function('
-      if (source.paramTypes.length) {
-        result += source.paramTypes.map(it => this.asSimpleString(it)).join(',')
-      }
-      result += ')'
-      result += this.asSimpleString(source.returnType)
-      return result
-    },
-
-    TypeVariable: source => source.declaration.name,
-    UnionType: source => source.types.map(this.asSimpleString).join(' | '),
-    IntersectionType: source => source.types.map(this.asSimpleString).join(' & '),
-    CompoundType: source => source.types.map(this.asSimpleString).join(', '),
   }
 }
