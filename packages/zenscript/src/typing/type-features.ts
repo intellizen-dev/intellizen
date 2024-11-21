@@ -5,7 +5,7 @@ import type { Type, ZenScriptType } from './type-description'
 import { stream } from 'langium'
 import { isOperatorFunctionDeclaration } from '../generated/ast'
 import { getClassChain } from '../utils/ast'
-import { isClassType, isCompoundType, isFunctionType, isIntersectionType, isTypeVariable, isUnionType } from './type-description'
+import { isAnyType, isClassType, isCompoundType, isFunctionType, isIntersectionType, isTypeVariable, isUnionType } from './type-description'
 
 export interface TypeAssignability {
   // target := source
@@ -121,6 +121,10 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
 
   private readonly typeConversionRules: BiRuleMap<boolean> = {
     ClassType: (from, to) => {
+      if (isAnyType(from) || isAnyType(to)) {
+        return true
+      }
+
       return stream(this.memberProvider.getMembers(from))
         .map(it => it.node)
         .filter(isOperatorFunctionDeclaration)
