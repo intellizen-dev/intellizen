@@ -8,7 +8,6 @@ type UncheckedRuleFunction<T extends RuleFunctionMatches> = (source: any, ...res
 export function defineRules<T extends RuleFunctionMatches>(
   thisObj: any,
   rules: Partial<T>,
-  fallback?: UncheckedRuleFunction<T>,
 ): (type?: string) => { call: UncheckedRuleFunction<T> } {
   // rules is a map of lambdas, assign each lambda a name to be able to call it
   // this is a bit of a hack, but it works
@@ -19,7 +18,7 @@ export function defineRules<T extends RuleFunctionMatches>(
   return (type?: string) => {
     return {
       call: (source, ...rest) => {
-        const rule = rules[type as keyof T] || fallback
+        const rule = rules[type as keyof T]
         return rule?.call(thisObj, source, ...rest)
       },
     }

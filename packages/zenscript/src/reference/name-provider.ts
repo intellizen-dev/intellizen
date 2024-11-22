@@ -18,11 +18,11 @@ type NameNodeRuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CstN
 
 export class ZenScriptNameProvider extends DefaultNameProvider {
   getName(node: AstNode): string | undefined {
-    return this.nameRules(node.$type).call(node)
+    return this.nameRules(node.$type).call(node) ?? super.getName(node)
   }
 
   getNameNode(node: AstNode): CstNode | undefined {
-    return this.nameNodeRules(node.$type).call(node)
+    return this.nameNodeRules(node.$type).call(node) ?? super.getNameNode(node)
   }
 
   getQualifiedName(node: AstNode): string | undefined {
@@ -48,13 +48,13 @@ export class ZenScriptNameProvider extends DefaultNameProvider {
     FunctionDeclaration: source => source.name || 'lambda function',
     ConstructorDeclaration: _ => 'zenConstructor',
     OperatorFunctionDeclaration: source => source.op,
-  }, source => super.getName(source))
+  })
 
   private readonly nameNodeRules = defineRules<NameNodeRuleMap>(this, {
     ImportDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'alias'),
     ConstructorDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'zenConstructor'),
     OperatorFunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'op'),
-  }, source => super.getNameNode(source))
+  })
 }
 
 function concat(qualifiedName: string | undefined, name: string | undefined): string | undefined {
