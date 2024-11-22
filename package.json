@@ -53,7 +53,7 @@
     ]
   },
   "scripts": {
-    "dev": "cross-env NODE_ENV=development conc \"turbo langium:generate:watch\" \"turbo dev\"",
+    "dev": "cross-env NODE_ENV=development 'conc \"turbo langium:generate:watch\" \"turbo dev\"'",
     "build": "turbo build",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --cache --fix",
