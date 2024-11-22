@@ -13,9 +13,9 @@ export function defineRules<T extends RuleFunctionMatches>(
     Object.defineProperty(rule, 'name', { value: $type, writable: false })
   }
 
-  return (type?: string) => ({
+  return $type => ({
     call: (source, ...rest) => {
-      const rule = rules[type as keyof T]
+      const rule = rules[$type as keyof T]
       return rule?.call(thisObj, source, ...rest)
     },
   })
