@@ -9,8 +9,8 @@ export function defineRules<T extends RuleFunctionMatches>(
 ): ($type: string | undefined) => { call: UncheckedRuleFunction<T> } {
   // rules is a map of lambdas, assign each lambda a name to be able to call it
   // this is a bit of a hack, but it works
-  for (const [key, value] of Object.entries(rules)) {
-    Object.defineProperty(value, 'name', { value: key, writable: false })
+  for (const [$type, rule] of Object.entries(rules)) {
+    Object.defineProperty(rule, 'name', { value: $type, writable: false })
   }
 
   return (type?: string) => ({
