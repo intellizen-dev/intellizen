@@ -9,8 +9,8 @@ import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
 import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter } from '../generated/ast'
 import { getPathAsString } from '../utils/ast'
-import { generateStream } from '../utils/stream'
 import { defineRules } from '../utils/rule'
+import { generateStream } from '../utils/stream'
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => Scope }

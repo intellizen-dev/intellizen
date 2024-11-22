@@ -8,8 +8,8 @@ import { stream } from 'langium'
 import { isClassDeclaration, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
 import { getClassChain, isStatic } from '../utils/ast'
-import { isSyntheticAstNode } from './synthetic'
 import { defineRules } from '../utils/rule'
+import { isSyntheticAstNode } from './synthetic'
 
 export interface MemberProvider {
   getMembers: (source: AstNode | Type | undefined) => AstNodeDescription[]

@@ -48,13 +48,13 @@ export class ZenScriptNameProvider extends DefaultNameProvider {
     FunctionDeclaration: source => source.name || 'lambda function',
     ConstructorDeclaration: _ => 'zenConstructor',
     OperatorFunctionDeclaration: source => source.op,
-  }, (source) => super.getName(source))
+  }, source => super.getName(source))
 
   private readonly nameNodeRules = defineRules<NameNodeRuleMap>(this, {
     ImportDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'alias'),
     ConstructorDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'zenConstructor'),
     OperatorFunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'op'),
-  }, (source) => super.getNameNode(source))
+  }, source => super.getNameNode(source))
 }
 
 function concat(qualifiedName: string | undefined, name: string | undefined): string | undefined {

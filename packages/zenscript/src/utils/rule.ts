@@ -6,8 +6,9 @@ type MemeberType<T> = T extends { [K in string]: infer V } ? (V extends (...args
 type UncheckedRuleFunction<T extends RuleFunctionMatches> = (source: any, ...rest: RestParameters<MemeberType<T>>) => ReturnType<MemeberType<T>> | undefined
 
 export function defineRules<T extends RuleFunctionMatches>(
-  thisObj: any, rules: Partial<T>,
-  fallback?: UncheckedRuleFunction<T>
+  thisObj: any,
+  rules: Partial<T>,
+  fallback?: UncheckedRuleFunction<T>,
 ): (type?: string) => { call: UncheckedRuleFunction<T> } {
   // rules is a map of lambdas, assign each lambda a name to be able to call it
   // this is a bit of a hack, but it works
@@ -24,4 +25,3 @@ export function defineRules<T extends RuleFunctionMatches>(
     }
   }
 }
-
