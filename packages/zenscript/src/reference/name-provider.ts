@@ -4,6 +4,7 @@ import { AstUtils, DefaultNameProvider, GrammarUtils } from 'langium'
 import { isClassDeclaration, isScript } from '../generated/ast'
 import { isImportable, isStatic, isToplevel } from '../utils/ast'
 import { getName, getQualifiedName } from '../utils/document'
+import { defineRules } from '../utils/rule'
 
 declare module 'langium' {
   interface NameProvider {
@@ -17,13 +18,11 @@ type NameNodeRuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CstN
 
 export class ZenScriptNameProvider extends DefaultNameProvider {
   getName(node: AstNode): string | undefined {
-    // @ts-expect-error allowed index type
-    return (this.nameRules[node.$type] ?? super.getName).call(this, node)
+    return this.nameRules(node.$type).call(node)
   }
 
   getNameNode(node: AstNode): CstNode | undefined {
-    // @ts-expect-error allowed index type
-    return (this.nameNodeRules[node.$type] ?? super.getNameNode).call(this, node)
+    return this.nameNodeRules(node.$type).call(node)
   }
 
   getQualifiedName(node: AstNode): string | undefined {
@@ -43,19 +42,19 @@ export class ZenScriptNameProvider extends DefaultNameProvider {
     }
   }
 
-  private readonly nameRules: NameRuleMap = {
+  private readonly nameRules = defineRules<NameRuleMap>(this, {
     Script: source => source.$document ? getName(source.$document) : undefined,
     ImportDeclaration: source => source.alias || source.path.at(-1)?.$refText,
     FunctionDeclaration: source => source.name || 'lambda function',
     ConstructorDeclaration: _ => 'zenConstructor',
     OperatorFunctionDeclaration: source => source.op,
-  }
+  }, (source) => super.getName(source))
 
-  private readonly nameNodeRules: NameNodeRuleMap = {
+  private readonly nameNodeRules = defineRules<NameNodeRuleMap>(this, {
     ImportDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'alias'),
     ConstructorDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'zenConstructor'),
     OperatorFunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'op'),
-  }
+  }, (source) => super.getNameNode(source))
 }
 
 function concat(qualifiedName: string | undefined, name: string | undefined): string | undefined {

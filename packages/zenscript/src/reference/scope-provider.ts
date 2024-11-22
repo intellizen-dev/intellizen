@@ -10,6 +10,7 @@ import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
 import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter } from '../generated/ast'
 import { getPathAsString } from '../utils/ast'
 import { generateStream } from '../utils/stream'
+import { defineRules } from '../utils/rule'
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => Scope }
@@ -29,8 +30,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   override getScope(context: ReferenceInfo): Scope {
-    // @ts-expect-error allowed index type
-    return this.rules[context.container.$type]?.call(this, context) ?? EMPTY_SCOPE
+    return this.rules(context.container.$type)?.call(context) ?? EMPTY_SCOPE
   }
 
   private lexicalScope(
@@ -70,7 +70,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return this.createScope(classes, outside)
   }
 
-  private readonly rules: RuleMap = {
+  private readonly rules = defineRules<RuleMap>(this, {
     ImportDeclaration: (source) => {
       const path = getPathAsString(source.container, source.index)
       const parentPath = substringBeforeLast(path, '.')
@@ -138,5 +138,5 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         return this.createScope(members)
       }
     },
-  }
+  })
 }

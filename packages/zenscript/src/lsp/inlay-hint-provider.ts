@@ -9,6 +9,7 @@ import { AbstractInlayHintProvider } from 'langium/lsp'
 import { InlayHintKind } from 'vscode-languageserver'
 import { isClassType } from '../typing/type-description'
 import { getPathAsString } from '../utils/ast'
+import { defineRules } from '../utils/rule'
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], acceptor: InlayHintAcceptor) => void }
@@ -26,8 +27,7 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
   }
 
   computeInlayHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
-    // @ts-expect-error allowed index type
-    this.rules[astNode.$type]?.call(this, astNode, acceptor)
+    this.rules(astNode.$type).call(astNode, acceptor)
   }
 
   private acceptTypeHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
@@ -72,7 +72,7 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
     acceptor(typeHint)
   }
 
-  private readonly rules: RuleMap = {
+  private readonly rules = defineRules<RuleMap>(this, {
     VariableDeclaration: (source, acceptor) => {
       this.acceptTypeHint(source, acceptor)
     },
@@ -96,5 +96,5 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
         })
       }
     },
-  }
+  })
 }

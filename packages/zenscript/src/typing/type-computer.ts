@@ -8,6 +8,7 @@ import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-desc
 import { type AstNode, stream } from 'langium'
 import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
 import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
+import { defineRules } from '../utils/rule'
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => Type | undefined
@@ -28,8 +29,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   public inferType(node: AstNode | undefined): Type | undefined {
-    // @ts-expect-error allowed index type
-    return this.rules[node?.$type]?.call(this, node)
+    return this.rules(node?.$type)?.call(node)
   }
 
   private classTypeOf(className: BuiltinTypes | string, substitutions: TypeParameterSubstitutions = new Map()): ClassType {
@@ -44,7 +44,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     return stream(this.packageManager.retrieve(className)).find(isClassDeclaration)
   }
 
-  private readonly rules: RuleMap = {
+  private readonly rules = defineRules<RuleMap>(this, {
     // region TypeReference
     ArrayTypeReference: (source) => {
       const arrayType = this.classTypeOf('Array')
@@ -410,5 +410,5 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return mapType
     },
     // endregion
-  }
+  })
 }

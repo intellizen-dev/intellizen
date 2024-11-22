@@ -9,6 +9,7 @@ import { isClassDeclaration, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
 import { getClassChain, isStatic } from '../utils/ast'
 import { isSyntheticAstNode } from './synthetic'
+import { defineRules } from '../utils/rule'
 
 export interface MemberProvider {
   getMembers: (source: AstNode | Type | undefined) => AstNodeDescription[]
@@ -27,11 +28,10 @@ export class ZenScriptMemberProvider implements MemberProvider {
   }
 
   getMembers(source: AstNode | Type | undefined): AstNodeDescription[] {
-    // @ts-expect-error allowed index type
-    return this.rules[source?.$type]?.call(this, source) ?? []
+    return this.rules(source?.$type).call(source) ?? []
   }
 
-  private readonly rules: RuleMap = {
+  private readonly rules = defineRules<RuleMap>(this, {
     SyntheticHierarchyNode: (source) => {
       const declarations = stream(source.children.values())
         .filter(it => it.isDataNode())
@@ -165,5 +165,5 @@ export class ZenScriptMemberProvider implements MemberProvider {
         .filter(it => !isStatic(it))
         .map(it => this.descriptionIndex.getDescription(it))
     },
-  }
+  })
 }
