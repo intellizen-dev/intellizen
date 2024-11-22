@@ -1,12 +1,12 @@
-type RestParameters<T> = T extends (first: any, ...rest: infer U) => any ? U : never
-type RuleFunctionMatches = { [K in string]: (...args: any) => any }
+type RuleMap = { [K in string]: (source: any, ...rest: any) => any }
+type RuleFunction<T extends RuleMap> = (source: any, ...rest: RestParameters<MemberType<T>>) => ReturnType<MemberType<T>> | undefined
 type MemberType<T> = T extends { [K in string]: infer V } ? (V extends (...args: any) => any ? V : never) : never
-type UncheckedRuleFunction<T extends RuleFunctionMatches> = (source: any, ...rest: RestParameters<MemberType<T>>) => ReturnType<MemberType<T>> | undefined
+type RestParameters<T> = T extends (head: any, ...tail: infer U) => any ? U : never
 
-export function defineRules<T extends RuleFunctionMatches>(
-  thisObj: any,
+export function defineRules<T extends RuleMap>(
+  thisObj: unknown,
   rules: Partial<T>,
-): ($type: string | undefined) => { call: UncheckedRuleFunction<T> } {
+): ($type: string | undefined) => { call: RuleFunction<T> } {
   // rules is a map of lambdas, assign each lambda a name to be able to call it
   // this is a bit of a hack, but it works
   for (const [$type, rule] of Object.entries(rules)) {
