@@ -13,7 +13,6 @@ import { ZenScriptMemberProvider } from './reference/member-provider'
 import { ZenScriptNameProvider } from './reference/name-provider'
 import { ZenScriptScopeComputation } from './reference/scope-computation'
 import { ZenScriptScopeProvider } from './reference/scope-provider'
-import { ZenScriptClassHierarchy } from './typing/class-hierarchy'
 import { ZenScriptTypeComputer } from './typing/type-computer'
 import { registerValidationChecks, ZenScriptValidator } from './validation/validator'
 import { ZenScriptBracketManager } from './workspace/bracket-manager'
@@ -35,7 +34,6 @@ export interface ZenScriptAddedServices {
   }
   typing: {
     TypeComputer: ZenScriptTypeComputer
-    ClassHierarchy: ZenScriptClassHierarchy
   }
   workspace: {
     PackageManager: ZenScriptPackageManager
@@ -86,7 +84,6 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
   },
   typing: {
     TypeComputer: services => new ZenScriptTypeComputer(services),
-    ClassHierarchy: () => new ZenScriptClassHierarchy(),
   },
   lsp: {
     CompletionProvider: services => new ZenScriptCompletionProvider(services),

@@ -1,14 +1,13 @@
 import type { AstNode, AstNodeDescription } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import type { ClassHierarchy } from '../typing/class-hierarchy'
 import type { TypeComputer } from '../typing/type-computer'
 import type { DescriptionIndex } from '../workspace/description-index'
 import type { ZenScriptSyntheticAstType } from './synthetic'
 import { stream } from 'langium'
 import { isClassDeclaration, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
-import { isStatic } from '../utils/ast'
+import { isStatic, streamClassChain, streamDeclaredMembers } from '../utils/ast'
 import { isSyntheticAstNode } from './synthetic'
 
 export interface MemberProvider {
@@ -21,12 +20,10 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => AstNodeDescr
 export class ZenScriptMemberProvider implements MemberProvider {
   private readonly descriptionIndex: DescriptionIndex
   private readonly typeComputer: TypeComputer
-  private readonly classHierarchy: ClassHierarchy
 
   constructor(services: ZenScriptServices) {
     this.descriptionIndex = services.workspace.DescriptionIndex
     this.typeComputer = services.typing.TypeComputer
-    this.classHierarchy = services.typing.ClassHierarchy
   }
 
   getMembers(source: AstNode | Type | undefined): AstNodeDescription[] {
@@ -61,7 +58,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     ClassDeclaration: (source) => {
-      return this.classHierarchy.streamDeclaredMembers(source)
+      return streamDeclaredMembers(source)
         .filter(isStatic)
         .map(it => this.descriptionIndex.getDescription(it))
         .toArray()
@@ -163,7 +160,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     ClassType: (source) => {
-      return this.classHierarchy.streamClassChain(source.declaration)
+      return streamClassChain(source.declaration)
         .flatMap(it => it.members)
         .filter(it => !isStatic(it))
         .map(it => this.descriptionIndex.getDescription(it))

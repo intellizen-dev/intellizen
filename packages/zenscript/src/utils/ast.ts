@@ -1,7 +1,7 @@
-import type { AstNode } from 'langium'
-import type { BracketExpression, ClassDeclaration, ImportDeclaration } from '../generated/ast'
-import { AstUtils } from 'langium'
-import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isScript } from '../generated/ast'
+import type { AstNode, Stream } from 'langium'
+import type { BracketExpression, ClassDeclaration, ClassMemberDeclaration, FunctionDeclaration, ImportDeclaration, OperatorFunctionDeclaration } from '../generated/ast'
+import { AstUtils, stream } from 'langium'
+import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
 
 export function isToplevel(node: AstNode | undefined): boolean {
@@ -62,4 +62,34 @@ export function getPathAsString(astNode: ImportDeclaration | BracketExpression, 
   else {
     throw new Error(`Illegal argument: ${astNode}`)
   }
+}
+
+export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDeclaration> {
+  const visited = new Set<ClassDeclaration>()
+  return stream(function *() {
+    const deque = [classDecl]
+    while (deque.length) {
+      const head = deque.shift()!
+      if (!visited.has(head)) {
+        visited.add(head)
+        yield head
+        head.superTypes
+          .map(it => it.path.at(-1)?.ref)
+          .filter(isClassDeclaration)
+          .forEach(it => deque.push(it))
+      }
+    }
+  }())
+}
+
+export function streamDeclaredMembers(classDecl: ClassDeclaration): Stream<ClassMemberDeclaration> {
+  return stream(classDecl.members)
+}
+
+export function streamDeclaredFunctions(classDecl: ClassDeclaration): Stream<FunctionDeclaration> {
+  return streamDeclaredMembers(classDecl).filter(isFunctionDeclaration)
+}
+
+export function streamDeclaredOperators(classDecl: ClassDeclaration): Stream<OperatorFunctionDeclaration> {
+  return streamDeclaredMembers(classDecl).filter(isOperatorFunctionDeclaration)
 }

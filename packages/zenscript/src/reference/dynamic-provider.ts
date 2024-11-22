@@ -1,13 +1,12 @@
 import type { AstNode, AstNodeDescription } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import type { ClassHierarchy } from '../typing/class-hierarchy'
 import type { TypeComputer } from '../typing/type-computer'
 import type { DescriptionIndex } from '../workspace/description-index'
 import { AstUtils } from 'langium'
-import { isCallExpression, isClassDeclaration, isFunctionDeclaration } from '../generated/ast'
+import { isCallExpression, isClassDeclaration } from '../generated/ast'
 import { isClassType, isFunctionType } from '../typing/type-description'
-import { isStatic } from '../utils/ast'
+import { isStatic, streamDeclaredFunctions, streamDeclaredOperators } from '../utils/ast'
 
 export interface DynamicProvider {
   getDynamics: (source: AstNode) => AstNodeDescription[]
@@ -19,12 +18,10 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => AstNodeDescr
 export class ZenScriptDynamicProvider implements DynamicProvider {
   private readonly descriptionIndex: DescriptionIndex
   private readonly typeComputer: TypeComputer
-  private readonly classHierarchy: ClassHierarchy
 
   constructor(services: ZenScriptServices) {
     this.descriptionIndex = services.workspace.DescriptionIndex
     this.typeComputer = services.typing.TypeComputer
-    this.classHierarchy = services.typing.ClassHierarchy
   }
 
   getDynamics(source: AstNode): AstNodeDescription[] {
@@ -49,8 +46,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
         if (isFunctionType(receiverType)) {
           const paramType = receiverType.paramTypes[index]
           if (isClassType(paramType)) {
-            this.classHierarchy.streamDeclaredMembers(paramType.declaration)
-              .filter(isFunctionDeclaration)
+            streamDeclaredFunctions(paramType.declaration)
               .filter(isStatic)
               .filter(it => it.parameters.length === 0)
               .forEach(it => dynamics.push(this.descriptionIndex.getDescription(it)))
@@ -67,7 +63,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
       // dynamic member
       const receiverType = this.typeComputer.inferType(source.receiver)
       if (isClassType(receiverType)) {
-        const operatorDecl = this.classHierarchy.streamDeclaredOperators(receiverType.declaration)
+        const operatorDecl = streamDeclaredOperators(receiverType.declaration)
           .filter(it => it.op === '.')
           .filter(it => it.parameters.length === 1)
           .head()
