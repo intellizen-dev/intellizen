@@ -27,7 +27,7 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
   }
 
   computeInlayHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
-    this.rules(astNode.$type).call(astNode, acceptor)
+    this.rules(astNode.$type)?.call(this, astNode, acceptor)
   }
 
   private acceptTypeHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
@@ -72,7 +72,7 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
     acceptor(typeHint)
   }
 
-  private readonly rules = defineRules<RuleMap>(this, {
+  private readonly rules = defineRules<RuleMap>({
     VariableDeclaration: (source, acceptor) => {
       this.acceptTypeHint(source, acceptor)
     },

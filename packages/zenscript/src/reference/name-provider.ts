@@ -18,11 +18,11 @@ type NameNodeRuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CstN
 
 export class ZenScriptNameProvider extends DefaultNameProvider {
   getName(node: AstNode): string | undefined {
-    return this.nameRules(node.$type).call(node) ?? super.getName(node)
+    return this.nameRules(node.$type)?.call(this, node) ?? super.getName(node)
   }
 
   getNameNode(node: AstNode): CstNode | undefined {
-    return this.nameNodeRules(node.$type).call(node) ?? super.getNameNode(node)
+    return this.nameNodeRules(node.$type)?.call(this, node) ?? super.getNameNode(node)
   }
 
   getQualifiedName(node: AstNode): string | undefined {
@@ -42,7 +42,7 @@ export class ZenScriptNameProvider extends DefaultNameProvider {
     }
   }
 
-  private readonly nameRules = defineRules<NameRuleMap>(this, {
+  private readonly nameRules = defineRules<NameRuleMap>({
     Script: source => source.$document ? getName(source.$document) : undefined,
     ImportDeclaration: source => source.alias || source.path.at(-1)?.$refText,
     FunctionDeclaration: source => source.name || 'lambda function',
@@ -50,7 +50,7 @@ export class ZenScriptNameProvider extends DefaultNameProvider {
     OperatorFunctionDeclaration: source => source.op,
   })
 
-  private readonly nameNodeRules = defineRules<NameNodeRuleMap>(this, {
+  private readonly nameNodeRules = defineRules<NameNodeRuleMap>({
     ImportDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'alias'),
     ConstructorDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'zenConstructor'),
     OperatorFunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'op'),

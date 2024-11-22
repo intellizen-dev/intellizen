@@ -28,10 +28,10 @@ export class ZenScriptMemberProvider implements MemberProvider {
   }
 
   getMembers(source: AstNode | Type | undefined): AstNodeDescription[] {
-    return this.rules(source?.$type).call(source) ?? []
+    return this.rules(source?.$type)?.call(this, source) ?? []
   }
 
-  private readonly rules = defineRules<RuleMap>(this, {
+  private readonly rules = defineRules<RuleMap>({
     SyntheticHierarchyNode: (source) => {
       const declarations = stream(source.children.values())
         .filter(it => it.isDataNode())

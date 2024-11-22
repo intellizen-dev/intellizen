@@ -23,10 +23,10 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
   }
 
   override highlightElement(node: AstNode, acceptor: SemanticTokenAcceptor): void {
-    this.rules(node.$type).call(node, acceptor)
+    this.rules(node.$type)?.call(this, node, acceptor)
   }
 
-  private readonly rules = defineRules<RuleMap>(this, {
+  private readonly rules = defineRules<RuleMap>({
     IntegerLiteral: (source, acceptor) => {
       acceptor({
         node: source,

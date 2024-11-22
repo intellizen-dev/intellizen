@@ -28,10 +28,10 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
   }
 
   getDynamics(source: AstNode): AstNodeDescription[] {
-    return this.rules(source.$type).call(source) ?? []
+    return this.rules(source.$type)?.call(this, source) ?? []
   }
 
-  private readonly rules = defineRules<RuleMap>(this, {
+  private readonly rules = defineRules<RuleMap>({
     ReferenceExpression: (source) => {
       const dynamics: AstNodeDescription[] = []
 

@@ -64,19 +64,19 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     }
 
     // ask the first type
-    else if (this.typeEqualityRules(first.$type).call(first, second)) {
+    else if (this.typeEqualityRules(first.$type)?.call(this, first, second)) {
       return true
     }
 
     // ask the second type
-    else if (this.typeEqualityRules(second.$type).call(second, first)) {
+    else if (this.typeEqualityRules(second.$type)?.call(this, second, first)) {
       return true
     }
 
     return false
   }
 
-  private readonly typeEqualityRules = defineRules<RuleMap>(this, {
+  private readonly typeEqualityRules = defineRules<RuleMap>({
     ClassType: (self, other) => {
       return isClassType(other) && self.declaration === other.declaration
     },
@@ -111,10 +111,10 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
   })
 
   isConvertible(from: Type, to: Type): boolean {
-    return this.typeConversionRules(from.$type).call(from, to) ?? false
+    return this.typeConversionRules(from.$type)?.call(this, from, to) ?? false
   }
 
-  private readonly typeConversionRules = defineRules<RuleMap>(this, {
+  private readonly typeConversionRules = defineRules<RuleMap>({
     ClassType: (from, to) => {
       if (isAnyType(from) || isAnyType(to)) {
         return true
@@ -136,25 +136,25 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
 
   isSubType(subType: Type, superType: Type): boolean {
     // ask the subtype
-    if (this.subTypeRules(subType.$type).call(subType, superType)) {
+    if (this.subTypeRules(subType.$type)?.call(this, subType, superType)) {
       return true
     }
 
     // ask the supertype
-    else if (this.superTypeRules(superType.$type).call(superType, subType)) {
+    else if (this.superTypeRules(superType.$type)?.call(this, superType, subType)) {
       return true
     }
 
     return false
   }
 
-  private readonly subTypeRules = defineRules<RuleMap>(this, {
+  private readonly subTypeRules = defineRules<RuleMap>({
     ClassType: (subType, superType) => {
       return isClassType(superType) && getClassChain(superType.declaration).includes(subType.declaration)
     },
   })
 
-  private readonly superTypeRules = defineRules<RuleMap>(this, {
+  private readonly superTypeRules = defineRules<RuleMap>({
     ClassType: (superType, subType) => {
       return isClassType(subType) && getClassChain(subType.declaration).includes(superType.declaration)
     },

@@ -29,7 +29,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   public inferType(node: AstNode | undefined): Type | undefined {
-    return this.rules(node?.$type).call(node)
+    return this.rules(node?.$type)?.call(this, node)
   }
 
   private classTypeOf(className: BuiltinTypes | string, substitutions: TypeParameterSubstitutions = new Map()): ClassType {
@@ -44,7 +44,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     return stream(this.packageManager.retrieve(className)).find(isClassDeclaration)
   }
 
-  private readonly rules = defineRules<RuleMap>(this, {
+  private readonly rules = defineRules<RuleMap>({
     // region TypeReference
     ArrayTypeReference: (source) => {
       const arrayType = this.classTypeOf('Array')

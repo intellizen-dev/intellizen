@@ -30,7 +30,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   override getScope(context: ReferenceInfo): Scope {
-    return this.rules(context.container.$type).call(context) ?? EMPTY_SCOPE
+    return this.rules(context.container.$type)?.call(this, context) ?? EMPTY_SCOPE
   }
 
   private lexicalScope(
@@ -70,7 +70,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return this.createScope(classes, outside)
   }
 
-  private readonly rules = defineRules<RuleMap>(this, {
+  private readonly rules = defineRules<RuleMap>({
     ImportDeclaration: (source) => {
       const path = getPathAsString(source.container, source.index)
       const parentPath = substringBeforeLast(path, '.')
