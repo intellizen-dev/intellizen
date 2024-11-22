@@ -3,7 +3,7 @@ import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import { DefaultNodeKindProvider } from 'langium/lsp'
 import { CompletionItemKind, SymbolKind } from 'vscode-languageserver'
-import { isVal, toAstNode } from '../utils/ast'
+import { toAstNode } from '../utils/ast'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
 type RuleMap<R> = { [K in keyof SourceMap]?: (source: SourceMap[K]) => R }
@@ -32,9 +32,9 @@ export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
     ConstructorDeclaration: () => SymbolKind.Constructor,
     OperatorFunctionDeclaration: () => SymbolKind.Operator,
     TypeParameter: () => SymbolKind.TypeParameter,
-    ValueParameter: () => SymbolKind.Property,
+    ValueParameter: () => SymbolKind.Variable,
     SyntheticHierarchyNode: () => SymbolKind.Module,
-    VariableDeclaration: source => isVal(source) ? SymbolKind.Constant : SymbolKind.Variable,
+    VariableDeclaration: () => SymbolKind.Variable,
   }
 
   private readonly completionItemRules: RuleMap<CompletionItemKind> = {
@@ -48,8 +48,8 @@ export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
     ConstructorDeclaration: () => CompletionItemKind.Constructor,
     OperatorFunctionDeclaration: () => CompletionItemKind.Operator,
     TypeParameter: () => CompletionItemKind.TypeParameter,
-    ValueParameter: () => CompletionItemKind.Property,
+    ValueParameter: () => CompletionItemKind.Variable,
     SyntheticHierarchyNode: () => CompletionItemKind.Module,
-    VariableDeclaration: source => isVal(source) ? CompletionItemKind.Constant : CompletionItemKind.Variable,
+    VariableDeclaration: () => CompletionItemKind.Variable,
   }
 }
