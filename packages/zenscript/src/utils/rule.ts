@@ -1,6 +1,6 @@
 type RuleMap = { [K in string]: (source: any, ...rest: any) => any }
 type RuleFunction<T extends RuleMap> = (source: any, ...rest: RestParameters<MemberType<T>>) => ReturnType<MemberType<T>> | undefined
-type MemberType<T> = T extends { [K in string]: infer V } ? (V extends (...args: any) => any ? V : never) : never
+type MemberType<T> = T extends { [K in string]: infer V } ? (V extends (source: any, ...rest: any) => any ? V : never) : never
 type RestParameters<T> = T extends (head: any, ...tail: infer U) => any ? U : never
 
 export function defineRules<T extends RuleMap>(
