@@ -8,24 +8,6 @@ export function isToplevel(node: AstNode | undefined): boolean {
   return isScript(node?.$container)
 }
 
-export function getClassChain(clazz?: ClassDeclaration): ClassDeclaration[] {
-  if (!clazz) {
-    return []
-  }
-  if (!clazz.superTypes) {
-    return [clazz]
-  }
-
-  const set = new Set<ClassDeclaration>()
-  set.add(clazz)
-  clazz.superTypes
-    .map(it => it.path.at(-1)?.ref)
-    .filter(it => isClassDeclaration(it))
-    .flatMap(it => getClassChain(it))
-    .forEach(it => set.add(it))
-  return Array.from(set)
-}
-
 export function isStatic(node: AstNode | undefined) {
   return node && 'prefix' in node && node.prefix === 'static'
 }
