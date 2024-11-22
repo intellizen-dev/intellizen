@@ -4,7 +4,9 @@ import type { CompletionItemLabelDetails } from 'vscode-languageserver'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
+import type { TypeComputer } from '../typing/type-computer'
 import { DefaultCompletionProvider } from 'langium/lsp'
+import { isFunctionType } from '../typing/type-description'
 import { toAstNode } from '../utils/ast'
 import { generateStream } from '../utils/stream'
 
@@ -12,12 +14,14 @@ type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
 type RuleMap<R> = { [K in keyof SourceMap]?: (source: SourceMap[K]) => R | undefined }
 
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
-  readonly completionOptions: CompletionProviderOptions = {
+  private readonly typeComputer: TypeComputer
+  override readonly completionOptions: CompletionProviderOptions = {
     triggerCharacters: ['.'],
   }
 
   constructor(services: ZenScriptServices) {
     super(services)
+    this.typeComputer = services.typing.TypeComputer
   }
 
   protected override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
@@ -42,18 +46,18 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     },
 
     FunctionDeclaration: (source) => {
-      const params = source.parameters.map((it) => {
-        if (it.typeRef && it.typeRef.$cstNode) {
-          return `${it.name} as ${it.typeRef.$cstNode.text}`
-        }
-        return it.name
-      }).join(', ')
+      const funcType = this.typeComputer.inferType(source)
+      if (!isFunctionType(funcType)) {
+        return
+      }
 
-      const retType = source.returnTypeRef?.$cstNode?.text
+      const params = source.parameters.map((param, index) => {
+        return `${param.name}: ${funcType.paramTypes[index].toString()}`
+      }).join(', ')
 
       return {
         detail: `(${params})`,
-        description: retType,
+        description: funcType.returnType.toString(),
       }
     },
 
@@ -64,20 +68,23 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     },
 
     VariableDeclaration: (source) => {
+      const type = this.typeComputer.inferType(source)
       return {
-        description: source.typeRef?.$cstNode?.text,
+        description: type?.toString(),
       }
     },
 
     ValueParameter: (source) => {
+      const type = this.typeComputer.inferType(source)
       return {
-        description: source.typeRef?.$cstNode?.text,
+        description: type?.toString(),
       }
     },
 
     FieldDeclaration: (source) => {
+      const type = this.typeComputer.inferType(source)
       return {
-        description: source.typeRef?.$cstNode?.text,
+        description: type?.toString(),
       }
     },
 
