@@ -30,7 +30,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   override getScope(context: ReferenceInfo): Scope {
-    return this.rules(context.container.$type)?.call(context) ?? EMPTY_SCOPE
+    return this.rules(context.container.$type).call(context) ?? EMPTY_SCOPE
   }
 
   private lexicalScope(

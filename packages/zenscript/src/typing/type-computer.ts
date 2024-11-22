@@ -29,7 +29,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   public inferType(node: AstNode | undefined): Type | undefined {
-    return this.rules(node?.$type)?.call(node)
+    return this.rules(node?.$type).call(node)
   }
 
   private classTypeOf(className: BuiltinTypes | string, substitutions: TypeParameterSubstitutions = new Map()): ClassType {
