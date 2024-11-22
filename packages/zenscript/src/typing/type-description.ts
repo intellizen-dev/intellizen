@@ -216,6 +216,10 @@ export function isIntersectionType(type: unknown): type is IntersectionType {
   return type instanceof IntersectionType
 }
 
+export function isCompoundType(type: unknown): type is CompoundType {
+  return type instanceof CompoundType
+}
+
 export function isTypeVariable(type: unknown): type is TypeVariable {
   return type instanceof TypeVariable
 }
