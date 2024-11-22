@@ -7,7 +7,7 @@ import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { TypeComputer } from '../typing/type-computer'
 import { DefaultCompletionProvider } from 'langium/lsp'
 import { isFunctionType } from '../typing/type-description'
-import { toAstNode } from '../utils/ast'
+import { getPathAsString, toAstNode } from '../utils/ast'
 import { generateStream } from '../utils/stream'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
@@ -63,28 +63,25 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
     ImportDeclaration: (source) => {
       return {
-        detail: `${source.path.slice(0, -1).map(it => it.$refText).join('.')}`,
+        description: getPathAsString(source),
       }
     },
 
     VariableDeclaration: (source) => {
-      const type = this.typeComputer.inferType(source)
       return {
-        description: type?.toString(),
+        description: this.typeComputer.inferType(source)?.toString(),
       }
     },
 
     ValueParameter: (source) => {
-      const type = this.typeComputer.inferType(source)
       return {
-        description: type?.toString(),
+        description: this.typeComputer.inferType(source)?.toString(),
       }
     },
 
     FieldDeclaration: (source) => {
-      const type = this.typeComputer.inferType(source)
       return {
-        description: type?.toString(),
+        description: this.typeComputer.inferType(source)?.toString(),
       }
     },
 
