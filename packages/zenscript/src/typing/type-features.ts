@@ -4,7 +4,7 @@ import type { TypeComputer } from './type-computer'
 import type { Type, ZenScriptType } from './type-description'
 import { stream } from 'langium'
 import { isOperatorFunctionDeclaration } from '../generated/ast'
-import { getClassChain } from '../utils/ast'
+import { streamClassChain } from '../utils/ast'
 import { isAnyType, isClassType, isCompoundType, isFunctionType, isIntersectionType, isTypeVariable, isUnionType } from './type-description'
 
 export interface TypeAssignability {
@@ -149,13 +149,13 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
 
   private readonly subTypeRules: RuleMap<boolean> = {
     ClassType: (subType, superType) => {
-      return isClassType(superType) && getClassChain(superType.declaration).includes(subType.declaration)
+      return isClassType(superType) && streamClassChain(superType.declaration).includes(subType.declaration)
     },
   }
 
   private readonly superTypeRules: RuleMap<boolean> = {
     ClassType: (superType, subType) => {
-      return isClassType(subType) && getClassChain(subType.declaration).includes(superType.declaration)
+      return isClassType(subType) && streamClassChain(subType.declaration).includes(superType.declaration)
     },
 
     IntersectionType: (superType, subType) => {
