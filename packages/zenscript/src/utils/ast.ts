@@ -53,8 +53,8 @@ export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDecla
     while (deque.length) {
       const head = deque.shift()!
       if (!visited.has(head)) {
-        visited.add(head)
         yield head
+        visited.add(head)
         head.superTypes
           .map(it => it.path.at(-1)?.ref)
           .filter(isClassDeclaration)
