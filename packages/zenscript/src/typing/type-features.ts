@@ -5,8 +5,8 @@ import type { Type, ZenScriptType } from './type-description'
 import { stream } from 'langium'
 import { isOperatorFunctionDeclaration } from '../generated/ast'
 import { getClassChain } from '../utils/ast'
-import { isAnyType, isClassType, isCompoundType, isFunctionType, isIntersectionType, isTypeVariable, isUnionType } from './type-description'
 import { defineRules } from '../utils/rule'
+import { isAnyType, isClassType, isCompoundType, isFunctionType, isIntersectionType, isTypeVariable, isUnionType } from './type-description'
 
 export interface TypeAssignability {
   // target := source
@@ -64,12 +64,12 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     }
 
     // ask the first type
-    else if (this.typeEqualityRules(first.$type).call(second, first)) {
+    else if (this.typeEqualityRules(first.$type).call(first, second)) {
       return true
     }
 
     // ask the second type
-    else if (this.typeEqualityRules(second.$type).call(first, second)) {
+    else if (this.typeEqualityRules(second.$type).call(second, first)) {
       return true
     }
 
