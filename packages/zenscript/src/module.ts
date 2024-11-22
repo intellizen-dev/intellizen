@@ -14,6 +14,7 @@ import { ZenScriptNameProvider } from './reference/name-provider'
 import { ZenScriptScopeComputation } from './reference/scope-computation'
 import { ZenScriptScopeProvider } from './reference/scope-provider'
 import { ZenScriptTypeComputer } from './typing/type-computer'
+import { ZenScriptTypeFeatures } from './typing/type-features'
 import { registerValidationChecks, ZenScriptValidator } from './validation/validator'
 import { ZenScriptBracketManager } from './workspace/bracket-manager'
 import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
@@ -34,6 +35,7 @@ export interface ZenScriptAddedServices {
   }
   typing: {
     TypeComputer: ZenScriptTypeComputer
+    TypeFeatures: ZenScriptTypeFeatures
   }
   workspace: {
     PackageManager: ZenScriptPackageManager
@@ -84,6 +86,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
   },
   typing: {
     TypeComputer: services => new ZenScriptTypeComputer(services),
+    TypeFeatures: services => new ZenScriptTypeFeatures(services),
   },
   lsp: {
     CompletionProvider: services => new ZenScriptCompletionProvider(services),
