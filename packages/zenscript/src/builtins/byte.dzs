@@ -1,3 +1,4 @@
 zenClass byte {
-    operator as() as short, int, long, float, double, string
+    operator -() as byte;
+    operator as() as short, int, long, float, double, string;
 }

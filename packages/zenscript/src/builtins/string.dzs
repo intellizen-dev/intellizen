@@ -85,5 +85,7 @@ zenClass string {
 
     function split(separator as string, maximum as int = 0) as [string];
 
-    operator as() as bool, byte, int, short, long, float, double
+    operator +(value as string) as string;
+
+    operator as() as bool, byte, int, short, long, float, double;
 }
