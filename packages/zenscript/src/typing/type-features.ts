@@ -119,7 +119,7 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
         return true
       }
 
-      return this.memberProvider.streamMembers(from, { nameHint: 'as', typeHint: 'OperatorFunctionDeclaration' })
+      return this.memberProvider.streamMembers(from)
         .filter(isOperatorFunctionDeclaration)
         .filter(it => it.op === 'as')
         .map(it => this.typeComputer.inferType(it.returnTypeRef))
