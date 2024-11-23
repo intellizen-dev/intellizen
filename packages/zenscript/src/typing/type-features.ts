@@ -5,6 +5,7 @@ import type { Type, ZenScriptType } from './type-description'
 import { stream } from 'langium'
 import { isOperatorFunctionDeclaration } from '../generated/ast'
 import { getClassChain } from '../utils/ast'
+import { defineRules } from '../utils/rule'
 import { isAnyType, isClassType, isCompoundType, isFunctionType, isIntersectionType, isTypeVariable, isUnionType } from './type-description'
 
 export interface TypeAssignability {
@@ -27,7 +28,7 @@ export interface SubType {
 export type TypeFeatures = TypeAssignability & TypeEquality & TypeConversion & SubType
 
 type SourceMap = ZenScriptType
-type RuleMap<R> = { [K in keyof SourceMap]?: (self: SourceMap[K], other: Type) => R }
+type RuleMap = { [K in keyof SourceMap]?: (self: SourceMap[K], other: Type) => boolean }
 
 export class ZenScriptTypeFeatures implements TypeFeatures {
   private readonly typeComputer: TypeComputer
@@ -63,19 +64,19 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     }
 
     // ask the first type
-    else if (this.typeEqualityRules[first.$type].call(this, second)) {
+    else if (this.typeEqualityRules(first.$type)?.call(this, first, second)) {
       return true
     }
 
     // ask the second type
-    else if (this.typeEqualityRules[second.$type].call(this, first)) {
+    else if (this.typeEqualityRules(second.$type)?.call(this, second, first)) {
       return true
     }
 
     return false
   }
 
-  private readonly typeEqualityRules: RuleMap<boolean> = {
+  private readonly typeEqualityRules = defineRules<RuleMap>({
     ClassType: (self, other) => {
       return isClassType(other) && self.declaration === other.declaration
     },
@@ -107,13 +108,13 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
         && self.types.length === other.types.length
         && self.types.every((it, index) => this.areTypesEqual(it, other.types[index]))
     },
-  }
+  })
 
   isConvertible(from: Type, to: Type): boolean {
-    return this.typeConversionRules[from.$type].call(this, from, to) ?? false
+    return this.typeConversionRules(from.$type)?.call(this, from, to) ?? false
   }
 
-  private readonly typeConversionRules: RuleMap<boolean> = {
+  private readonly typeConversionRules = defineRules<RuleMap>({
     ClassType: (from, to) => {
       if (isAnyType(from) || isAnyType(to)) {
         return true
@@ -131,29 +132,29 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     CompoundType: (from, to) => {
       return from.types.some(it => this.isAssignable(to, it))
     },
-  }
+  })
 
   isSubType(subType: Type, superType: Type): boolean {
     // ask the subtype
-    if (this.subTypeRules[subType.$type].call(this, subType, superType)) {
+    if (this.subTypeRules(subType.$type)?.call(this, subType, superType)) {
       return true
     }
 
     // ask the supertype
-    else if (this.superTypeRules[superType.$type].call(this, superType, subType)) {
+    else if (this.superTypeRules(superType.$type)?.call(this, superType, subType)) {
       return true
     }
 
     return false
   }
 
-  private readonly subTypeRules: RuleMap<boolean> = {
+  private readonly subTypeRules = defineRules<RuleMap>({
     ClassType: (subType, superType) => {
       return isClassType(superType) && getClassChain(superType.declaration).includes(subType.declaration)
     },
-  }
+  })
 
-  private readonly superTypeRules: RuleMap<boolean> = {
+  private readonly superTypeRules = defineRules<RuleMap>({
     ClassType: (superType, subType) => {
       return isClassType(subType) && getClassChain(subType.declaration).includes(superType.declaration)
     },
@@ -161,5 +162,5 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     IntersectionType: (superType, subType) => {
       return superType.types.some(it => this.isSubType(subType, it))
     },
-  }
+  })
 }

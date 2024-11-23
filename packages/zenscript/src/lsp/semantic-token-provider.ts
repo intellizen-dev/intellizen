@@ -7,6 +7,7 @@ import { AbstractSemanticTokenProvider } from 'langium/lsp'
 import { SemanticTokenModifiers, SemanticTokenTypes } from 'vscode-languageserver'
 import { isLocation } from '../generated/ast'
 import { isStringType } from '../typing/type-description'
+import { defineRules } from '../utils/rule'
 
 type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], acceptor: SemanticTokenAcceptor) => void }
@@ -22,11 +23,10 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
   }
 
   override highlightElement(node: AstNode, acceptor: SemanticTokenAcceptor): void {
-    // @ts-expect-error allowed index type
-    this.rules[node.$type]?.call(this, node, acceptor)
+    this.rules(node.$type)?.call(this, node, acceptor)
   }
 
-  private readonly rules: RuleMap = {
+  private readonly rules = defineRules<RuleMap>({
     IntegerLiteral: (source, acceptor) => {
       acceptor({
         node: source,
@@ -267,5 +267,5 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         modifier: READONLY_PREFIX.includes(source.prefix) ? SemanticTokenModifiers.readonly : undefined,
       })
     },
-  }
+  })
 }
