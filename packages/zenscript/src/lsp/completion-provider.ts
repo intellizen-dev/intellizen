@@ -27,9 +27,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
   protected override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
     const source = toAstNode(nodeDescription)
-    // @ts-expect-error allowed index type
-    const labelDetails = this.labelDetailRules[source.$type]?.call(this, source)
     const kind = this.nodeKindProvider.getCompletionItemKind(nodeDescription)
+    const labelDetails = this.labelDetailRules(source?.$type)?.call(this, source)
 
     return {
       nodeDescription,

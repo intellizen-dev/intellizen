@@ -12,14 +12,12 @@ type RuleMap<R> = { [K in keyof SourceMap]?: (source: SourceMap[K]) => R }
 export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
   override getSymbolKind(node: AstNode | AstNodeDescription): SymbolKind {
     const source = toAstNode(node)
-    // @ts-expect-error allowed index type
-    return this.symbolKindRules[source?.$type]?.call(this, source) ?? super.getSymbolKind(node)
+    return this.symbolKindRules(source?.$type)?.call(this, source) ?? super.getSymbolKind(node)
   }
 
   override getCompletionItemKind(node: AstNode | AstNodeDescription): CompletionItemKind {
     const source = toAstNode(node)
-    // @ts-expect-error allowed index type
-    return this.completionItemRules[source?.$type]?.call(this, source) ?? super.getCompletionItemKind(node)
+    return this.completionItemRules(source?.$type)?.call(this, source) ?? super.getCompletionItemKind(node)
   }
 
   private readonly symbolKindRules = defineRules<RuleMap<SymbolKind>>({
