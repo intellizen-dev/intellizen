@@ -147,7 +147,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return
       }
 
-      const operatorDecl = this.memberProvider().streamMembers(rangeType)
+      const operatorDecl = this.memberProvider().streamMembers(rangeType, { nameHint: 'for', typeHint: 'OperatorFunctionDeclaration' })
         .filter(it => isOperatorFunctionDeclaration(it))
         .filter(it => it.op === 'for')
         .filter(it => it.parameters.length === length)
@@ -190,7 +190,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
           return expectingType.paramTypes.at(index)
         }
         else if (isClassType(expectingType)) {
-          const lambdaDecl = this.memberProvider().streamMembers(expectingType)
+          const lambdaDecl = this.memberProvider().streamMembers(expectingType, { nameHint: 'lambda', typeHint: 'FunctionDeclaration' })
             .filter(it => isFunctionDeclaration(it))
             .filter(it => it.prefix === 'lambda')
             .head()
@@ -323,7 +323,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return receiverType
       }
 
-      const operatorDecl = this.memberProvider().streamMembers(source.receiver)
+      const operatorDecl = this.memberProvider().streamMembers(source.receiver, { nameHint: '[]', typeHint: 'OperatorFunctionDeclaration' })
         .filter(it => isOperatorFunctionDeclaration(it))
         .filter(it => it.op === '[]')
         .head()

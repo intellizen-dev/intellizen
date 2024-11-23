@@ -1,13 +1,14 @@
-import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, ScopeOptions, Stream } from 'langium'
-import type { ZenScriptAstType } from '../generated/ast'
+import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes, ReferenceInfo, Scope, ScopeOptions, Stream } from 'langium'
+import type { Script, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptDescriptionIndex } from '../workspace/description-index'
 import type { PackageManager } from '../workspace/package-manager'
 import type { DynamicProvider } from './dynamic-provider'
 import type { MemberProvider } from './member-provider'
 import { substringBeforeLast } from '@intellizen/shared'
-import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream, StreamScope } from 'langium'
-import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter } from '../generated/ast'
+import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, MapScope, stream, StreamScope } from 'langium'
+
+import { ClassDeclaration, ImportDeclaration, isClassDeclaration, isScript, TypeParameter } from '../generated/ast'
 import { getPathAsString } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 import { generateStream } from '../utils/stream'
@@ -37,8 +38,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     astNode: AstNode,
     processor: (desc: AstNodeDescription) => AstNodeDescription | undefined,
     outside?: Scope,
+    document?: LangiumDocument,
   ): Scope {
-    const precomputed = AstUtils.getDocument(astNode).precomputedScopes
+    const precomputed = (document ?? AstUtils.getDocument(astNode)).precomputedScopes
     return generateStream(astNode, it => it.$container)
       .map(container => precomputed?.get(container))
       .nonNullable()
@@ -54,10 +56,22 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return this.createScope(this.indexManager.allElements(), outside)
   }
 
+  private packageCache: MapScope | undefined
+
   private packageScope(outside?: Scope) {
-    const packages = stream(this.packageManager.root.children.values())
-      .filter(it => it.isInternalNode())
-    return this.createScopeForNodes(packages, outside)
+    if (!this.packageCache) {
+      const packages = stream(this.packageManager.root.children.values())
+        .filter(it => it.isInternalNode())
+      this.packageCache = new MapScope(packages.map(it => this.descriptionIndex.getDescription(it)), outside)
+    }
+
+    return this.packageCache!
+  }
+
+  private importScope(script: Script, source: ReferenceInfo, outside?: Scope) {
+    const imports = stream(script.imports)
+      .map(it => this.descriptionIndex.createImportedDescription(it))
+    return this.createScope(imports, outside)
   }
 
   private classScope(outside?: Scope) {
@@ -115,28 +129,35 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     MemberAccess: (source) => {
       const outer = this.dynamicScope(source.container)
-      const members = this.memberProvider.streamMembers(source.container.receiver)
+      const members = this.memberProvider.streamMembers(source.container.receiver, { nameHint: source.reference.$refText })
       return this.createScopeForNodes(members, outer)
     },
 
     NamedTypeReference: (source) => {
       if (!source.index) {
-        const outer = this.classScope()
-        const processor = (desc: AstNodeDescription) => {
-          switch (desc.type) {
-            case TypeParameter:
-            case ClassDeclaration:
-              return desc
-            case ImportDeclaration: {
-              return this.descriptionIndex.createImportedDescription(desc.node as ImportDeclaration)
-            }
-          }
+        let outer = this.classScope()
+        const document = AstUtils.getDocument(source.container)
+        const script = document.parseResult.value
+        if (!isScript(script)) {
+          return outer
         }
-        return this.lexicalScope(source.container, processor, outer)
+        outer = this.importScope(script, source, outer)
+
+        const localClasses = stream(script.classes)
+          .filter(isClassDeclaration)
+          .flatMap((it) => {
+            if (it.typeParameters) {
+              return [...it.typeParameters, it]
+            }
+            return it
+          })
+          .map(it => this.descriptionIndex.getDescription(it))
+
+        return this.createScope(localClasses, outer)
       }
       else {
         const prev = source.container.path[source.index - 1].ref
-        const members = this.memberProvider.streamMembers(prev)
+        const members = this.memberProvider.streamMembers(prev, { nameHint: source.reference.$refText })
         return this.createScopeForNodes(members)
       }
     },
