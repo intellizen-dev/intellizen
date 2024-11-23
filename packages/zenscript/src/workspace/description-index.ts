@@ -1,4 +1,4 @@
-import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, NameProvider } from 'langium'
+import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, LangiumDocument, LangiumDocuments, NameProvider } from 'langium'
 import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 
@@ -12,6 +12,7 @@ export interface DescriptionIndex {
 export class ZenScriptDescriptionIndex implements DescriptionIndex {
   private readonly descriptions: AstNodeDescriptionProvider
   private readonly nameProvider: NameProvider
+  private readonly documents: LangiumDocuments
 
   readonly astDescriptions: WeakMap<AstNode, AstNodeDescription>
   readonly thisDescriptions: WeakMap<ClassDeclaration, AstNodeDescription>
@@ -21,6 +22,7 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
     this.nameProvider = services.references.NameProvider
     this.astDescriptions = new WeakMap()
     this.thisDescriptions = new WeakMap()
+    this.documents = services.shared.workspace.LangiumDocuments
   }
 
   getDescription(astNode: AstNode): AstNodeDescription {
@@ -38,11 +40,21 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
   }
 
   createDynamicDescription(astNode: AstNode, name: string): AstNodeDescription {
-    return this.descriptions.createDescription(astNode, name)
+    const existing = this.astDescriptions.get(astNode)
+    const document = existing?.documentUri ? this.documents.getDocument(existing.documentUri) : undefined
+    return this.descriptions.createDescription(astNode, name, document)
   }
 
   createImportedDescription(importDecl: ImportDeclaration): AstNodeDescription {
-    const ref = importDecl.path.at(-1)?.ref ?? importDecl
-    return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
+    const importRef = importDecl.path.at(-1)
+    const ref = importRef?.ref
+    if (!importRef || !ref) {
+      return this.getDescription(importDecl)
+    }
+    if (!importDecl.alias) {
+      return importRef.$nodeDescription!
+    }
+    const document = this.documents.getDocument(importRef.$nodeDescription!.documentUri)
+    return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl), document)
   }
 }
