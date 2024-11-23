@@ -1,4 +1,4 @@
-import type { AstNode, AstNodeDescription, ReferenceInfo, Scope } from 'langium'
+import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, ScopeOptions, Stream } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptDescriptionIndex } from '../workspace/description-index'
@@ -6,7 +6,7 @@ import type { PackageManager } from '../workspace/package-manager'
 import type { DynamicProvider } from './dynamic-provider'
 import type { MemberProvider } from './member-provider'
 import { substringBeforeLast } from '@intellizen/shared'
-import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream } from 'langium'
+import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream, StreamScope } from 'langium'
 import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter } from '../generated/ast'
 import { getPathAsString } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -47,7 +47,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   private dynamicScope(astNode: AstNode, outside?: Scope) {
-    return this.createScope(this.dynamicProvider.getDynamics(astNode), outside)
+    return this.createScope(this.dynamicProvider.streamDynamicDescriptions(astNode), outside)
   }
 
   private globalScope(outside?: Scope) {
@@ -57,8 +57,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private packageScope(outside?: Scope) {
     const packages = stream(this.packageManager.root.children.values())
       .filter(it => it.isInternalNode())
-      .map(it => this.descriptionIndex.getDescription(it))
-    return this.createScope(packages, outside)
+    return this.createScopeForNodes(packages, outside)
   }
 
   private classScope(outside?: Scope) {
@@ -66,8 +65,11 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .filter(it => it.isDataNode())
       .flatMap(it => it.data)
       .filter(isClassDeclaration)
-      .map(it => this.descriptionIndex.getDescription(it))
-    return this.createScope(classes, outside)
+    return this.createScopeForNodes(classes, outside)
+  }
+
+  override createScopeForNodes(nodes: Stream<AstNode>, outerScope?: Scope, options?: ScopeOptions): Scope {
+    return new StreamScope(nodes.map(it => this.descriptionIndex.getDescription(it)), outerScope, options)
   }
 
   private readonly rules = defineRules<RuleMap>({
@@ -113,8 +115,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     MemberAccess: (source) => {
       const outer = this.dynamicScope(source.container)
-      const members = this.memberProvider.getMembers(source.container.receiver)
-      return this.createScope(members, outer)
+      const members = this.memberProvider.streamMembers(source.container.receiver)
+      return this.createScopeForNodes(members, outer)
     },
 
     NamedTypeReference: (source) => {
@@ -134,8 +136,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       }
       else {
         const prev = source.container.path[source.index - 1].ref
-        const members = this.memberProvider.getMembers(prev)
-        return this.createScope(members)
+        const members = this.memberProvider.streamMembers(prev)
+        return this.createScopeForNodes(members)
       }
     },
   })

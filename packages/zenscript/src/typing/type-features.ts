@@ -2,7 +2,6 @@ import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
 import type { TypeComputer } from './type-computer'
 import type { Type, ZenScriptType } from './type-description'
-import { stream } from 'langium'
 import { isOperatorFunctionDeclaration } from '../generated/ast'
 import { streamClassChain } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -120,8 +119,7 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
         return true
       }
 
-      return stream(this.memberProvider.getMembers(from))
-        .map(it => it.node)
+      return this.memberProvider.streamMembers(from)
         .filter(isOperatorFunctionDeclaration)
         .filter(it => it.op === 'as')
         .map(it => this.typeComputer.inferType(it.returnTypeRef))
