@@ -213,8 +213,16 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     PrefixExpression: (source) => {
       switch (source.op) {
-        case '-':
-          return this.classTypeOf('int')
+        case '-': {
+          const operatorDecl = stream(this.memberProvider().getMembers(source.expr))
+            .map(it => it.node)
+            .filter(isOperatorFunctionDeclaration)
+            .filter(it => it.op === '-')
+            .filter(it => it.parameters.length === 0)
+            .head()
+          return this.inferType(operatorDecl?.returnTypeRef)
+        }
+
         case '!':
           return this.classTypeOf('bool')
       }
