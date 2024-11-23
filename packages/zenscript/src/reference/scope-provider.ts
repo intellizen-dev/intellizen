@@ -57,7 +57,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private packageScope(outside?: Scope) {
     const packages = stream(this.packageManager.root.children.values())
       .filter(it => it.isInternalNode())
-      .map(it => this.descriptionIndex.getPackageDescription(it))
+      .map(it => this.descriptionIndex.getDescription(it))
     return this.createScope(packages, outside)
   }
 
@@ -85,7 +85,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
           sibling.data.forEach(it => elements.push(this.descriptionIndex.getDescription(it)))
         }
         else {
-          elements.push(this.descriptionIndex.getPackageDescription(sibling))
+          elements.push(this.descriptionIndex.getDescription(sibling))
         }
       }
       return this.createScope(elements)

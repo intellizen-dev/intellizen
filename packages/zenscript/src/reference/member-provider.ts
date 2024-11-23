@@ -39,7 +39,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
         .map(it => this.descriptionIndex.getDescription(it))
       const packages = stream(source.children.values())
         .filter(it => it.isInternalNode())
-        .map(it => this.descriptionIndex.getPackageDescription(it))
+        .map(it => this.descriptionIndex.getDescription(it))
       return stream(declarations, packages).toArray()
     },
 

@@ -1,3 +1,5 @@
+import type { AstNode } from 'langium'
+
 export class HierarchyTree<V> {
   readonly root: HierarchyNode<V>
   readonly separator: string
@@ -32,7 +34,8 @@ export class HierarchyTree<V> {
   }
 }
 
-export class HierarchyNode<V> {
+export class HierarchyNode<V> implements AstNode {
+  readonly $type = 'SyntheticHierarchyNode'
   readonly name: string
   readonly parent?: HierarchyNode<V>
   readonly children: Map<string, HierarchyNode<V>>
@@ -76,4 +79,8 @@ export class HierarchyNode<V> {
   private shouldFree() {
     return this.data.size === 0 && this.children.size === 0
   }
+}
+
+export function isHierarchyNode(node: unknown): node is HierarchyNode<unknown> {
+  return node instanceof HierarchyNode
 }
