@@ -7,6 +7,7 @@ import { CustomTokenBuilder } from './lexer/token-builder'
 import { CustomValueConverter } from './lexer/value-converter'
 import { ZenScriptCompletionProvider } from './lsp/completion-provider'
 import { ZenScriptInlayHintProvider } from './lsp/inlay-hint-provider'
+import { ZenScriptNodeKindProvider } from './lsp/node-kind-provider'
 import { ZenScriptSemanticTokenProvider } from './lsp/semantic-token-provider'
 import { ZenScriptDynamicProvider } from './reference/dynamic-provider'
 import { ZenScriptMemberProvider } from './reference/member-provider'
@@ -99,6 +100,9 @@ export const ZenScriptSharedModule: Module<ZenScriptSharedServices, PartialLangi
   workspace: {
     WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
     ConfigurationManager: services => new ZenScriptConfigurationManager(services),
+  },
+  lsp: {
+    NodeKindProvider: () => new ZenScriptNodeKindProvider(),
   },
 }
 

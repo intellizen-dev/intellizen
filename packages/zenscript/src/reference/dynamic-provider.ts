@@ -7,6 +7,7 @@ import { AstUtils } from 'langium'
 import { isCallExpression, isClassDeclaration } from '../generated/ast'
 import { isClassType, isFunctionType } from '../typing/type-description'
 import { isStatic, streamDeclaredFunctions, streamDeclaredOperators } from '../utils/ast'
+import { defineRules } from '../utils/rule'
 
 export interface DynamicProvider {
   getDynamics: (source: AstNode) => AstNodeDescription[]
@@ -25,11 +26,10 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
   }
 
   getDynamics(source: AstNode): AstNodeDescription[] {
-    // @ts-expect-error allowed index type
-    return this.rules[source.$type]?.call(this, source)
+    return this.rules(source.$type)?.call(this, source) ?? []
   }
 
-  private readonly rules: RuleMap = {
+  private readonly rules = defineRules<RuleMap>({
     ReferenceExpression: (source) => {
       const dynamics: AstNodeDescription[] = []
 
@@ -74,5 +74,5 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
 
       return dynamics
     },
-  }
+  })
 }

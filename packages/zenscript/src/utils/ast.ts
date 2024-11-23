@@ -16,6 +16,10 @@ export function isGlobal(node: AstNode | undefined) {
   return node && 'prefix' in node && node.prefix === 'global'
 }
 
+export function isVal(node: AstNode | undefined) {
+  return node && 'prefix' in node && node.prefix === 'val'
+}
+
 export function isImportable(node: AstNode | undefined) {
   if (isScript(node)) {
     return isZs(AstUtils.getDocument(node))
@@ -48,7 +52,7 @@ export function getPathAsString(astNode: ImportDeclaration | BracketExpression, 
 
 export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDeclaration> {
   const visited = new Set<ClassDeclaration>()
-  return stream(function *() {
+  return stream(function* () {
     const deque = [classDecl]
     while (deque.length) {
       const head = deque.shift()!
