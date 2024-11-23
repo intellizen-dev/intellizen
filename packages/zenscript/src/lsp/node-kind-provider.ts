@@ -15,18 +15,13 @@ export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
     return this.symbolKindRules(source?.$type)?.call(this, source) ?? super.getSymbolKind(node)
   }
 
-  override getCompletionItemKind(node: AstNode | AstNodeDescription): CompletionItemKind {
-    const source = toAstNode(node)
-    return this.completionItemRules(source?.$type)?.call(this, source) ?? super.getCompletionItemKind(node)
-  }
-
   private readonly symbolKindRules = defineRules<RuleMap<SymbolKind>>({
     FunctionDeclaration: () => SymbolKind.Function,
     ClassDeclaration: () => SymbolKind.Class,
     FieldDeclaration: () => SymbolKind.Field,
     ExpandFunctionDeclaration: () => SymbolKind.Function,
     LoopParameter: () => SymbolKind.Variable,
-    PackageDeclaration: () => SymbolKind.Package,
+    PackageDeclaration: () => SymbolKind.Module,
     ImportDeclaration: () => SymbolKind.Module,
     ConstructorDeclaration: () => SymbolKind.Constructor,
     OperatorFunctionDeclaration: () => SymbolKind.Operator,
@@ -35,6 +30,11 @@ export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
     SyntheticHierarchyNode: () => SymbolKind.Module,
     VariableDeclaration: () => SymbolKind.Variable,
   })
+
+  override getCompletionItemKind(node: AstNode | AstNodeDescription): CompletionItemKind {
+    const source = toAstNode(node)
+    return this.completionItemRules(source?.$type)?.call(this, source) ?? super.getCompletionItemKind(node)
+  }
 
   private readonly completionItemRules = defineRules<RuleMap<CompletionItemKind>>({
     FunctionDeclaration: () => CompletionItemKind.Function,
