@@ -1,10 +1,10 @@
-import type { HierarchyNode } from '@intellizen/shared'
 import type { AstNode, LangiumDocument, NameProvider } from 'langium'
 import type { ZenScriptServices } from '../module'
-import { HierarchyTree } from '@intellizen/shared'
+import type { HierarchyNode } from '../utils/hierarchy-tree'
 import { AstUtils, DocumentState, stream } from 'langium'
 import { isClassDeclaration } from '../generated/ast'
 import { isImportable, isStatic } from '../utils/ast'
+import { HierarchyTree } from '../utils/hierarchy-tree'
 
 export interface PackageManager {
   retrieve: (path: string) => ReadonlySet<AstNode>

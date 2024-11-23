@@ -1,6 +1,6 @@
-import type { HierarchyNode } from '@intellizen/shared'
 import type { AstNode, LangiumDocument, WorkspaceFolder } from 'langium'
 import type { ClassDeclaration, ImportDeclaration, NamedTypeReference, Script, VariableDeclaration } from '../../../src/generated/ast'
+import type { HierarchyNode } from '../../../src/utils/hierarchy-tree'
 import * as path from 'node:path'
 import { URI } from 'langium'
 import { NodeFileSystem } from 'langium/node'

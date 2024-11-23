@@ -17,6 +17,7 @@ import { ZenScriptScopeProvider } from './reference/scope-provider'
 import { ZenScriptTypeComputer } from './typing/type-computer'
 import { ZenScriptTypeFeatures } from './typing/type-features'
 import { registerValidationChecks, ZenScriptValidator } from './validation/validator'
+import { ZenScriptAstNodeDescriptionProvider } from './workspace/ast-descriptions'
 import { ZenScriptBracketManager } from './workspace/bracket-manager'
 import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
 import { ZenScriptDescriptionIndex } from './workspace/description-index'
@@ -77,6 +78,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     DynamicProvider: services => new ZenScriptDynamicProvider(services),
   },
   workspace: {
+    AstNodeDescriptionProvider: services => new ZenScriptAstNodeDescriptionProvider(services),
     PackageManager: services => new ZenScriptPackageManager(services),
     BracketManager: services => new ZenScriptBracketManager(services),
     DescriptionIndex: services => new ZenScriptDescriptionIndex(services),
