@@ -8,10 +8,11 @@ import type { TypeComputer } from '../typing/type-computer'
 import { DefaultCompletionProvider } from 'langium/lsp'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
+import { defineRules } from '../utils/rule'
 import { generateStream } from '../utils/stream'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
-type RuleMap<R> = { [K in keyof SourceMap]?: (source: SourceMap[K]) => R | undefined }
+type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CompletionItemLabelDetails | undefined }
 
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private readonly typeComputer: TypeComputer
@@ -38,7 +39,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
   }
 
-  private readonly labelDetailRules: RuleMap<CompletionItemLabelDetails> = {
+  private readonly labelDetailRules = defineRules<RuleMap>({
     ClassDeclaration: (source) => {
       return {
         description: this.nameProvider.getQualifiedName(source),
@@ -97,5 +98,5 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
         description: qualifiedName,
       }
     },
-  }
+  })
 }
