@@ -1,29 +1,11 @@
-import type { AstNode, AstNodeDescription } from 'langium'
-import type { BracketExpression, ClassDeclaration, ImportDeclaration } from '../generated/ast'
-import { AstUtils, isAstNodeDescription } from 'langium'
-import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isScript } from '../generated/ast'
+import type { AstNode, AstNodeDescription, Stream } from 'langium'
+import type { BracketExpression, ClassDeclaration, ClassMemberDeclaration, FunctionDeclaration, ImportDeclaration, OperatorFunctionDeclaration } from '../generated/ast'
+import { AstUtils, isAstNodeDescription, stream } from 'langium'
+import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
 
 export function isToplevel(node: AstNode | undefined): boolean {
   return isScript(node?.$container)
-}
-
-export function getClassChain(clazz?: ClassDeclaration): ClassDeclaration[] {
-  if (!clazz) {
-    return []
-  }
-  if (!clazz.superTypes) {
-    return [clazz]
-  }
-
-  const set = new Set<ClassDeclaration>()
-  set.add(clazz)
-  clazz.superTypes
-    .map(it => it.path.at(-1)?.ref)
-    .filter(it => isClassDeclaration(it))
-    .flatMap(it => getClassChain(it))
-    .forEach(it => set.add(it))
-  return Array.from(set)
 }
 
 export function isStatic(node: AstNode | undefined) {
@@ -70,4 +52,34 @@ export function getPathAsString(astNode: ImportDeclaration | BracketExpression, 
 
 export function toAstNode(item: AstNode | AstNodeDescription): AstNode | undefined {
   return isAstNodeDescription(item) ? item.node : item
+}
+
+export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDeclaration> {
+  const visited = new Set<ClassDeclaration>()
+  return stream(function* () {
+    const deque = [classDecl]
+    while (deque.length) {
+      const head = deque.shift()!
+      if (!visited.has(head)) {
+        yield head
+        visited.add(head)
+        head.superTypes
+          .map(it => it.path.at(-1)?.ref)
+          .filter(isClassDeclaration)
+          .forEach(it => deque.push(it))
+      }
+    }
+  }())
+}
+
+export function streamDeclaredMembers(classDecl: ClassDeclaration): Stream<ClassMemberDeclaration> {
+  return stream(classDecl.members)
+}
+
+export function streamDeclaredFunctions(classDecl: ClassDeclaration): Stream<FunctionDeclaration> {
+  return streamDeclaredMembers(classDecl).filter(isFunctionDeclaration)
+}
+
+export function streamDeclaredOperators(classDecl: ClassDeclaration): Stream<OperatorFunctionDeclaration> {
+  return streamDeclaredMembers(classDecl).filter(isOperatorFunctionDeclaration)
 }

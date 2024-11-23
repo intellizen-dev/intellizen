@@ -7,7 +7,7 @@ import type { ZenScriptSyntheticAstType } from './synthetic'
 import { stream } from 'langium'
 import { isClassDeclaration, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
-import { getClassChain, isStatic } from '../utils/ast'
+import { isStatic, streamClassChain, streamDeclaredMembers } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 import { isSyntheticAstNode } from './synthetic'
 
@@ -58,10 +58,10 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     ClassDeclaration: (source) => {
-      return getClassChain(source)
-        .flatMap(it => it.members)
-        .filter(it => isStatic(it))
+      return streamDeclaredMembers(source)
+        .filter(isStatic)
         .map(it => this.descriptionIndex.getDescription(it))
+        .toArray()
     },
 
     VariableDeclaration: (source) => {
@@ -160,10 +160,11 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     ClassType: (source) => {
-      return getClassChain(source.declaration)
+      return streamClassChain(source.declaration)
         .flatMap(it => it.members)
         .filter(it => !isStatic(it))
         .map(it => this.descriptionIndex.getDescription(it))
+        .toArray()
     },
   })
 }
