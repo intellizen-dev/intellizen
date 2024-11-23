@@ -207,9 +207,8 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return this.inferType(source.right)
     },
 
-    ConditionalExpression: (_) => {
-      // TODO: operator overloading
-      return this.classTypeOf('bool')
+    ConditionalExpression: (source) => {
+      return this.inferType(source.second) ?? this.inferType(source.third)
     },
 
     PrefixExpression: (source) => {
@@ -260,7 +259,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return this.inferType(source.typeRef)
     },
 
-    InstanceofExpression: (_) => {
+    InstanceofExpression: () => {
       return this.classTypeOf('bool')
     },
 
@@ -347,12 +346,12 @@ export class ZenScriptTypeComputer implements TypeComputer {
       }
     },
 
-    NullLiteral: (_) => {
-      // TODO: does it make sense?
+    NullLiteral: () => {
+      // does it make sense?
       return this.classTypeOf('any')
     },
 
-    BooleanLiteral: (_) => {
+    BooleanLiteral: () => {
       return this.classTypeOf('bool')
     },
 
@@ -382,15 +381,15 @@ export class ZenScriptTypeComputer implements TypeComputer {
       }
     },
 
-    StringLiteral: (_) => {
+    StringLiteral: () => {
       return this.classTypeOf('string')
     },
 
-    UnquotedString: (_) => {
+    UnquotedString: () => {
       return this.classTypeOf('string')
     },
 
-    StringTemplate: (_) => {
+    StringTemplate: () => {
       return this.classTypeOf('string')
     },
 

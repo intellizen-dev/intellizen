@@ -1,1 +1,3 @@
-zenClass short
+zenClass short {
+    operator as() as byte, int, long, float, double, string
+}
