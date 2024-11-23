@@ -1,6 +1,6 @@
-import type { AstNode, Stream } from 'langium'
+import type { AstNode, AstNodeDescription, Stream } from 'langium'
 import type { BracketExpression, ClassDeclaration, ClassMemberDeclaration, FunctionDeclaration, ImportDeclaration, OperatorFunctionDeclaration } from '../generated/ast'
-import { AstUtils, stream } from 'langium'
+import { AstUtils, isAstNodeDescription, stream } from 'langium'
 import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
 
@@ -48,6 +48,10 @@ export function getPathAsString(astNode: ImportDeclaration | BracketExpression, 
   else {
     throw new Error(`Illegal argument: ${astNode}`)
   }
+}
+
+export function toAstNode(item: AstNode | AstNodeDescription): AstNode | undefined {
+  return isAstNodeDescription(item) ? item.node : item
 }
 
 export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDeclaration> {
