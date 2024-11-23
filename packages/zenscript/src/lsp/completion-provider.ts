@@ -5,11 +5,11 @@ import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { TypeComputer } from '../typing/type-computer'
+import { substringBeforeLast } from '@intellizen/shared'
 import { DefaultCompletionProvider } from 'langium/lsp'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
 import { defineRules } from '../utils/rule'
-import { generateStream } from '../utils/stream'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CompletionItemLabelDetails | undefined }
@@ -40,8 +40,11 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
   private readonly labelDetailRules = defineRules<RuleMap>({
     ClassDeclaration: (source) => {
-      return {
-        description: this.nameProvider.getQualifiedName(source),
+      const qualifiedName = this.nameProvider.getQualifiedName(source)
+      if (qualifiedName) {
+        return {
+          description: substringBeforeLast(qualifiedName, '.'),
+        }
       }
     },
 
@@ -82,19 +85,6 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     FieldDeclaration: (source) => {
       return {
         description: this.typeComputer.inferType(source)?.toString(),
-      }
-    },
-
-    SyntheticHierarchyNode: (source) => {
-      const qualifiedName = generateStream(source, it => it.parent)
-        .filter(it => it.parent !== undefined)
-        .map(it => it.name)
-        .toArray()
-        .reverse()
-        .join('.')
-
-      return {
-        description: qualifiedName,
       }
     },
   })
