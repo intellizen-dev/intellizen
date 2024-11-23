@@ -8,6 +8,7 @@ import { stream } from 'langium'
 import { isClassDeclaration, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
 import { getClassChain, isStatic } from '../utils/ast'
+import { defineRules } from '../utils/rule'
 import { isSyntheticAstNode } from './synthetic'
 
 export interface MemberProvider {
@@ -27,11 +28,10 @@ export class ZenScriptMemberProvider implements MemberProvider {
   }
 
   getMembers(source: AstNode | Type | undefined): AstNodeDescription[] {
-    // @ts-expect-error allowed index type
-    return this.rules[source?.$type]?.call(this, source) ?? []
+    return this.rules(source?.$type)?.call(this, source) ?? []
   }
 
-  private readonly rules: RuleMap = {
+  private readonly rules = defineRules<RuleMap>({
     SyntheticHierarchyNode: (source) => {
       const declarations = stream(source.children.values())
         .filter(it => it.isDataNode())
@@ -165,5 +165,5 @@ export class ZenScriptMemberProvider implements MemberProvider {
         .filter(it => !isStatic(it))
         .map(it => this.descriptionIndex.getDescription(it))
     },
-  }
+  })
 }
