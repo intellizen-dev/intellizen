@@ -1,6 +1,6 @@
-import type { AstNode } from 'langium'
+import type { AstNode, AstNodeDescription } from 'langium'
 import type { BracketExpression, ClassDeclaration, ImportDeclaration } from '../generated/ast'
-import { AstUtils } from 'langium'
+import { AstUtils, isAstNodeDescription } from 'langium'
 import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
 
@@ -34,6 +34,10 @@ export function isGlobal(node: AstNode | undefined) {
   return node && 'prefix' in node && node.prefix === 'global'
 }
 
+export function isVal(node: AstNode | undefined) {
+  return node && 'prefix' in node && node.prefix === 'val'
+}
+
 export function isImportable(node: AstNode | undefined) {
   if (isScript(node)) {
     return isZs(AstUtils.getDocument(node))
@@ -62,4 +66,8 @@ export function getPathAsString(astNode: ImportDeclaration | BracketExpression, 
   else {
     throw new Error(`Illegal argument: ${astNode}`)
   }
+}
+
+export function toAstNode(item: AstNode | AstNodeDescription): AstNode | undefined {
+  return isAstNodeDescription(item) ? item.node : item
 }
