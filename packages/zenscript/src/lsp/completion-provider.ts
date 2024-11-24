@@ -1,12 +1,15 @@
-import type { AstNodeDescription } from 'langium'
-import type { CompletionProviderOptions, CompletionValueItem } from 'langium/lsp'
-import type { CompletionItemLabelDetails } from 'vscode-languageserver'
-import type { ZenScriptAstType } from '../generated/ast'
+import type { AstNodeDescription, MaybePromise } from 'langium'
+import type { CompletionAcceptor, CompletionContext, CompletionProviderOptions, CompletionValueItem, NextFeature } from 'langium/lsp'
+import type { BracketExpression, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { TypeComputer } from '../typing/type-computer'
+import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
 import { substringBeforeLast } from '@intellizen/shared'
 import { DefaultCompletionProvider } from 'langium/lsp'
+
+import { CompletionItemKind, type CompletionItemLabelDetails, TextEdit } from 'vscode-languageserver'
+import { isBracketExpression, isBracketPath, isExpressionTemplate } from '../generated/ast'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -16,6 +19,7 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CompletionIt
 
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private readonly typeComputer: TypeComputer
+  private readonly bracketManager: ZenScriptBracketManager
   override readonly completionOptions: CompletionProviderOptions = {
     triggerCharacters: ['.'],
   }
@@ -23,6 +27,43 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   constructor(services: ZenScriptServices) {
     super(services)
     this.typeComputer = services.typing.TypeComputer
+    this.bracketManager = services.workspace.BracketManager
+  }
+
+  private compltetForBracket(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): MaybePromise<void> {
+    const path = isBracketPath(context.node) ? bracket.path.slice(0, context.node?.$containerIndex) : bracket.path
+
+    if (path.some(it => isExpressionTemplate(it))) {
+      return
+    }
+    const candidate = this.bracketManager.completionFor(path.map(it => it.value as string))
+
+    const textRange = {
+      start: bracket.path[0].$cstNode!.range.start,
+      end: context.node!.$cstNode!.range.end,
+    }
+
+    for (const completion of candidate) {
+      acceptor(context, {
+        label: completion.id,
+        kind: CompletionItemKind.EnumMember,
+        labelDetails: {
+          description: completion.name,
+        },
+        textEdit: TextEdit.replace(textRange, completion.id),
+      })
+    }
+  }
+
+  protected override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
+    if (isBracketExpression(context.node?.$container)) {
+      if (next.feature.$containerIndex !== 0) {
+        return
+      }
+      return this.compltetForBracket(context, context.node.$container, acceptor)
+    }
+
+    return super.completionFor(context, next, acceptor)
   }
 
   protected override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
