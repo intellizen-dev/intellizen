@@ -1,24 +1,26 @@
-import type { AstNode, AstNodeDescription, LangiumDocument } from 'langium'
+import type { AstNode, AstNodeDescription } from 'langium'
 import { CstUtils, DefaultAstNodeDescriptionProvider, URI } from 'langium'
-import { generateStream } from '../utils/stream'
+
+declare module 'langium' {
+  interface AstNodeDescriptionProvider {
+    createDescriptionWithUri: (node: AstNode, uri: URI | undefined, name?: string) => AstNodeDescription
+  }
+}
 
 export class ZenScriptAstNodeDescriptionProvider extends DefaultAstNodeDescriptionProvider {
-  override createDescription(node: AstNode, name: string | undefined, document?: LangiumDocument): AstNodeDescription {
-    document ??= generateStream(node, it => it.$container)
-      .map(it => it.$document)
-      .nonNullable()
-      .head()
-    const nameProvider = this.nameProvider
+  createDescriptionWithUri(
+    node: AstNode,
+    uri = URI.from({ scheme: 'unknown' }),
+    name = this.nameProvider.getName(node) ?? 'unknown',
+  ) {
+    const nameNode = this.nameProvider.getNameNode(node) ?? node.$cstNode
     return {
       node,
-      name: name ?? this.nameProvider.getName(node) ?? 'unknown',
-      get nameSegment() {
-        const nameNode = nameProvider.getNameNode(node) ?? node.$cstNode
-        return CstUtils.toDocumentSegment(nameNode)
-      },
+      name,
+      nameSegment: CstUtils.toDocumentSegment(nameNode),
       selectionSegment: CstUtils.toDocumentSegment(node.$cstNode),
       type: node.$type,
-      documentUri: document?.uri ?? URI.from({ scheme: 'unknown' }),
+      documentUri: uri,
       path: this.astNodeLocator.getAstNodePath(node),
     }
   }

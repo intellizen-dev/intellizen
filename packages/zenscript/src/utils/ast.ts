@@ -1,4 +1,4 @@
-import type { AstNode, AstNodeDescription, Stream } from 'langium'
+import type { AstNode, AstNodeDescription, Stream, URI } from 'langium'
 import type { BracketExpression, ClassDeclaration, ClassMemberDeclaration, FunctionDeclaration, ImportDeclaration, OperatorFunctionDeclaration } from '../generated/ast'
 import { AstUtils, isAstNodeDescription, stream } from 'langium'
 import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
@@ -29,6 +29,16 @@ export function isImportable(node: AstNode | undefined) {
   }
   else {
     return isStatic(node) || isClassDeclaration(node)
+  }
+}
+
+export function getDocumentUri(node: AstNode | undefined): URI | undefined {
+  let current = node
+  while (current) {
+    if (current.$document) {
+      return current.$document.uri
+    }
+    current = current.$container
   }
 }
 

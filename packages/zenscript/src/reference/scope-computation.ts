@@ -21,13 +21,18 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
 
   protected override processNode(node: AstNode, document: LangiumDocument, scopes: PrecomputedScopes): void {
     const container = node.$container
-    if (container) {
-      const name = this.nameProvider.getName(node)
-      if (name) {
-        const description = this.descriptions.createDescription(node, name, document)
-        this.descriptionIndex.astDescriptions.set(node, description)
-        scopes.add(container, description)
-      }
+    if (!container) {
+      return
     }
+
+    const name = this.nameProvider.getName(node)
+    if (!name) {
+      return
+    }
+
+    const uri = document.uri
+    const description = this.descriptions.createDescriptionWithUri(node, uri, name)
+    this.descriptionIndex.astDescriptions.set(node, description)
+    scopes.add(container, description)
   }
 }
