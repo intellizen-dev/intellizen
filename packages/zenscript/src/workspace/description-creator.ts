@@ -15,15 +15,29 @@ export class ZenScriptDescriptionCreator extends DefaultAstNodeDescriptionProvid
     uri = URI.from({ scheme: 'unknown' }),
     name = this.nameProvider.getName(node) ?? 'unknown',
   ) {
-    const nameNode = this.nameProvider.getNameNode(node) ?? node.$cstNode
+    const nameProvider = this.nameProvider
+    const astNodeLocator = this.astNodeLocator
     return {
       node,
       name,
-      nameSegment: CstUtils.toDocumentSegment(nameNode),
-      selectionSegment: CstUtils.toDocumentSegment(node.$cstNode),
+      get nameSegment() {
+        const nameNode = nameProvider.getNameNode(node) ?? node.$cstNode
+        const _nameSegment = CstUtils.toDocumentSegment(nameNode)
+        Object.defineProperty(this, 'nameSegment', { value: _nameSegment })
+        return _nameSegment
+      },
+      get selectionSegment() {
+        const _selectionSegment = CstUtils.toDocumentSegment(node.$cstNode)
+        Object.defineProperty(this, 'selectionSegment', { value: _selectionSegment })
+        return _selectionSegment
+      },
       type: node.$type,
       documentUri: uri,
-      path: this.astNodeLocator.getAstNodePath(node),
+      get path() {
+        const _path = astNodeLocator.getAstNodePath(node)
+        Object.defineProperty(this, 'path', { value: _path })
+        return _path
+      },
     }
   }
 }
