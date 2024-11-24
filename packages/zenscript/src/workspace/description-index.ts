@@ -1,6 +1,7 @@
-import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, NameProvider } from 'langium'
+import type { AstNode, AstNodeDescription, NameProvider } from 'langium'
 import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
+import type { DescriptionCreator } from './description-creator'
 import { getDocumentUri } from '../utils/ast'
 
 export interface DescriptionIndex {
@@ -11,14 +12,14 @@ export interface DescriptionIndex {
 }
 
 export class ZenScriptDescriptionIndex implements DescriptionIndex {
-  private readonly descriptions: AstNodeDescriptionProvider
+  private readonly creator: DescriptionCreator
   private readonly nameProvider: NameProvider
 
   readonly astDescriptions: WeakMap<AstNode, AstNodeDescription>
   readonly thisDescriptions: WeakMap<ClassDeclaration, AstNodeDescription>
 
   constructor(services: ZenScriptServices) {
-    this.descriptions = services.workspace.AstNodeDescriptionProvider
+    this.creator = services.workspace.AstNodeDescriptionProvider
     this.nameProvider = services.references.NameProvider
     this.astDescriptions = new WeakMap()
     this.thisDescriptions = new WeakMap()
@@ -27,7 +28,7 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
   getDescription(astNode: AstNode): AstNodeDescription {
     if (!this.astDescriptions.has(astNode)) {
       const uri = getDocumentUri(astNode)
-      const desc = this.descriptions.createDescriptionWithUri(astNode, uri)
+      const desc = this.creator.createDescriptionWithUri(astNode, uri)
       this.astDescriptions.set(astNode, desc)
     }
     return this.astDescriptions.get(astNode)!
@@ -36,7 +37,7 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
   getThisDescription(classDecl: ClassDeclaration): AstNodeDescription {
     if (!this.thisDescriptions.has(classDecl)) {
       const uri = getDocumentUri(classDecl)
-      const desc = this.descriptions.createDescriptionWithUri(classDecl, uri, 'this')
+      const desc = this.creator.createDescriptionWithUri(classDecl, uri, 'this')
       this.thisDescriptions.set(classDecl, desc)
     }
     return this.thisDescriptions.get(classDecl)!
@@ -44,7 +45,7 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
 
   createDynamicDescription(astNode: AstNode, name: string): AstNodeDescription {
     const originalUri = this.astDescriptions.get(astNode)?.documentUri
-    return this.descriptions.createDescriptionWithUri(astNode, originalUri, name)
+    return this.creator.createDescriptionWithUri(astNode, originalUri, name)
   }
 
   createImportedDescription(importDecl: ImportDeclaration): AstNodeDescription {
@@ -65,6 +66,6 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
 
     const targetUri = targetDescription?.documentUri
     const alias = this.nameProvider.getName(importDecl)
-    return this.descriptions.createDescriptionWithUri(target, targetUri, alias)
+    return this.creator.createDescriptionWithUri(target, targetUri, alias)
   }
 }

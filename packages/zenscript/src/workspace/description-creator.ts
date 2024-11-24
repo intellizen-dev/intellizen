@@ -2,12 +2,14 @@ import type { AstNode, AstNodeDescription } from 'langium'
 import { CstUtils, DefaultAstNodeDescriptionProvider, URI } from 'langium'
 
 declare module 'langium' {
-  interface AstNodeDescriptionProvider {
-    createDescriptionWithUri: (node: AstNode, uri: URI | undefined, name?: string) => AstNodeDescription
-  }
+  interface AstNodeDescriptionProvider extends DescriptionCreator {}
 }
 
-export class ZenScriptAstNodeDescriptionProvider extends DefaultAstNodeDescriptionProvider {
+export interface DescriptionCreator {
+  createDescriptionWithUri: (node: AstNode, uri: URI | undefined, name?: string) => AstNodeDescription
+}
+
+export class ZenScriptDescriptionCreator extends DefaultAstNodeDescriptionProvider {
   createDescriptionWithUri(
     node: AstNode,
     uri = URI.from({ scheme: 'unknown' }),
