@@ -212,8 +212,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     PrefixExpression: (source) => {
       switch (source.op) {
         case '-': {
-          const operatorDecl = stream(this.memberProvider().getMembers(source.expr))
-            .map(it => it.node)
+          const operatorDecl = this.memberProvider().streamMembers(source.expr)
             .filter(isOperatorFunctionDeclaration)
             .filter(it => it.op === '-')
             .filter(it => it.parameters.length === 0)
