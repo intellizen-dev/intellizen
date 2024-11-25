@@ -85,6 +85,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   private tryCompletionForBracketProperty(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): boolean {
+    // do not complete for expression template beacuse it is hard to determine the value
     if (bracket.path.some(it => isExpressionTemplate(it))) {
       return false
     }
@@ -93,6 +94,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     let key: string | undefined
     let value: string | undefined
     let bracketId: string
+    // <blockstate:minecraft:furnace:|>  (with > here, empty property)
+    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     if (isBracketExpression(context.node)) {
       bracketId = bracket.path.map(it => it.value).join(':')
 
@@ -120,6 +123,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
       return true
     }
+    // <blockstate:minecraft:furnace:faci|>  (with > here, no '=', not empty value)
+    //                               ^^^^
     if (isBracketPath(context.node)) {
       range = {
         start: context.node.$cstNode!.range.start,
@@ -128,6 +133,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       key = context.node.value as string
       bracketId = bracket.path.slice(0, context.node.$containerIndex!).map(it => it.value).join(':')
     }
+    // <blockstate:minecraft:furnace:faci        (no > here)
+    //                               ^^^^
     else if (isProperty(context.node?.$container)) {
       const property = context.node.$container
       range = {
@@ -175,9 +182,11 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
   private compltetForBracket(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): MaybePromise<void> {
     let path: (BracketPath | { value: string })[] | undefined
+    // <item:minecraft:app|>  (with > here)
     if (isBracketPath(context.node)) {
       path = bracket.path.slice(0, context.node.$containerIndex! + 1)
     }
+    // <item:minecraft:app|        (no > here)
     else {
       if (bracket.properties.length === 0) {
         path = bracket.path
@@ -196,6 +205,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
     let editTextRange: Range | undefined
 
+    // completion for empty path, no text to replace
     if (bracket.path.length > 0) {
       editTextRange = {
         start: bracket.path[0].$cstNode!.range.start,
@@ -217,11 +227,11 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
           description: completion.name,
         },
         textEdit,
-        commitCharacters: ['>'],
       })
     }
   }
 
+  // find the bracket expression node from the context
   private findBracket(context: CompletionContext): BracketExpression | undefined {
     if (isBracketExpression(context.node)) {
       return context.node
@@ -242,6 +252,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   protected override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
     const bracket = this.findBracket(context)
     if (bracket) {
+      // skip other features, only complete for bracket context once
       if (next.feature.$containerIndex !== 0) {
         return
       }
