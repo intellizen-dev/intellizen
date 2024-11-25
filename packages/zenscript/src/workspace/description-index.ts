@@ -1,6 +1,8 @@
-import type { AstNode, AstNodeDescription, AstNodeDescriptionProvider, NameProvider } from 'langium'
+import type { AstNode, AstNodeDescription, NameProvider } from 'langium'
 import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
+import type { DescriptionCreator } from './description-creator'
+import { getDocumentUri } from '../utils/ast'
 
 export interface DescriptionIndex {
   getDescription: (astNode: AstNode) => AstNodeDescription
@@ -10,14 +12,14 @@ export interface DescriptionIndex {
 }
 
 export class ZenScriptDescriptionIndex implements DescriptionIndex {
-  private readonly descriptions: AstNodeDescriptionProvider
+  private readonly creator: DescriptionCreator
   private readonly nameProvider: NameProvider
 
   readonly astDescriptions: WeakMap<AstNode, AstNodeDescription>
   readonly thisDescriptions: WeakMap<ClassDeclaration, AstNodeDescription>
 
   constructor(services: ZenScriptServices) {
-    this.descriptions = services.workspace.AstNodeDescriptionProvider
+    this.creator = services.workspace.AstNodeDescriptionProvider
     this.nameProvider = services.references.NameProvider
     this.astDescriptions = new WeakMap()
     this.thisDescriptions = new WeakMap()
@@ -25,24 +27,45 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
 
   getDescription(astNode: AstNode): AstNodeDescription {
     if (!this.astDescriptions.has(astNode)) {
-      this.astDescriptions.set(astNode, this.descriptions.createDescription(astNode, undefined))
+      const uri = getDocumentUri(astNode)
+      const desc = this.creator.createDescriptionWithUri(astNode, uri)
+      this.astDescriptions.set(astNode, desc)
     }
     return this.astDescriptions.get(astNode)!
   }
 
   getThisDescription(classDecl: ClassDeclaration): AstNodeDescription {
     if (!this.thisDescriptions.has(classDecl)) {
-      this.thisDescriptions.set(classDecl, this.descriptions.createDescription(classDecl, 'this'))
+      const uri = getDocumentUri(classDecl)
+      const desc = this.creator.createDescriptionWithUri(classDecl, uri, 'this')
+      this.thisDescriptions.set(classDecl, desc)
     }
     return this.thisDescriptions.get(classDecl)!
   }
 
   createDynamicDescription(astNode: AstNode, name: string): AstNodeDescription {
-    return this.descriptions.createDescription(astNode, name)
+    const originalUri = this.astDescriptions.get(astNode)?.documentUri
+    return this.creator.createDescriptionWithUri(astNode, originalUri, name)
   }
 
   createImportedDescription(importDecl: ImportDeclaration): AstNodeDescription {
-    const ref = importDecl.path.at(-1)?.ref ?? importDecl
-    return this.descriptions.createDescription(ref, this.nameProvider.getName(importDecl))
+    const targetRef = importDecl.path.at(-1)
+    if (!targetRef) {
+      return this.getDescription(importDecl)
+    }
+
+    const target = targetRef.ref
+    if (!target) {
+      return this.getDescription(importDecl)
+    }
+
+    const targetDescription = targetRef.$nodeDescription
+    if (!importDecl.alias && targetDescription) {
+      return targetDescription
+    }
+
+    const targetUri = targetDescription?.documentUri
+    const alias = this.nameProvider.getName(importDecl)
+    return this.creator.createDescriptionWithUri(target, targetUri, alias)
   }
 }
