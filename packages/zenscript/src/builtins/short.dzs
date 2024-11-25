@@ -16,8 +16,8 @@ zenClass short {
     operator >(value as short) as bool;
     operator <=(value as short) as bool;
     operator >=(value as short) as bool;
-    operator ==(value as any) as bool;
-    operator !=(value as any) as bool;
+    operator ==(value as short) as bool;
+    operator !=(value as short) as bool;
 
     operator as() as byte, int, long, float, double, string;
 }
