@@ -268,7 +268,6 @@ export class ZenScriptTypeComputer implements TypeComputer {
             .head()
           return this.inferType(operator?.returnTypeRef)
         }
-        // endregion
 
         case '&&':
         case '||':
