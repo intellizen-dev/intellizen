@@ -1,15 +1,20 @@
-import type { AstNodeDescription, MaybePromise } from 'langium'
+import type { AstNodeDescription, MaybePromise, Stream } from 'langium'
 import type { CompletionAcceptor, CompletionContext, CompletionProviderOptions, CompletionValueItem, NextFeature } from 'langium/lsp'
-import type { BracketExpression, ZenScriptAstType } from '../generated/ast'
+import type { CompletionItemLabelDetails, Range } from 'vscode-languageserver'
+import type { BracketExpression, BracketPath, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
+import type { BracketMirror } from '../resource'
 import type { TypeComputer } from '../typing/type-computer'
 import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
-import { substringBeforeLast } from '@intellizen/shared'
-import { DefaultCompletionProvider } from 'langium/lsp'
 
-import { CompletionItemKind, type CompletionItemLabelDetails, TextEdit } from 'vscode-languageserver'
-import { isBracketExpression, isBracketPath, isExpressionTemplate } from '../generated/ast'
+import { substringBeforeLast } from '@intellizen/shared'
+
+import { AstUtils, CstUtils, GrammarUtils, stream } from 'langium'
+import { DefaultCompletionProvider } from 'langium/lsp'
+import { CompletionItemKind, TextEdit } from 'vscode-languageserver'
+
+import { isBracketExpression, isBracketPath, isExpression, isExpressionTemplate, isProperty } from '../generated/ast'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -17,11 +22,16 @@ import { defineRules } from '../utils/rule'
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CompletionItemLabelDetails | undefined }
 
+export interface BracketCompletion {
+  id: string
+  paths: string[]
+  name?: string
+}
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private readonly typeComputer: TypeComputer
   private readonly bracketManager: ZenScriptBracketManager
   override readonly completionOptions: CompletionProviderOptions = {
-    triggerCharacters: ['.'],
+    triggerCharacters: ['.', '<', ':'],
   }
 
   constructor(services: ZenScriptServices) {
@@ -30,37 +40,215 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     this.bracketManager = services.workspace.BracketManager
   }
 
-  private compltetForBracket(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): MaybePromise<void> {
-    const path = isBracketPath(context.node) ? bracket.path.slice(0, context.node?.$containerIndex) : bracket.path
+  private collectBracketFor(path: string[]): Stream<BracketCompletion> {
+    if (path.length === 0) {
+      // if do not type anything, return all items
+      return stream(this.bracketManager.mirrors)
+        .filter(mirror => mirror.type === 'crafttweaker.item.IItemStack')
+        .flatMap((mirror) => {
+          return this.collectBracketForMirror(mirror, path)
+        })
+    }
+    const prefix = path.join(':')
+    const mirror = this.bracketManager.mirrors.find(mirror => mirror.regex.test(prefix))
+    if (mirror) {
+      return this.collectBracketForMirror(mirror, path)
+    }
+    return stream(this.bracketManager.mirrors).flatMap((mirror) => {
+      return this.collectBracketForMirror(mirror, path)
+    })
+  }
 
-    if (path.some(it => isExpressionTemplate(it))) {
+  private collectBracketForMirror(mirror: BracketMirror, path: string[]): Stream<BracketCompletion> {
+    const isItem = (mirror.type === 'crafttweaker.item.IItemStack')
+    if (isItem && path.length > 0 && this.fuzzyMatcher.match(path[0], 'item')) {
+      path = path.slice(1)
+    }
+
+    return stream(mirror.entries.entries())
+      .filter((it) => {
+        const sourcePaths = it[0].split(':')
+        return sourcePaths.length >= path.length
+          && sourcePaths.slice(0, path.length).every(
+            (it, i) => this.fuzzyMatcher.match(path[i], it),
+          )
+      })
+      .map((it) => {
+        const [id, entry] = it
+
+        return {
+          id: isItem ? `item:${id}` : id,
+          paths: isItem ? ['item', ...id.split(':')] : id.split(':'),
+          name: entry.name,
+        }
+      })
+  }
+
+  private tryCompletionForBracketProperty(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): boolean {
+    if (bracket.path.some(it => isExpressionTemplate(it))) {
+      return false
+    }
+
+    let range: Range | undefined
+    let key: string | undefined
+    let value: string | undefined
+    let bracketId: string
+    if (isBracketExpression(context.node)) {
+      bracketId = bracket.path.map(it => it.value).join(':')
+
+      const mirror = this.bracketManager.resolve(bracketId)
+      if (!mirror) {
+        return false
+      }
+
+      stream(Object.keys(mirror.properties))
+        .flatMap((key) => {
+          const propValues = (mirror.properties as any)[key]
+          if (!Array.isArray(propValues)) {
+            return []
+          }
+          return stream(propValues)
+            .filter(it => typeof it === 'string')
+            .map(it => `${key}=${it}`)
+        })
+        .forEach((it) => {
+          acceptor(context, {
+            label: it,
+            kind: CompletionItemKind.Property,
+          })
+        })
+
+      return true
+    }
+    if (isBracketPath(context.node)) {
+      range = {
+        start: context.node.$cstNode!.range.start,
+        end: context.node.$cstNode!.range.end,
+      }
+      key = context.node.value as string
+      bracketId = bracket.path.slice(0, context.node.$containerIndex!).map(it => it.value).join(':')
+    }
+    else if (isProperty(context.node?.$container)) {
+      const property = context.node.$container
+      range = {
+        start: property.key.$cstNode!.range.start,
+        end: context.node!.$cstNode!.range.end,
+      }
+
+      key = property.key.value
+      value = property.value?.value?.toString()
+      bracketId = bracket.path.map(it => it.value).join(':')
+    }
+    else {
+      return false
+    }
+
+    // completion for property
+    const mirror = this.bracketManager.resolve(bracketId)
+    if (!mirror) {
+      return false
+    }
+
+    stream(Object.keys(mirror.properties))
+      .filter(it => this.fuzzyMatcher.match(key, it))
+      .flatMap((key) => {
+        const propValues = (mirror.properties as any)[key]
+        if (!Array.isArray(propValues)) {
+          return []
+        }
+        return stream(propValues)
+          .filter(it => typeof it === 'string')
+          .filter(it => !value || this.fuzzyMatcher.match(value, it))
+          .map(it => `${key}=${it}`)
+      })
+      .forEach((it) => {
+        const textEdit = TextEdit.replace(range, it)
+        acceptor(context, {
+          label: it,
+          kind: CompletionItemKind.Property,
+          textEdit,
+        })
+      })
+
+    return true
+  }
+
+  private compltetForBracket(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): MaybePromise<void> {
+    let path: (BracketPath | { value: string })[] | undefined
+    if (isBracketPath(context.node)) {
+      path = bracket.path.slice(0, context.node.$containerIndex! + 1)
+    }
+    else {
+      if (bracket.properties.length === 0) {
+        path = bracket.path
+      }
+      else if (bracket.properties.length === 1 && !GrammarUtils.findNodeForKeyword(bracket.properties[0].$cstNode, '=')) {
+        // if the last property only has a key, may is be a wrong ast node, assume it as also a path
+        const lastText = bracket.properties[0].key.value
+        path = [...bracket.path, { value: lastText }]
+      }
+    }
+    if (!path || path.some(it => isExpressionTemplate(it))) {
       return
     }
-    const candidate = this.bracketManager.completionFor(path.map(it => it.value as string))
 
-    const textRange = {
-      start: bracket.path[0].$cstNode!.range.start,
-      end: context.node!.$cstNode!.range.end,
+    const candidate = this.collectBracketFor(path.map(it => it.value as string))
+
+    let editTextRange: Range | undefined
+
+    if (bracket.path.length > 0) {
+      editTextRange = {
+        start: bracket.path[0].$cstNode!.range.start,
+        end: context.node!.$cstNode!.range.end,
+      }
     }
 
+    const hasTrailingGT = GrammarUtils.findNodeForKeyword(bracket.$cstNode, '>')
+
     for (const completion of candidate) {
+      const textEditText = hasTrailingGT ? completion.id : `${completion.id}>`
+      const textEdit = editTextRange
+        ? TextEdit.replace(editTextRange, textEditText)
+        : TextEdit.insert(context.position, textEditText)
       acceptor(context, {
         label: completion.id,
         kind: CompletionItemKind.EnumMember,
         labelDetails: {
           description: completion.name,
         },
-        textEdit: TextEdit.replace(textRange, completion.id),
+        textEdit,
+        commitCharacters: ['>'],
       })
     }
   }
 
+  private findBracket(context: CompletionContext): BracketExpression | undefined {
+    if (isBracketExpression(context.node)) {
+      return context.node
+    }
+    let bracketNode
+    if (context.node?.$containerProperty === 'path') {
+      bracketNode = context.node?.$container
+    }
+    else if (context.node?.$containerProperty === 'key') {
+      bracketNode = context.node?.$container?.$container
+    }
+
+    if (isBracketExpression(bracketNode)) {
+      return bracketNode
+    }
+  }
+
   protected override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
-    if (isBracketExpression(context.node?.$container)) {
+    const bracket = this.findBracket(context)
+    if (bracket) {
       if (next.feature.$containerIndex !== 0) {
         return
       }
-      return this.compltetForBracket(context, context.node.$container, acceptor)
+      if (this.tryCompletionForBracketProperty(context, bracket, acceptor)) {
+        return
+      }
+      return this.compltetForBracket(context, bracket, acceptor)
     }
 
     return super.completionFor(context, next, acceptor)

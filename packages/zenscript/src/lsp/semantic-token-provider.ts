@@ -5,7 +5,7 @@ import type { TypeComputer } from '../typing/type-computer'
 import { type AstNode, CstUtils, stream } from 'langium'
 import { AbstractSemanticTokenProvider } from 'langium/lsp'
 import { SemanticTokenModifiers, SemanticTokenTypes } from 'vscode-languageserver'
-import { isLocation } from '../generated/ast'
+import { isBracketPath } from '../generated/ast'
 import { isStringType } from '../typing/type-description'
 import { defineRules } from '../utils/rule'
 
@@ -24,6 +24,10 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
 
   override highlightElement(node: AstNode, acceptor: SemanticTokenAcceptor): void {
     this.rules(node.$type)?.call(this, node, acceptor)
+  }
+
+  private isNumber(text: string) {
+    return /^\d+$/.test(text)
   }
 
   private readonly rules = defineRules<RuleMap>({
@@ -52,36 +56,24 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
     },
 
     BracketExpression: (source, acceptor) => {
-      const locations = stream(source.path).filter(isLocation)
+      const locations = stream(source.path).filter(isBracketPath)
       const [first, ...rest] = locations
 
-      switch (CstUtils.flattenCst(first.$cstNode!).head()?.tokenType.name) {
-        case 'IDENTIFIER':
-          acceptor({
-            node: first,
-            property: 'value',
-            type: SemanticTokenTypes.enum,
-          })
-          break
+      if (typeof first.value === 'string') {
+        acceptor({
+          node: first,
+          property: 'value',
+          type: SemanticTokenTypes.enum,
+        })
       }
 
       rest.forEach((it) => {
-        switch (CstUtils.flattenCst(it.$cstNode!).head()?.tokenType.name) {
-          case 'IDENTIFIER':
-            acceptor({
-              node: it,
-              property: 'value',
-              type: SemanticTokenTypes.enumMember,
-            })
-            break
-
-          case 'INTEGER':
-            acceptor({
-              node: it,
-              property: 'value',
-              type: SemanticTokenTypes.number,
-            })
-            break
+        if (typeof it.value === 'string') {
+          acceptor({
+            node: it,
+            property: 'value',
+            type: this.isNumber(it.value) ? SemanticTokenTypes.number : SemanticTokenTypes.enum,
+          })
         }
       })
     },
