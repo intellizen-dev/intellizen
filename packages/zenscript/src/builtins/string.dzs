@@ -87,5 +87,9 @@ zenClass string {
 
     operator +(value as string) as string;
 
+    operator has(substr as string) as bool;
+
+    operator [](index as int) as string;
+
     operator as() as bool, byte, int, short, long, float, double;
 }

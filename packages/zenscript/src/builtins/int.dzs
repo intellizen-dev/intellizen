@@ -1,4 +1,27 @@
+import stanhebben.zenscript.value.IntRange;
+
 zenClass int {
     operator -() as int;
+    operator !() as int;
+
+    operator &(value as int) as int;
+    operator |(value as int) as int;
+    operator ^(value as int) as int;
+
+    operator +(value as int) as int;
+    operator -(value as int) as int;
+    operator *(value as int) as int;
+    operator /(value as int) as int;
+    operator %(value as int) as int;
+
+    operator <(value as int) as bool;
+    operator >(value as int) as bool;
+    operator <=(value as int) as bool;
+    operator >=(value as int) as bool;
+    operator ==(value as int) as bool;
+    operator !=(value as int) as bool;
+
+    operator ..(to as int) as IntRange;
+
     operator as() as byte, short, long, float, double, string;
 }
