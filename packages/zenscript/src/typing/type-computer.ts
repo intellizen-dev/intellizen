@@ -223,10 +223,10 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     InfixExpression: (source) => {
       switch (source.op) {
-        case '&': // Arithmetic
+        case '&': // Bitwise
         case '|':
         case '^':
-        case '+':
+        case '+': // Arithmetic
         case '-':
         case '*':
         case '/':
@@ -260,11 +260,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
           return this.inferType(operator?.returnTypeRef)
         }
 
-        case '&&':
+        case '&&': // Logical
         case '||':
           return this.classTypeOf('bool')
 
-        case '~':
+        case '~': // String Concat
           return this.classTypeOf('string')
       }
     },
