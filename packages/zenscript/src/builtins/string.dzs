@@ -91,5 +91,9 @@ zenClass string {
 
     operator [](index as int) as string;
 
+    operator ==(value as string) as bool;
+
+    operator !=(value as string) as bool;
+
     operator as() as bool, byte, int, short, long, float, double;
 }

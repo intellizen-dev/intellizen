@@ -8,5 +8,5 @@ zenClass bool {
     operator ==(value as bool) as bool;
     operator !=(value as bool) as bool;
 
-    operator as() as string
+    operator as() as string;
 }

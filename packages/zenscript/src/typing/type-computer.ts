@@ -6,7 +6,7 @@ import type { BracketManager } from '../workspace/bracket-manager'
 import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
 import { type AstNode, stream } from 'langium'
-import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isIndexingExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
 import { defineRules } from '../utils/rule'
 import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
 
@@ -200,17 +200,8 @@ export class ZenScriptTypeComputer implements TypeComputer {
     // endregion
 
     // region Expression
-    Assignment: (source) => {
-      if (source.op === '=' && isIndexingExpression(source.left)) {
-        const operator = this.memberProvider().streamOperators(source.left.receiver)
-          .filter(it => it.op === '[]=')
-          .filter(it => it.parameters.length === 2)
-          .head()
-        return this.inferType(operator?.returnTypeRef)
-      }
-      else {
-        return this.inferType(source.right)
-      }
+    Assignment: () => {
+      return this.classTypeOf('void')
     },
 
     ConditionalExpression: (source) => {
@@ -328,12 +319,17 @@ export class ZenScriptTypeComputer implements TypeComputer {
     },
 
     MemberAccess: (source) => {
+      const receiverType = this.inferType(source.receiver)
+
       const targetContainer = source.target.ref?.$container
       if (isOperatorFunctionDeclaration(targetContainer) && targetContainer.op === '.') {
-        return this.inferType(targetContainer.returnTypeRef)
+        let dynamicTargetType = this.inferType(targetContainer.returnTypeRef)
+        if (dynamicTargetType && isClassType(receiverType)) {
+          dynamicTargetType = dynamicTargetType.substituteTypeParameters(receiverType.substitutions)
+        }
+        return dynamicTargetType
       }
 
-      const receiverType = this.inferType(source.receiver)
       let targetType = this.inferType(source.target.ref)
       if (targetType && isClassType(receiverType)) {
         targetType = targetType.substituteTypeParameters(receiverType.substitutions)
