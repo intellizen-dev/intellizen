@@ -160,4 +160,4 @@ export class ZenScriptMemberProvider implements MemberProvider {
         .filter(it => !isStatic(it))
     },
   })
-}
+}/*  */

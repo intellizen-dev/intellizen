@@ -1,6 +1,7 @@
 import type { AstNode, AstNodeDescription, Stream } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
+import type { ZenScriptOverloadResolver } from '../typing/overload-resolver'
 import type { TypeComputer } from '../typing/type-computer'
 import type { DescriptionIndex } from '../workspace/description-index'
 import { AstUtils, EMPTY_STREAM, stream } from 'langium'
@@ -19,10 +20,12 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => Stream<AstNo
 export class ZenScriptDynamicProvider implements DynamicProvider {
   private readonly descriptionIndex: DescriptionIndex
   private readonly typeComputer: TypeComputer
+  private readonly overloadResolver: ZenScriptOverloadResolver
 
   constructor(services: ZenScriptServices) {
     this.descriptionIndex = services.workspace.DescriptionIndex
     this.typeComputer = services.typing.TypeComputer
+    this.overloadResolver = services.typing.OverloadResolver
   }
 
   streamDynamicDescriptions(source: AstNode): Stream<AstNodeDescription> {
@@ -41,9 +44,9 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
         // dynamic arguments
         if (isCallExpression(source.$container) && source.$containerProperty === 'arguments') {
           const index = source.$containerIndex!
-          const receiverType = this.typeComputer.inferType(source.$container.receiver)
-          if (isFunctionType(receiverType)) {
-            const paramType = receiverType.paramTypes[index]
+          const callType = this.overloadResolver.predictCallType(source.$container)
+          if (isFunctionType(callType)) {
+            const paramType = callType.paramTypes[index]
             if (isClassType(paramType)) {
               yield * streamDeclaredFunctions(paramType.declaration)
                 .filter(isStatic)

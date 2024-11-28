@@ -1,13 +1,14 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, ScopeOptions, Stream } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
+import type { ZenScriptOverloadResolver } from '../typing/overload-resolver'
 import type { ZenScriptDescriptionIndex } from '../workspace/description-index'
 import type { PackageManager } from '../workspace/package-manager'
 import type { DynamicProvider } from './dynamic-provider'
 import type { MemberProvider } from './member-provider'
 import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream, StreamScope } from 'langium'
-import { ClassDeclaration, ImportDeclaration, isClassDeclaration, TypeParameter } from '../generated/ast'
+import { ClassDeclaration, ImportDeclaration, isCallExpression, isClassDeclaration, TypeParameter } from '../generated/ast'
 import { getPathAsString } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 import { generateStream } from '../utils/stream'
@@ -20,6 +21,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly memberProvider: MemberProvider
   private readonly dynamicProvider: DynamicProvider
   private readonly descriptionIndex: ZenScriptDescriptionIndex
+  private readonly overloadResolver: ZenScriptOverloadResolver
 
   constructor(services: ZenScriptServices) {
     super(services)
@@ -27,6 +29,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     this.memberProvider = services.references.MemberProvider
     this.dynamicProvider = services.references.DynamicProvider
     this.descriptionIndex = services.workspace.DescriptionIndex
+    this.overloadResolver = services.typing.OverloadResolver
   }
 
   override getScope(context: ReferenceInfo): Scope {
@@ -116,7 +119,16 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     MemberAccess: (source) => {
       const outer = this.dynamicScope(source.container)
       const members = this.memberProvider.streamMembers(source.container.receiver)
-      return this.createScopeForNodes(members, outer)
+
+      if (source.reference.$refText === '' || !isCallExpression(source.container.$container) || source.container.$containerProperty !== 'receiver') {
+        return this.createScopeForNodes(members, outer)
+      }
+
+      const overload = this.overloadResolver.findOverloadMethod(members, source.container.$container, source.reference.$refText)
+      if (!overload) {
+        return outer
+      }
+      return this.createScopeForNodes(stream([overload]), outer)
     },
 
     NamedTypeReference: (source) => {

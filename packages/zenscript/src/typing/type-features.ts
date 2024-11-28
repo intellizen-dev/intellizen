@@ -124,7 +124,7 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
         .filter(it => it.op === 'as')
         .map(it => this.typeComputer.inferType(it.returnTypeRef))
         .nonNullable()
-        .some(it => this.isAssignable(to, it))
+        .some(it => this.isSubType(to, it))
     },
 
     CompoundType: (from, to) => {
