@@ -52,7 +52,7 @@ export class ZenScriptNameProvider extends DefaultNameProvider {
 
   private readonly nameNodeRules = defineRules<NameNodeRuleMap>({
     ImportDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'alias'),
-    ConstructorDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'zenConstructor'),
+    ConstructorDeclaration: source => GrammarUtils.findNodeForKeyword(source.$cstNode, 'zenConstructor'),
     OperatorFunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'op'),
   })
 }

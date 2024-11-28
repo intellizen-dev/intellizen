@@ -1,5 +1,5 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, ScopeOptions, Stream } from 'langium'
-import type { ZenScriptAstType } from '../generated/ast'
+import type { CallExpression, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptOverloadResolver } from '../typing/overload-resolver'
 import type { ZenScriptDescriptionIndex } from '../workspace/description-index'
@@ -8,7 +8,7 @@ import type { DynamicProvider } from './dynamic-provider'
 import type { MemberProvider } from './member-provider'
 import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream, StreamScope } from 'langium'
-import { ClassDeclaration, ImportDeclaration, isCallExpression, isClassDeclaration, TypeParameter } from '../generated/ast'
+import { ClassDeclaration, ImportDeclaration, isCallExpression, isClassDeclaration, isScript, TypeParameter } from '../generated/ast'
 import { getPathAsString } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 import { generateStream } from '../utils/stream'
@@ -71,6 +71,31 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return this.createScopeForNodes(classes, outside)
   }
 
+  private importScope(source: ReferenceInfo, outer?: Scope) {
+    const script = AstUtils.findRootNode(source.container)
+    if (!isScript(script)) {
+      return EMPTY_SCOPE
+    }
+
+    const imports = stream(script.imports)
+      .flatMap(it => this.descriptionIndex.createImportedDescription(it))
+
+    if (source.reference.$refText === '' || !isCallExpression(source.container.$container) || source.container.$containerProperty !== 'receiver') {
+      return this.createScope(imports, outer)
+    }
+
+    // filter here since import may have alias
+    const candidates = imports.filter(it => it.name === source.reference.$refText).map(it => it.node).nonNullable()
+
+    const overload = this.overloadResolver.findOverloadMethod(candidates, source.container.$container, undefined)
+    if (!overload) {
+      return outer || EMPTY_SCOPE
+    }
+
+    const description = this.descriptionIndex.createDynamicDescription(overload, source.reference.$refText)
+    return this.createScope([description], outer)
+  }
+
   override createScopeForNodes(nodes: Stream<AstNode>, outerScope?: Scope, options?: ScopeOptions): Scope {
     return new StreamScope(nodes.map(it => this.descriptionIndex.getDescription(it)), outerScope, options)
   }
@@ -100,14 +125,26 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       let outer: Scope
       outer = this.packageScope()
       outer = this.globalScope(outer)
+      outer = this.importScope(source, outer)
       outer = this.dynamicScope(source.container, outer)
+
+      const processOverload = source.reference.$refText !== '' && isCallExpression(source.container.$container) && source.container.$containerProperty === 'receiver'
 
       const processor = (desc: AstNodeDescription) => {
         switch (desc.type) {
           case TypeParameter:
             return
           case ImportDeclaration: {
-            return this.descriptionIndex.createImportedDescription(desc.node as ImportDeclaration)
+            return
+          }
+          case ClassDeclaration: {
+            if (processOverload) {
+              const ctor = this.overloadResolver.findOverloadConstructor(desc.node as ClassDeclaration, source.container.$container as CallExpression)
+              if (ctor) {
+                return this.descriptionIndex.getDescription(ctor)
+              }
+            }
+            return desc
           }
           default:
             return desc
@@ -140,7 +177,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             case ClassDeclaration:
               return desc
             case ImportDeclaration: {
-              return this.descriptionIndex.createImportedDescription(desc.node as ImportDeclaration)
+              return this.descriptionIndex.createImportedDescription(desc.node as ImportDeclaration)[0]
             }
           }
         }

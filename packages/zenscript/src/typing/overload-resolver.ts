@@ -52,7 +52,7 @@ export class ZenScriptOverloadResolver {
     this.nameProvider = services.references.NameProvider
   }
 
-  findOverlaodConstructor(classDecl: ClassDeclaration, callExpr: CallExpression): AstNode | undefined {
+  findOverloadConstructor(classDecl: ClassDeclaration, callExpr: CallExpression): AstNode | undefined {
     const constructors = classDecl.members
       .filter(it => isConstructorDeclaration(it))
 
@@ -73,7 +73,7 @@ export class ZenScriptOverloadResolver {
 
     const clazz = found.find(it => isClassDeclaration(it))
     if (clazz) {
-      return this.findOverlaodConstructor(clazz, callExpr)
+      return this.findOverloadConstructor(clazz, callExpr)
     }
 
     const methods = found.filter(it => isFunctionDeclaration(it) || isExpandFunctionDeclaration(it))

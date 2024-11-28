@@ -1,14 +1,14 @@
-import type { AstNode, AstNodeDescription, NameProvider } from 'langium'
-import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { DescriptionCreator } from './description-creator'
-import { getDocumentUri } from '../utils/ast'
+import { type AstNode, type AstNodeDescription, type NameProvider, stream } from 'langium'
+import { type ClassDeclaration, type ImportDeclaration, isClassDeclaration, isFunctionDeclaration } from '../generated/ast'
+import { getDocumentUri, isStatic } from '../utils/ast'
 
 export interface DescriptionIndex {
   getDescription: (astNode: AstNode) => AstNodeDescription
   getThisDescription: (classDecl: ClassDeclaration) => AstNodeDescription
   createDynamicDescription: (astNode: AstNode, name: string) => AstNodeDescription
-  createImportedDescription: (importDecl: ImportDeclaration) => AstNodeDescription
+  createImportedDescription: (importDecl: ImportDeclaration) => AstNodeDescription[]
 }
 
 export class ZenScriptDescriptionIndex implements DescriptionIndex {
@@ -44,28 +44,51 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
   }
 
   createDynamicDescription(astNode: AstNode, name: string): AstNodeDescription {
-    const originalUri = this.astDescriptions.get(astNode)?.documentUri
+    const existing = this.astDescriptions.get(astNode)
+    if (existing?.name === name) {
+      return existing
+    }
+    const originalUri = existing?.documentUri
     return this.creator.createDescriptionWithUri(astNode, originalUri, name)
   }
 
-  createImportedDescription(importDecl: ImportDeclaration): AstNodeDescription {
+  createImportedDescription(importDecl: ImportDeclaration): AstNodeDescription[] {
     const targetRef = importDecl.path.at(-1)
     if (!targetRef) {
-      return this.getDescription(importDecl)
+      return [this.getDescription(importDecl)]
     }
 
     const target = targetRef.ref
     if (!target) {
-      return this.getDescription(importDecl)
+      return [this.getDescription(importDecl)]
+    }
+
+    // handle import overloading
+    if (isFunctionDeclaration(target)) {
+      // Find function with same name in the same package
+      const parentRef = importDecl.path.at(-2)?.ref
+      if (!parentRef) {
+        return []
+      }
+
+      if (isClassDeclaration(parentRef)) {
+        const result = stream(parentRef.members)
+          .filter(it => isFunctionDeclaration(it))
+          .filter(it => it.name === target.name)
+          .filter(it => isStatic(it))
+          .map(it => this.createDynamicDescription(it, it.name))
+          .toArray()
+        return result
+      }
     }
 
     const targetDescription = targetRef.$nodeDescription
     if (!importDecl.alias && targetDescription) {
-      return targetDescription
+      return [targetDescription]
     }
 
     const targetUri = targetDescription?.documentUri
     const alias = this.nameProvider.getName(importDecl)
-    return this.creator.createDescriptionWithUri(target, targetUri, alias)
+    return [this.creator.createDescriptionWithUri(target, targetUri, alias)]
   }
 }
