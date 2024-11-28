@@ -6,7 +6,7 @@ import type { BracketManager } from '../workspace/bracket-manager'
 import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
 import { type AstNode, stream } from 'langium'
-import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { isAssignment, isCallExpression, isClassDeclaration, isConstructorDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isMemberAccess, isOperatorFunctionDeclaration, isReferenceExpression, isTypeParameter, isVariableDeclaration } from '../generated/ast'
 import { defineRules } from '../utils/rule'
 import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
 
@@ -362,6 +362,15 @@ export class ZenScriptTypeComputer implements TypeComputer {
     },
 
     CallExpression: (source) => {
+      if (isReferenceExpression(source.receiver) || isMemberAccess(source.receiver)) {
+        const receiverRef = source.receiver.target.ref
+        if (!receiverRef) {
+          return
+        }
+        if (isConstructorDeclaration(receiverRef)) {
+          return new ClassType(receiverRef.$container, new Map())
+        }
+      }
       const receiverType = this.inferType(source.receiver)
       if (isFunctionType(receiverType)) {
         return receiverType.returnType

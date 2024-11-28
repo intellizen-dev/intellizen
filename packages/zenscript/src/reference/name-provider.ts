@@ -46,7 +46,7 @@ export class ZenScriptNameProvider extends DefaultNameProvider {
     Script: source => source.$document ? getName(source.$document) : undefined,
     ImportDeclaration: source => source.alias || source.path.at(-1)?.$refText,
     FunctionDeclaration: source => source.name || 'lambda function',
-    ConstructorDeclaration: _ => 'zenConstructor',
+    ConstructorDeclaration: source => source.$container.name,
     OperatorFunctionDeclaration: source => source.op,
   })
 
