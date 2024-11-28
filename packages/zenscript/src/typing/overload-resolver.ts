@@ -2,14 +2,13 @@ import type { AstNode, AstNodeDescription, NameProvider, Stream } from 'langium'
 import type { CallExpression, ClassDeclaration, ConstructorDeclaration, ExpandFunctionDeclaration, Expression, FunctionDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptMemberProvider } from '../reference/member-provider'
-import type { ZenScriptNameProvider } from '../reference/name-provider'
-import type { ClassType, IntersectionType, Type, UnionType } from '../typing/type-description'
+import type { Type } from '../typing/type-description'
 import type { ZenScriptDescriptionIndex } from '../workspace/description-index'
 import type { ZenScriptTypeComputer } from './type-computer'
 import type { ZenScriptTypeFeatures } from './type-features'
-import { AstUtils, stream } from 'langium'
-import { isClassDeclaration, isConstructorDeclaration, isExpandFunctionDeclaration, isFunctionDeclaration, isFunctionExpression, isMemberAccess, isOperatorFunctionDeclaration, isReferenceExpression, isScript } from '../generated/ast'
-import { FunctionType, isClassType, isCompoundType, isTypeVariable } from '../typing/type-description'
+import { AstUtils } from 'langium'
+import { isClassDeclaration, isConstructorDeclaration, isExpandFunctionDeclaration, isFunctionDeclaration, isFunctionExpression, isMemberAccess, isReferenceExpression, isScript } from '../generated/ast'
+import { FunctionType } from '../typing/type-description'
 
 export enum OverloadMatch {
   FullMatch = 0,
