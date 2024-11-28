@@ -170,7 +170,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     NamedTypeReference: (source) => {
       if (!source.index) {
-        const outer = this.classScope()
+        let outer = this.packageScope()
+        outer = this.classScope(outer)
         const processor = (desc: AstNodeDescription) => {
           switch (desc.type) {
             case TypeParameter:

@@ -1,0 +1,32 @@
+package intellizen.test;
+
+zenClass Overload {
+  function foo();
+  function foo(intVal as int);
+
+  function foo(intVal as int, doubleVal as double);
+  function foo(intVal as int, intVal as int);
+
+  function varargs();
+  function varargs(intVal as int, ...rest as int);
+  function varargs(intVal as int);
+
+  function varargs_miss(...rest as int);
+  function varargs_miss(...rest as int);
+
+  function optional(intVal as int, optionalInt as int = 1);
+  function optional(intVal as int);
+  function optional_miss(optionalInt as int = 1);
+
+  function optional_convert(intVal as int, optionalInt as int = 1);
+  function optional_convert(doubleVal as double);
+
+  function varargs_vs_optional(optionalInt as int = 1);
+  function varargs_vs_optional(...intVarargs as int);
+
+
+  zenConstructor ();
+  zenConstructor (intVal as int);
+
+  
+}

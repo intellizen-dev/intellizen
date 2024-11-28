@@ -1,0 +1,6 @@
+package intellizen.test;
+
+zenClass StaticOverload {
+  static function foo();
+  static function foo(intVal as int);
+}
