@@ -209,10 +209,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
     },
 
     PrefixExpression: (source) => {
+      const exprType = this.inferType(source.expr)
       switch (source.op) {
         case '-':
         case '!': {
-          const operator = this.memberProvider().streamOperators(source.expr)
+          const operator = this.memberProvider().streamOperators(exprType)
             .filter(it => it.op === source.op)
             .filter(it => it.parameters.length === 0)
             .head()
@@ -222,6 +223,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     },
 
     InfixExpression: (source) => {
+      const leftType = this.inferType(source.left)
       switch (source.op) {
         case '&': // Bitwise
         case '|':
@@ -237,7 +239,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         case '>=':
         case '==':
         case '!=': {
-          const operator = this.memberProvider().streamOperators(source.left)
+          const operator = this.memberProvider().streamOperators(leftType)
             .filter(it => it.op === source.op)
             .filter(it => it.parameters.length === 1)
             .head()
@@ -245,7 +247,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         }
         case 'has': // Containment
         case 'in': {
-          const operator = this.memberProvider().streamOperators(source.left)
+          const operator = this.memberProvider().streamOperators(leftType)
             .filter(it => it.op === 'has')
             .filter(it => it.parameters.length === 1)
             .head()
@@ -253,7 +255,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         }
         case '..': // Range
         case 'to': {
-          const operator = this.memberProvider().streamOperators(source.left)
+          const operator = this.memberProvider().streamOperators(leftType)
             .filter(it => it.op === '..')
             .filter(it => it.parameters.length === 1)
             .head()
