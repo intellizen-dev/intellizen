@@ -147,13 +147,12 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return
       }
 
-      const operatorDecl = this.memberProvider().streamMembers(rangeType)
-        .filter(it => isOperatorFunctionDeclaration(it))
+      const operator = this.memberProvider().streamOperators(rangeType)
         .filter(it => it.op === 'for')
         .filter(it => it.parameters.length === length)
         .head()
 
-      let paramType = this.inferType(operatorDecl?.parameters.at(index))
+      let paramType = this.inferType(operator?.parameters.at(index))
       if (isClassType(rangeType)) {
         paramType = paramType?.substituteTypeParameters(rangeType.substitutions)
       }
@@ -201,56 +200,72 @@ export class ZenScriptTypeComputer implements TypeComputer {
     // endregion
 
     // region Expression
-    Assignment: (source) => {
-      return this.inferType(source.right)
+    Assignment: () => {
+      return this.classTypeOf('void')
     },
 
-    ConditionalExpression: (_) => {
-      // TODO: operator overloading
-      return this.classTypeOf('bool')
+    ConditionalExpression: (source) => {
+      return this.inferType(source.second) ?? this.inferType(source.third)
     },
 
     PrefixExpression: (source) => {
       switch (source.op) {
         case '-':
-          return this.classTypeOf('int')
-        case '!':
-          return this.classTypeOf('bool')
+        case '!': {
+          const operator = this.memberProvider().streamOperators(source.expr)
+            .filter(it => it.op === source.op)
+            .filter(it => it.parameters.length === 0)
+            .head()
+          return this.inferType(operator?.returnTypeRef)
+        }
       }
     },
 
     InfixExpression: (source) => {
-      // TODO: operator overloading
       switch (source.op) {
-        case '+':
+        case '&': // Bitwise
+        case '|':
+        case '^':
+        case '+': // Arithmetic
         case '-':
         case '*':
         case '/':
         case '%':
-          return this.classTypeOf('int')
-        case '<':
+        case '<': // Comparison
         case '>':
         case '<=':
         case '>=':
-          return this.classTypeOf('bool')
         case '==':
-        case '!=':
-          return this.classTypeOf('bool')
-        case '&&':
+        case '!=': {
+          const operator = this.memberProvider().streamOperators(source.left)
+            .filter(it => it.op === source.op)
+            .filter(it => it.parameters.length === 1)
+            .head()
+          return this.inferType(operator?.returnTypeRef)
+        }
+        case 'has': // Containment
+        case 'in': {
+          const operator = this.memberProvider().streamOperators(source.left)
+            .filter(it => it.op === 'has')
+            .filter(it => it.parameters.length === 1)
+            .head()
+          return this.inferType(operator?.returnTypeRef)
+        }
+        case '..': // Range
+        case 'to': {
+          const operator = this.memberProvider().streamOperators(source.left)
+            .filter(it => it.op === '..')
+            .filter(it => it.parameters.length === 1)
+            .head()
+          return this.inferType(operator?.returnTypeRef)
+        }
+
+        case '&&': // Logical
         case '||':
           return this.classTypeOf('bool')
-        case 'has':
-        case 'in':
-          return this.classTypeOf('bool')
-        case '&':
-        case '|':
-        case '^':
-          return this.classTypeOf('int')
-        case '~':
+
+        case '~': // String Concat
           return this.classTypeOf('string')
-        case 'to':
-        case '..':
-          return this.classTypeOf('stanhebben.zenscript.value.IntRange')
       }
     },
 
@@ -258,7 +273,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return this.inferType(source.typeRef)
     },
 
-    InstanceofExpression: (_) => {
+    InstanceofExpression: () => {
       return this.classTypeOf('bool')
     },
 
@@ -304,12 +319,17 @@ export class ZenScriptTypeComputer implements TypeComputer {
     },
 
     MemberAccess: (source) => {
+      const receiverType = this.inferType(source.receiver)
+
       const targetContainer = source.target.ref?.$container
       if (isOperatorFunctionDeclaration(targetContainer) && targetContainer.op === '.') {
-        return this.inferType(targetContainer.returnTypeRef)
+        let dynamicTargetType = this.inferType(targetContainer.returnTypeRef)
+        if (dynamicTargetType && isClassType(receiverType)) {
+          dynamicTargetType = dynamicTargetType.substituteTypeParameters(receiverType.substitutions)
+        }
+        return dynamicTargetType
       }
 
-      const receiverType = this.inferType(source.receiver)
       let targetType = this.inferType(source.target.ref)
       if (targetType && isClassType(receiverType)) {
         targetType = targetType.substituteTypeParameters(receiverType.substitutions)
@@ -323,11 +343,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return receiverType
       }
 
-      const operatorDecl = this.memberProvider().streamMembers(source.receiver)
-        .filter(it => isOperatorFunctionDeclaration(it))
+      const operator = this.memberProvider().streamOperators(source.receiver)
         .filter(it => it.op === '[]')
+        .filter(it => it.parameters.length === 1)
         .head()
-      let returnType = this.inferType(operatorDecl?.returnTypeRef)
+      let returnType = this.inferType(operator?.returnTypeRef)
       if (isClassType(receiverType)) {
         returnType = returnType?.substituteTypeParameters(receiverType.substitutions)
       }
@@ -344,12 +364,12 @@ export class ZenScriptTypeComputer implements TypeComputer {
       }
     },
 
-    NullLiteral: (_) => {
-      // TODO: does it make sense?
+    NullLiteral: () => {
+      // does it make sense?
       return this.classTypeOf('any')
     },
 
-    BooleanLiteral: (_) => {
+    BooleanLiteral: () => {
       return this.classTypeOf('bool')
     },
 
@@ -379,15 +399,15 @@ export class ZenScriptTypeComputer implements TypeComputer {
       }
     },
 
-    StringLiteral: (_) => {
+    StringLiteral: () => {
       return this.classTypeOf('string')
     },
 
-    UnquotedString: (_) => {
+    UnquotedString: () => {
       return this.classTypeOf('string')
     },
 
-    StringTemplate: (_) => {
+    StringTemplate: () => {
       return this.classTypeOf('string')
     },
 

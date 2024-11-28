@@ -1,1 +1,18 @@
-zenClass double
+zenClass double {
+    operator -() as double;
+
+    operator +(value as double) as double;
+    operator -(value as double) as double;
+    operator *(value as double) as double;
+    operator /(value as double) as double;
+    operator %(value as double) as double;
+
+    operator <(value as double) as bool;
+    operator >(value as double) as bool;
+    operator <=(value as double) as bool;
+    operator >=(value as double) as bool;
+    operator ==(value as double) as bool;
+    operator !=(value as double) as bool;
+
+    operator as() as byte, short, int, long, float, string;
+}

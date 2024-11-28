@@ -1,10 +1,10 @@
 import type { AstNode, Stream } from 'langium'
-import type { ZenScriptAstType } from '../generated/ast'
+import type { OperatorFunctionDeclaration, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
 import type { ZenScriptSyntheticAstType } from './synthetic'
 import { EMPTY_STREAM, stream } from 'langium'
-import { isClassDeclaration, isVariableDeclaration } from '../generated/ast'
+import { isClassDeclaration, isOperatorFunctionDeclaration, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
 import { isStatic, streamClassChain, streamDeclaredMembers } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -12,6 +12,7 @@ import { isSyntheticAstNode } from './synthetic'
 
 export interface MemberProvider {
   streamMembers: (source: AstNode | Type | undefined) => Stream<AstNode>
+  streamOperators: (source: AstNode | Type | undefined) => Stream<OperatorFunctionDeclaration>
 }
 
 type SourceMap = ZenScriptAstType & ZenScriptType & ZenScriptSyntheticAstType
@@ -24,8 +25,12 @@ export class ZenScriptMemberProvider implements MemberProvider {
     this.typeComputer = services.typing.TypeComputer
   }
 
-  streamMembers(source: AstNode | Type | undefined): Stream<AstNode> {
+  public streamMembers(source: AstNode | Type | undefined): Stream<AstNode> {
     return this.rules(source?.$type)?.call(this, source) ?? EMPTY_STREAM
+  }
+
+  public streamOperators(source: AstNode | Type | undefined): Stream<OperatorFunctionDeclaration> {
+    return this.streamMembers(source).filter(isOperatorFunctionDeclaration)
   }
 
   private readonly rules = defineRules<RuleMap>({

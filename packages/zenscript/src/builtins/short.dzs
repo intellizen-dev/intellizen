@@ -1,1 +1,23 @@
-zenClass short
+zenClass short {
+    operator -() as short;
+    operator !() as short;
+
+    operator &(value as short) as short;
+    operator |(value as short) as short;
+    operator ^(value as short) as short;
+
+    operator +(value as short) as short;
+    operator -(value as short) as short;
+    operator *(value as short) as short;
+    operator /(value as short) as short;
+    operator %(value as short) as short;
+
+    operator <(value as short) as bool;
+    operator >(value as short) as bool;
+    operator <=(value as short) as bool;
+    operator >=(value as short) as bool;
+    operator ==(value as short) as bool;
+    operator !=(value as short) as bool;
+
+    operator as() as byte, int, long, float, double, string;
+}
