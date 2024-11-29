@@ -9,6 +9,7 @@ import { ZenScriptCompletionProvider } from './lsp/completion-provider'
 import { ZenScriptInlayHintProvider } from './lsp/inlay-hint-provider'
 import { ZenScriptNodeKindProvider } from './lsp/node-kind-provider'
 import { ZenScriptSemanticTokenProvider } from './lsp/semantic-token-provider'
+import { AsyncParser } from './parser/async-parser'
 import { ZenScriptDynamicProvider } from './reference/dynamic-provider'
 import { ZenScriptMemberProvider } from './reference/member-provider'
 import { ZenScriptNameProvider } from './reference/name-provider'
@@ -86,6 +87,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
   parser: {
     TokenBuilder: () => new CustomTokenBuilder(),
     ValueConverter: () => new CustomValueConverter(),
+    AsyncParser: services => new AsyncParser(services),
   },
   typing: {
     TypeComputer: services => new ZenScriptTypeComputer(services),
