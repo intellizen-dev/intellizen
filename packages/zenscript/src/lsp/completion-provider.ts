@@ -1,6 +1,6 @@
-import type { AstNodeDescription, MaybePromise, Stream } from 'langium'
+import type { AstNodeDescription, LangiumDocument, MaybePromise, Stream } from 'langium'
 import type { CompletionAcceptor, CompletionContext, CompletionProviderOptions, CompletionValueItem, NextFeature } from 'langium/lsp'
-import type { CompletionItemLabelDetails } from 'vscode-languageserver'
+import type { CancellationToken, CompletionItem, CompletionItemLabelDetails, CompletionList, CompletionParams, Range } from 'vscode-languageserver'
 import type { BracketExpression, BracketLocation, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
@@ -9,7 +9,7 @@ import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
 import { substringBeforeLast } from '@intellizen/shared'
 import { GrammarUtils, stream } from 'langium'
 import { DefaultCompletionProvider } from 'langium/lsp'
-import { CompletionItemKind } from 'vscode-languageserver'
+import { CompletionItemKind, TextEdit } from 'vscode-languageserver'
 import { isBracketExpression, isBracketLocation, isBracketProperty, isExpressionTemplate } from '../generated/ast'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
@@ -79,24 +79,36 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     let key: string | undefined
     let value: string | undefined
     let bracketId: string
+    // need to manual provide range for vs may use '=', ':' to match the completion
+    let range: Range | undefined
+
     // <blockstate:minecraft:furnace:|>  (with > here, empty property)
     // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     if (isBracketExpression(context.node)) {
       bracketId = bracket.path.map(it => it.value).join(':')
+      range = {
+        start: context.position,
+        end: context.position,
+      }
     }
     // <blockstate:minecraft:furnace:faci|>  (with > here, no '=', not empty value)
     //                               ^^^^
     else if (isBracketLocation(context.node)) {
       key = context.node.value as string
       bracketId = bracket.path.slice(0, context.node.$containerIndex!).map(it => it.value).join(':')
+      range = context.node.$cstNode?.range
     }
     // <blockstate:minecraft:furnace:faci=|>        (with '=' here)
-    //                               ^^^^
+    //                               ^^^^^
     else if (isBracketProperty(context.node)) {
       const property = context.node
       key = property.key.value
       value = ''
       bracketId = bracket.path.map(it => it.value).join(':')
+      range = {
+        start: context.position,
+        end: context.position,
+      }
     }
     // <blockstate:minecraft:furnace:faci|        (no > here)
     //                               ^^^^
@@ -106,6 +118,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       key = property.key.value
       value = property.value?.value?.toString()
       bracketId = bracket.path.map(it => it.value).join(':')
+
+      range = context.node.$cstNode?.range
     }
     else {
       return false
@@ -126,6 +140,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
             label: it,
             kind: CompletionItemKind.Property,
             commitCharacters: ['='],
+            textEdit: range && TextEdit.replace(range, it),
           })
         })
 
@@ -144,6 +159,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
           label: it,
           kind: CompletionItemKind.Constant,
           commitCharacters: ['>', ','],
+          textEdit: range && TextEdit.replace(range, it),
         })
       })
 
@@ -211,6 +227,17 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
   }
 
+  private readonly bracketTriggerCharacters = new Set(['<', ':', '=', ','])
+
+  private currentTriggerCharacter: string | undefined
+  private continue: boolean = false
+
+  public override getCompletion(document: LangiumDocument, params: CompletionParams, _cancelToken?: CancellationToken): Promise<CompletionList | undefined> {
+    this.currentTriggerCharacter = params.context?.triggerCharacter
+    this.continue = false
+    return super.getCompletion(document, params, _cancelToken)
+  }
+
   protected override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
     const bracket = this.findBracket(context)
     if (bracket) {
@@ -218,13 +245,28 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       if (next !== context.features[0]) {
         return
       }
+      // do not check completion for other features even no completion items
+      this.continue = false
       if (this.tryCompletionForBracketProperty(context, bracket, acceptor)) {
         return
       }
       return this.completionForBracket(context, bracket, acceptor)
     }
 
+    // if the current trigger character is a bracket trigger character, skip other completions
+    if (this.currentTriggerCharacter && this.bracketTriggerCharacters.has(this.currentTriggerCharacter)) {
+      this.continue = false
+      return
+    }
+
     return super.completionFor(context, next, acceptor)
+  }
+
+  protected override continueCompletion(items: CompletionItem[]): boolean {
+    if (this.continue) {
+      return false
+    }
+    return super.continueCompletion(items)
   }
 
   protected override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
