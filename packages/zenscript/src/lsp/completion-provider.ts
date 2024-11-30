@@ -7,7 +7,7 @@ import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { TypeComputer } from '../typing/type-computer'
 import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
 import { substringBeforeLast } from '@intellizen/shared'
-import { GrammarUtils, stream } from 'langium'
+import { EMPTY_STREAM, GrammarUtils, stream } from 'langium'
 import { DefaultCompletionProvider } from 'langium/lsp'
 import { CompletionItemKind, TextEdit } from 'vscode-languageserver'
 import { isBracketExpression, isBracketLocation, isBracketProperty, isExpressionTemplate } from '../generated/ast'
@@ -19,8 +19,8 @@ type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CompletionItemLabelDetails | undefined }
 
 export interface BracketCompletion {
-  id: string
-  name?: string
+  label: string
+  description?: string
 }
 
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
@@ -36,40 +36,66 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     this.bracketManager = services.workspace.BracketManager
   }
 
-  private collectBracketFor(path: string[], current: string): Stream<BracketCompletion> {
-    const hierarchy = this.bracketManager.entryTree.find(path)
-    if (!hierarchy) {
-      return stream([])
+  private collectBracketCompletions(path: string[]): Stream<BracketCompletion> {
+    const tree = this.bracketManager.entryTree.find(path)
+    if (!tree) {
+      return EMPTY_STREAM
     }
-
-    const children = hierarchy.children
-
-    const candidates = stream(children.values())
-      .filter(it => !current || this.fuzzyMatcher.match(current, it.name))
-      .toArray()
-
-    const entries = stream(candidates).filter(node => node.isDataNode())
-      .flatMap((node) => {
-        return stream(node.data).map((entry) => {
-          return {
-            id: node.name,
-            name: entry.name,
-          }
-        })
-      })
-
-    const groups = stream(candidates).filter(node => node.isInternalNode())
-      .map((node) => {
-        return {
-          id: node.name,
-        }
-      })
-
-    return entries.concat(groups)
+    const ends = stream(tree.children.values())
+      .filter(node => node.isDataNode())
+      .flatMap(node => node.data)
+      .map(entry => ({
+        label: tree.name,
+        description: entry.name,
+      }))
+    const middles = stream(tree.children.values())
+      .filter(node => node.isInternalNode())
+      .map(node => ({
+        label: node.name,
+      }))
+    return stream(ends, middles)
   }
 
-  private tryCompletionForBracketProperty(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): boolean {
-    // do not complete for expression template beacuse it is hard to determine the value
+  private findBracketExpression(context: CompletionContext): BracketExpression | undefined {
+    if (isBracketExpression(context.node)) {
+      return context.node
+    }
+    let bracketNode
+    if (context.node?.$containerProperty === 'path' || context.node?.$containerProperty === 'properties') {
+      bracketNode = context.node?.$container
+    }
+    else if (context.node?.$containerProperty === 'key' || context.node?.$containerProperty === 'value') {
+      bracketNode = context.node?.$container?.$container
+    }
+
+    if (isBracketExpression(bracketNode)) {
+      return bracketNode
+    }
+  }
+
+  private completionForBracketExpression(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): boolean {
+    const bracket = this.findBracketExpression(context)
+    if (bracket) {
+      // stop completion here for we only complete for bracket context once, and do not check completion for other features even no completion items
+      this._continueCompletion = false
+      if (this.completionForBracketProperty(context, bracket, acceptor)) {
+        return false
+      }
+      this.completionForBracketLocation(context, bracket, acceptor)
+      return false
+    }
+
+    // if the current trigger character is a bracket trigger character, skip other completions
+    if (this.currentTriggerCharacter && this.bracketTriggerCharacters.has(this.currentTriggerCharacter)) {
+      this._continueCompletion = false
+      return false
+    }
+
+    return true
+  }
+
+  private completionForBracketProperty(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): boolean {
+    // do not complete for expression template because it is hard to determine the value
     if (bracket.path.some(it => isExpressionTemplate(it))) {
       return false
     }
@@ -194,14 +220,14 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       return
     }
 
-    const candidate = this.collectBracketFor(path.map(it => it.value as string), current)
+    const candidate = this.collectBracketCompletions(path.map(it => it.value as string))
 
     for (const completion of candidate) {
       acceptor(context, {
-        label: completion.id,
-        kind: completion.name ? CompletionItemKind.EnumMember : CompletionItemKind.Enum,
+        label: completion.label,
+        kind: completion.description ? CompletionItemKind.EnumMember : CompletionItemKind.Enum,
         labelDetails: {
-          description: completion.name,
+          description: completion.description,
         },
         commitCharacters: [':', '>'],
 
@@ -209,70 +235,28 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
   }
 
-  // find the bracket expression node from the context
-  private findBracket(context: CompletionContext): BracketExpression | undefined {
-    if (isBracketExpression(context.node)) {
-      return context.node
-    }
-    let bracketNode
-    if (context.node?.$containerProperty === 'path' || context.node?.$containerProperty === 'properties') {
-      bracketNode = context.node?.$container
-    }
-    else if (context.node?.$containerProperty === 'key' || context.node?.$containerProperty === 'value') {
-      bracketNode = context.node?.$container?.$container
-    }
-
-    if (isBracketExpression(bracketNode)) {
-      return bracketNode
-    }
-  }
-
   private readonly bracketTriggerCharacters = new Set(['<', ':', '=', ','])
-
   private currentTriggerCharacter: string | undefined
-  private continue: boolean = true
+  private _continueCompletion = true
 
   public override getCompletion(document: LangiumDocument, params: CompletionParams, _cancelToken?: CancellationToken): Promise<CompletionList | undefined> {
-    // store the current trigger character, and reset the continue flag
+    // store the current trigger character, and reset the _continueCompletion flag
     this.currentTriggerCharacter = params.context?.triggerCharacter
-    this.continue = true
+    this._continueCompletion = true
     return super.getCompletion(document, params, _cancelToken)
   }
 
-  private completionForBracket(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): boolean {
-    const bracket = this.findBracket(context)
-    if (bracket) {
-      // stop completion here for we only complete for bracket context once, and do not check completion for other features even no completion items
-      this.continue = false
-      if (this.tryCompletionForBracketProperty(context, bracket, acceptor)) {
-        return false
-      }
-      this.completionForBracketLocation(context, bracket, acceptor)
-      return false
-    }
-
-    // if the current trigger character is a bracket trigger character, skip other completions
-    if (this.currentTriggerCharacter && this.bracketTriggerCharacters.has(this.currentTriggerCharacter)) {
-      this.continue = false
-      return false
-    }
-
-    return true
-  }
-
   protected override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
-    const continueCompletion = this.continue && this.completionForBracket(context, next, acceptor)
-    if (!continueCompletion) {
-      return
+    const continueCompletion = this._continueCompletion && this.completionForBracketExpression(context, next, acceptor)
+    if (continueCompletion) {
+      return super.completionFor(context, next, acceptor)
     }
-
-    return super.completionFor(context, next, acceptor)
   }
 
   protected override continueCompletion(items: CompletionItem[]): boolean {
     // because langium will attempt to use a different context to complete if they found no items,
-    // we need to check if we have already completed the bracket context, if so, we should not continue to other contexts
-    if (!this.continue) {
+    // we need to check if we have already completed the bracket context, if so, we should not _continueCompletion to other contexts
+    if (!this._continueCompletion) {
       return false
     }
     return super.continueCompletion(items)
