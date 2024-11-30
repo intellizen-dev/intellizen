@@ -32,12 +32,12 @@ export function isImportable(node: AstNode | undefined) {
   }
 }
 
-export function hasOptionalArg(funcDecl: CallableDeclaration, limit: number = Number.MAX_VALUE): boolean {
-  return stream(funcDecl.parameters).limit(limit).some(it => it.defaultValue)
+export function isOptionalArgAt(funcDecl: CallableDeclaration, index = 0): boolean {
+  return funcDecl.parameters.at(index)?.defaultValue !== undefined
 }
 
-export function hasVararg(funcDecl: CallableDeclaration, limit: number = Number.MAX_VALUE): boolean {
-  return stream(funcDecl.parameters).limit(limit).some(it => it.varargs)
+export function isLastVararg(funcDecl: CallableDeclaration): boolean {
+  return funcDecl.parameters.at(-1)?.varargs !== undefined
 }
 
 export function getDocumentUri(node: AstNode | undefined): URI | undefined {

@@ -8,7 +8,7 @@ import type { Type } from './type-description'
 import type { ZenScriptTypeFeatures } from './type-features'
 import { AstUtils } from 'langium'
 import { isClassDeclaration, isConstructorDeclaration, isExpandFunctionDeclaration, isFunctionDeclaration, isFunctionExpression, isMemberAccess, isReferenceExpression, isScript } from '../generated/ast'
-import { hasOptionalArg, hasVararg } from '../utils/ast'
+import { isLastVararg, isOptionalArgAt } from '../utils/ast'
 import { FunctionType } from './type-description'
 
 export enum OverloadMatch {
@@ -17,19 +17,6 @@ export enum OverloadMatch {
   ImplicitMatch = 2,
   PossibleMatch = 3,
   NotMatch = 4,
-}
-
-// TODO: remove
-export function isOptionalArgs(method: CallableDeclaration, before: number): boolean {
-  let index = before
-  if (index < 0) {
-    index = method.parameters.length + index
-  }
-  if (isExpandFunctionDeclaration(method)) {
-    index++
-  }
-
-  return index < method.parameters.length && method.parameters[index].defaultValue !== undefined
 }
 
 export class ZenScriptOverloadResolver {
@@ -244,7 +231,7 @@ export class ZenScriptOverloadResolver {
     const paramterTypes = checkType ? paramters.map(p => this.typeComputer.inferType(p) || this.typeComputer.classTypeOf('any')) : []
 
     if (argumentLength > paramters.length) {
-      if (!hasVararg(method)) {
+      if (!isLastVararg(method)) {
         return OverloadMatch.NotMatch
       }
 
@@ -265,8 +252,7 @@ export class ZenScriptOverloadResolver {
       }
     }
     else if (argumentLength < paramters.length) {
-      // FIXME: replace me with hasOptionalArg
-      if (!hasOptionalArg(method, argumentLength)) {
+      if (!isOptionalArgAt(method, argumentLength)) {
         return OverloadMatch.NotMatch
       }
 
@@ -276,7 +262,7 @@ export class ZenScriptOverloadResolver {
 
       match = OverloadMatch.OptionalMatch
     }
-    else if (hasVararg(method)) {
+    else if (isLastVararg(method)) {
       if (!checkType) {
         return OverloadMatch.PossibleMatch
       }
