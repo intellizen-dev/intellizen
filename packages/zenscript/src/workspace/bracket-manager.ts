@@ -1,9 +1,7 @@
-import type { FileSystemProvider, Stream, URI } from 'langium'
-import type { FuzzyMatcher } from 'langium/lsp'
+import type { FileSystemProvider, URI } from 'langium'
 import type { WorkspaceFolder } from 'vscode-languageserver'
 import type { ZenScriptServices } from '../module'
 import type { BracketEntry, BracketMirror } from '../resource'
-import { stream } from 'langium'
 import { BracketsJsonSchema } from '../resource'
 import { existsFileUri } from '../utils/fs'
 
@@ -31,10 +29,6 @@ export class ZenScriptBracketManager implements BracketManager {
 
   resolve(id: string) {
     id = this.normalize(id)
-    if (id.startsWith('item:')) {
-      id = id.substring(5)
-      return this.mirrors.find(mirror => this.isItem(mirror.type))?.entries.get(id)
-    }
     return this.mirrors.find(mirror => mirror.entries.has(id))?.entries.get(id)
   }
 
@@ -45,11 +39,7 @@ export class ZenScriptBracketManager implements BracketManager {
   }
 
   private normalize(id: string) {
-    return id.replace(/:[0*]$/, '')
-  }
-
-  private isItem(type: string) {
-    return type === 'crafttweaker.item.IItemStack'
+    return id.replace(/^item:/, '').replace(/:[0*]$/, '')
   }
 
   private async loadBrackets(bracketsUri: URI | undefined) {

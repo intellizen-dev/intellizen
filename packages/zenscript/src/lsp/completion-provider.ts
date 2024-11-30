@@ -1,20 +1,17 @@
 import type { AstNodeDescription, MaybePromise, Stream } from 'langium'
 import type { CompletionAcceptor, CompletionContext, CompletionProviderOptions, CompletionValueItem, NextFeature } from 'langium/lsp'
 import type { CompletionItemLabelDetails, Range } from 'vscode-languageserver'
-import type { BracketExpression, BracketPath, ZenScriptAstType } from '../generated/ast'
+import type { BracketExpression, BracketLocation, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { BracketMirror } from '../resource'
 import type { TypeComputer } from '../typing/type-computer'
 import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
-
 import { substringBeforeLast } from '@intellizen/shared'
-
-import { AstUtils, CstUtils, GrammarUtils, stream } from 'langium'
+import { GrammarUtils, stream } from 'langium'
 import { DefaultCompletionProvider } from 'langium/lsp'
 import { CompletionItemKind, TextEdit } from 'vscode-languageserver'
-
-import { isBracketExpression, isBracketPath, isExpression, isExpressionTemplate, isProperty } from '../generated/ast'
+import { isBracketExpression, isBracketLocation, isBracketProperty, isExpressionTemplate } from '../generated/ast'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -24,9 +21,10 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CompletionIt
 
 export interface BracketCompletion {
   id: string
-  paths: string[]
+  path: string[]
   name?: string
 }
+
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private readonly typeComputer: TypeComputer
   private readonly bracketManager: ZenScriptBracketManager
@@ -78,7 +76,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
         return {
           id: isItem ? `item:${id}` : id,
-          paths: isItem ? ['item', ...id.split(':')] : id.split(':'),
+          path: isItem ? ['item', ...id.split(':')] : id.split(':'),
           name: entry.name,
         }
       })
@@ -125,7 +123,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
     // <blockstate:minecraft:furnace:faci|>  (with > here, no '=', not empty value)
     //                               ^^^^
-    if (isBracketPath(context.node)) {
+    if (isBracketLocation(context.node)) {
       range = {
         start: context.node.$cstNode!.range.start,
         end: context.node.$cstNode!.range.end,
@@ -135,7 +133,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
     // <blockstate:minecraft:furnace:faci        (no > here)
     //                               ^^^^
-    else if (isProperty(context.node?.$container)) {
+    else if (isBracketProperty(context.node?.$container)) {
       const property = context.node.$container
       range = {
         start: property.key.$cstNode!.range.start,
@@ -180,10 +178,10 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     return true
   }
 
-  private compltetForBracket(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): MaybePromise<void> {
-    let path: (BracketPath | { value: string })[] | undefined
+  private completionForBracket(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): MaybePromise<void> {
+    let path: (BracketLocation | { value: string })[] | undefined
     // <item:minecraft:app|>  (with > here)
-    if (isBracketPath(context.node)) {
+    if (isBracketLocation(context.node)) {
       path = bracket.path.slice(0, context.node.$containerIndex! + 1)
     }
     // <item:minecraft:app|        (no > here)
@@ -259,7 +257,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       if (this.tryCompletionForBracketProperty(context, bracket, acceptor)) {
         return
       }
-      return this.compltetForBracket(context, bracket, acceptor)
+      return this.completionForBracket(context, bracket, acceptor)
     }
 
     return super.completionFor(context, next, acceptor)

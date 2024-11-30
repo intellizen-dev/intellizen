@@ -300,11 +300,11 @@ interface FunctionExpression extends Expression {
 }
 
 interface BracketExpression extends Expression {
-    path: BracketPath[];
-    properties?: Property[];
+    path: BracketLocation[];
+    properties?: BracketProperty[];
 }
 
-interface BracketPath {
+interface BracketLocation {
     value: string | ExpressionTemplate;
 }
 
@@ -548,16 +548,16 @@ terminal fragment IN_TEMPLATE_LITERAL:
     /[^$`\\]|\\./;
 
 BracketExpression returns BracketExpression:
-    '<' path+=BracketPath (':' path+=BracketPath)*
-        (':' properties+=Property (',' properties+=Property)*)?
+    '<' path+=BracketLocation (':' path+=BracketLocation)*
+        (':' properties+=BracketProperty (',' properties+=BracketProperty)*)?
     '>'
 ;
 
-BracketPath returns BracketPath:
-    value=Location | ExpressionTemplate
+BracketLocation returns BracketLocation:
+    value=LocationLiteral | ExpressionTemplate
 ;
 
-Location returns string:
+LocationLiteral returns string:
     (ID | INTEGER | '.' | '-' | '*')+
 ;
 
@@ -565,7 +565,7 @@ ExpressionTemplate returns ExpressionTemplate:
     '${' expr=Expression '}'
 ;
 
-Property:
+BracketProperty:
     key=UnquotedString '=' value=(UnquotedString | IntegerLiteral | BooleanLiteral)
 ;
 
