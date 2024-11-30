@@ -4,27 +4,52 @@ import type { ZenScriptServices } from '../module'
 import type { BracketEntry, BracketMirror } from '../resource'
 import { BracketsJsonSchema } from '../resource'
 import { existsFileUri } from '../utils/fs'
+import { HierarchyTree } from '../utils/hierarchy-tree'
 
 export interface BracketManager {
-  initialize: (folders: WorkspaceFolder[]) => Promise<void>
   resolve: (id: string) => BracketEntry | undefined
   type: (id: string) => string | undefined
 }
 
+export function isItemType(type: string): boolean {
+  return type === 'crafttweaker.item.IItemStack'
+}
+
+export function appendItemPrefix(id: string): string {
+  return `item:${id}`
+}
+
 export class ZenScriptBracketManager implements BracketManager {
   private readonly fileSystemProvider: FileSystemProvider
-  public readonly mirrors: BracketMirror[]
+  readonly mirrors: BracketMirror[]
+  readonly entryTree: HierarchyTree<BracketEntry>
 
   constructor(services: ZenScriptServices) {
     this.fileSystemProvider = services.shared.workspace.FileSystemProvider
     this.mirrors = []
+    this.entryTree = new HierarchyTree<BracketEntry>(':')
     services.shared.workspace.ConfigurationManager.onLoaded(async (folders) => {
-      await this.initialize(folders)
+      await this.initializeMirrors(folders)
+      await this.initializeEntryTree()
     })
   }
 
-  async initialize(folders: WorkspaceFolder[]) {
+  private async initializeMirrors(folders: WorkspaceFolder[]) {
     await Promise.all(folders.map(folder => this.loadBrackets(folder.config.extra.brackets)))
+  }
+
+  private async initializeEntryTree() {
+    this.mirrors.forEach((mirror) => {
+      if (isItemType(mirror.type)) {
+        mirror.entries.forEach((entry, id) => {
+          this.entryTree.insert(appendItemPrefix(id), entry)
+        })
+      }
+
+      mirror.entries.forEach((entry, id) => {
+        this.entryTree.insert(id, entry)
+      })
+    })
   }
 
   resolve(id: string) {
