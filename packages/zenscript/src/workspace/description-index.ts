@@ -8,7 +8,7 @@ export interface DescriptionIndex {
   getDescription: (astNode: AstNode) => AstNodeDescription
   getThisDescription: (classDecl: ClassDeclaration) => AstNodeDescription
   createDynamicDescription: (astNode: AstNode, name: string) => AstNodeDescription
-  createImportedDescription: (importDecl: ImportDeclaration) => AstNodeDescription[]
+  createImportedDescriptions: (importDecl: ImportDeclaration) => AstNodeDescription[]
 }
 
 export class ZenScriptDescriptionIndex implements DescriptionIndex {
@@ -52,7 +52,7 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
     return this.creator.createDescriptionWithUri(astNode, originalUri, name)
   }
 
-  createImportedDescription(importDecl: ImportDeclaration): AstNodeDescription[] {
+  createImportedDescriptions(importDecl: ImportDeclaration): AstNodeDescription[] {
     const targetRef = importDecl.path.at(-1)
     if (!targetRef) {
       return [this.getDescription(importDecl)]
@@ -63,23 +63,19 @@ export class ZenScriptDescriptionIndex implements DescriptionIndex {
       return [this.getDescription(importDecl)]
     }
 
-    // handle import overloading
+    // TODO: Workaround for function overloading, may rework after langium supports multi-target references
     if (isFunctionDeclaration(target)) {
-      // Find function with same name in the same package
-      const parentRef = importDecl.path.at(-2)?.ref
-      if (!parentRef) {
+      const classDecl = importDecl.path.at(-2)?.ref
+      if (!isClassDeclaration(classDecl)) {
         return []
       }
 
-      if (isClassDeclaration(parentRef)) {
-        const result = stream(parentRef.members)
-          .filter(it => isFunctionDeclaration(it))
-          .filter(it => it.name === target.name)
-          .filter(it => isStatic(it))
-          .map(it => this.createDynamicDescription(it, it.name))
-          .toArray()
-        return result
-      }
+      return stream(classDecl.members)
+        .filter(isFunctionDeclaration)
+        .filter(isStatic)
+        .filter(it => it.name === target.name)
+        .map(it => this.createDynamicDescription(it, it.name))
+        .toArray()
     }
 
     const targetDescription = targetRef.$nodeDescription

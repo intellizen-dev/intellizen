@@ -71,29 +71,33 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return this.createScopeForNodes(classes, outside)
   }
 
-  private importScope(source: ReferenceInfo, outer?: Scope) {
+  private importedScope(source: ReferenceInfo, outside?: Scope) {
     const script = AstUtils.findRootNode(source.container)
     if (!isScript(script)) {
       return EMPTY_SCOPE
     }
 
+    const refText = source.reference.$refText
     const imports = stream(script.imports)
-      .flatMap(it => this.descriptionIndex.createImportedDescription(it))
+      .flatMap(it => this.descriptionIndex.createImportedDescriptions(it))
 
-    if (source.reference.$refText === '' || !isCallExpression(source.container.$container) || source.container.$containerProperty !== 'receiver') {
-      return this.createScope(imports, outer)
+    if (refText === '' || !isCallExpression(source.container.$container) || source.container.$containerProperty !== 'receiver') {
+      return this.createScope(imports, outside)
     }
 
-    // filter here since import may have alias
-    const candidates = imports.filter(it => it.name === source.reference.$refText).map(it => it.node).nonNullable()
+    // TODO: Workaround for function overloading, may rework after langium supports multi-target references
+    const candidates = imports
+      .filter(it => it.name === refText)
+      .map(it => it.node)
+      .nonNullable()
 
     const overload = this.overloadResolver.findOverloadMethod(candidates, source.container.$container, undefined)
     if (!overload) {
-      return outer || EMPTY_SCOPE
+      return outside ?? EMPTY_SCOPE
     }
 
-    const description = this.descriptionIndex.createDynamicDescription(overload, source.reference.$refText)
-    return this.createScope([description], outer)
+    const description = this.descriptionIndex.createDynamicDescription(overload, refText)
+    return this.createScope([description], outside)
   }
 
   override createScopeForNodes(nodes: Stream<AstNode>, outerScope?: Scope, options?: ScopeOptions): Scope {
@@ -125,7 +129,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       let outer: Scope
       outer = this.packageScope()
       outer = this.globalScope(outer)
-      outer = this.importScope(source, outer)
+      outer = this.importedScope(source, outer)
       outer = this.dynamicScope(source.container, outer)
 
       const processOverload = source.reference.$refText !== '' && isCallExpression(source.container.$container) && source.container.$containerProperty === 'receiver'
@@ -178,7 +182,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             case ClassDeclaration:
               return desc
             case ImportDeclaration: {
-              return this.descriptionIndex.createImportedDescription(desc.node as ImportDeclaration)[0]
+              return this.descriptionIndex.createImportedDescriptions(desc.node as ImportDeclaration)[0]
             }
           }
         }
