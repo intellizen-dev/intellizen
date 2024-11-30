@@ -1,5 +1,5 @@
 import type { AstNode, AstNodeDescription, NameProvider, Stream } from 'langium'
-import type { CallableDeclaration, CallExpression, ClassDeclaration, Expression } from '../generated/ast'
+import type { CallableDeclaration, CallExpression, ClassDeclaration, ConstructorDeclaration, Expression, FunctionDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptMemberProvider } from '../reference/member-provider'
 import type { ZenScriptDescriptionIndex } from '../workspace/description-index'
@@ -10,6 +10,12 @@ import { AstUtils } from 'langium'
 import { isClassDeclaration, isConstructorDeclaration, isExpandFunctionDeclaration, isFunctionDeclaration, isFunctionExpression, isMemberAccess, isReferenceExpression, isScript } from '../generated/ast'
 import { isLastVararg, isOptionalArgAt } from '../utils/ast'
 import { FunctionType } from './type-description'
+
+// TODO: impl
+export interface OverloadResolver {
+  resolveConstructor: (callExpr: CallExpression, candidates: ConstructorDeclaration[]) => ConstructorDeclaration | undefined
+  resolveFunction: (callExpr: CallExpression, candidates: FunctionDeclaration[]) => FunctionDeclaration | undefined
+}
 
 export enum OverloadMatch {
   FullMatch = 0,
@@ -34,28 +40,26 @@ export class ZenScriptOverloadResolver {
     this.nameProvider = services.references.NameProvider
   }
 
-  findOverloadConstructor(classDecl: ClassDeclaration, callExpr: CallExpression): AstNode | undefined {
-    const constructors = classDecl.members
-      .filter(it => isConstructorDeclaration(it))
-
-    if (constructors.length === 0) {
+  resolveConstructor(callExpr: CallExpression, candidates: ConstructorDeclaration[]): ConstructorDeclaration | undefined {
+    if (candidates.length === 0) {
       return
     }
 
-    const index = this.resolveOverload(constructors, callExpr.arguments)
-
+    const index = this.resolveOverload(candidates, callExpr.arguments)
     if (index.length === 0) {
-      return constructors[0]
+      return candidates[0]
     }
-    return constructors[index[0]]
+    return candidates[index[0]]
   }
 
-  findOverloadMethod(members: Stream<AstNode>, callExpr: CallExpression, name?: string): AstNode | undefined {
-    const found = members.filter(it => !name || this.nameProvider.getName(it) === name).toArray()
+  // TODO: rename to resolveFunction
+  findOverloadMethod(callExpr: CallExpression, candidates: Stream<AstNode>, name?: string): AstNode | undefined {
+    const found = candidates.filter(it => !name || this.nameProvider.getName(it) === name).toArray()
 
-    const clazz = found.find(it => isClassDeclaration(it))
-    if (clazz) {
-      return this.findOverloadConstructor(clazz, callExpr)
+    const classDecl = found.find(it => isClassDeclaration(it))
+    if (classDecl) {
+      const constructors = classDecl.members.filter(isConstructorDeclaration)
+      return this.resolveConstructor(callExpr, constructors)
     }
 
     const methods = found.filter(it => isFunctionDeclaration(it) || isExpandFunctionDeclaration(it))
@@ -68,6 +72,7 @@ export class ZenScriptOverloadResolver {
     return methods[index[0]]
   }
 
+  // TODO: move into TypeComputer
   predictCallType(callExpr: CallExpression): Type | undefined {
     if (isReferenceExpression(callExpr.receiver)) {
       if (callExpr.receiver.target.$nodeDescription) {
@@ -138,6 +143,7 @@ export class ZenScriptOverloadResolver {
     return this.descriptionIndex.getDescription(functionDecl)
   }
 
+  // TODO: consider returning `CallableDeclaration | undefined` or `CallableDeclaration[]`
   resolveOverload(methods: Array<CallableDeclaration>, args: Array<Expression>): number[] {
     const possible = new Set<number>()
 
@@ -214,11 +220,11 @@ export class ZenScriptOverloadResolver {
     }
   }
 
-  matchSignature(method: CallableDeclaration, args: Type[] | number): OverloadMatch {
-    const paramters = method.parameters
+  private matchSignature(method: CallableDeclaration, args: Type[] | number): OverloadMatch {
+    const parameters = method.parameters
     if (isExpandFunctionDeclaration(method)) {
       // remove first parameter
-      paramters.shift()
+      parameters.shift()
     }
     const checkType = Array.isArray(args)
 
@@ -226,11 +232,11 @@ export class ZenScriptOverloadResolver {
 
     const argumentLength = checkType ? args.length : args
 
-    let checkLength = Math.min(argumentLength, paramters.length)
+    let checkLength = Math.min(argumentLength, parameters.length)
 
-    const paramterTypes = checkType ? paramters.map(p => this.typeComputer.inferType(p) || this.typeComputer.classTypeOf('any')) : []
+    const parameterTypes = checkType ? parameters.map(p => this.typeComputer.inferType(p) || this.typeComputer.classTypeOf('any')) : []
 
-    if (argumentLength > paramters.length) {
+    if (argumentLength > parameters.length) {
       if (!isLastVararg(method)) {
         return OverloadMatch.NotMatch
       }
@@ -239,9 +245,9 @@ export class ZenScriptOverloadResolver {
         return OverloadMatch.PossibleMatch
       }
 
-      const varargsType = paramterTypes[paramterTypes.length - 1]
+      const varargsType = parameterTypes[parameterTypes.length - 1]
       match = OverloadMatch.ImplicitMatch
-      for (let i = paramters.length - 1; i < argumentLength; i++) {
+      for (let i = parameters.length - 1; i < argumentLength; i++) {
         if (this.typeFeatures.areTypesEqual(varargsType, args[i])) {
           continue
         }
@@ -251,7 +257,7 @@ export class ZenScriptOverloadResolver {
         }
       }
     }
-    else if (argumentLength < paramters.length) {
+    else if (argumentLength < parameters.length) {
       if (!isOptionalArgAt(method, argumentLength)) {
         return OverloadMatch.NotMatch
       }
@@ -266,7 +272,7 @@ export class ZenScriptOverloadResolver {
       if (!checkType) {
         return OverloadMatch.PossibleMatch
       }
-      const varargsType = paramterTypes[paramterTypes.length - 1]
+      const varargsType = parameterTypes[parameterTypes.length - 1]
       if (!varargsType) {
         return OverloadMatch.NotMatch
       }
@@ -291,11 +297,11 @@ export class ZenScriptOverloadResolver {
     }
 
     for (let i = 0; i < checkLength; i++) {
-      if (this.typeFeatures.areTypesEqual(paramterTypes[i], args[i])) {
+      if (this.typeFeatures.areTypesEqual(parameterTypes[i], args[i])) {
         continue
       }
       match = OverloadMatch.ImplicitMatch
-      if (!this.typeFeatures.isAssignable(paramterTypes[i], args[i])) {
+      if (!this.typeFeatures.isAssignable(parameterTypes[i], args[i])) {
         return OverloadMatch.NotMatch
       }
     }

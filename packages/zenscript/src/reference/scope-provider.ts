@@ -1,5 +1,5 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, ScopeOptions, Stream } from 'langium'
-import type { CallExpression, ZenScriptAstType } from '../generated/ast'
+import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptOverloadResolver } from '../typing/overload-resolver'
 import type { ZenScriptDescriptionIndex } from '../workspace/description-index'
@@ -8,7 +8,7 @@ import type { DynamicProvider } from './dynamic-provider'
 import type { MemberProvider } from './member-provider'
 import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream, StreamScope } from 'langium'
-import { ClassDeclaration, ImportDeclaration, isCallExpression, isClassDeclaration, isScript, TypeParameter } from '../generated/ast'
+import { ClassDeclaration, ImportDeclaration, isCallExpression, isClassDeclaration, isConstructorDeclaration, isScript, TypeParameter } from '../generated/ast'
 import { getPathAsString } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 import { generateStream } from '../utils/stream'
@@ -91,12 +91,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .map(it => it.node)
       .nonNullable()
 
-    const overload = this.overloadResolver.findOverloadMethod(candidates, source.container.$container, undefined)
-    if (!overload) {
+    const overloaded = this.overloadResolver.findOverloadMethod(source.container.$container, candidates, undefined)
+    if (!overloaded) {
       return outside ?? EMPTY_SCOPE
     }
 
-    const description = this.descriptionIndex.createDynamicDescription(overload, refText)
+    const description = this.descriptionIndex.createDynamicDescription(overloaded, refText)
     return this.createScope([description], outside)
   }
 
@@ -132,8 +132,6 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       outer = this.importedScope(source, outer)
       outer = this.dynamicScope(source.container, outer)
 
-      const processOverload = source.reference.$refText !== '' && isCallExpression(source.container.$container) && source.container.$containerProperty === 'receiver'
-
       const processor = (desc: AstNodeDescription) => {
         switch (desc.type) {
           case TypeParameter:
@@ -142,10 +140,13 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             return
           }
           case ClassDeclaration: {
-            if (processOverload) {
-              const ctor = this.overloadResolver.findOverloadConstructor(desc.node as ClassDeclaration, source.container.$container as CallExpression)
-              if (ctor) {
-                return this.descriptionIndex.getDescription(ctor)
+            const classDecl = desc.node as ClassDeclaration
+            const callExpr = source.container.$container
+            if (isCallExpression(callExpr) && source.container.$containerProperty === 'receiver') {
+              const constructors = classDecl.members.filter(isConstructorDeclaration)
+              const overloaded = this.overloadResolver.resolveConstructor(callExpr, constructors)
+              if (overloaded) {
+                return this.descriptionIndex.getDescription(overloaded)
               }
             }
             return desc
@@ -165,7 +166,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         return this.createScopeForNodes(members, outer)
       }
 
-      const overload = this.overloadResolver.findOverloadMethod(members, source.container.$container, source.reference.$refText)
+      const overload = this.overloadResolver.findOverloadMethod(source.container.$container, members, source.reference.$refText)
       if (!overload) {
         return outer
       }
