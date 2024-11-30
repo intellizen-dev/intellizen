@@ -1,14 +1,15 @@
 import type { AstNode, AstNodeDescription, NameProvider, Stream } from 'langium'
-import type { CallExpression, ClassDeclaration, ConstructorDeclaration, ExpandFunctionDeclaration, Expression, FunctionDeclaration } from '../generated/ast'
+import type { CallableDeclaration, CallExpression, ClassDeclaration, Expression } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptMemberProvider } from '../reference/member-provider'
-import type { Type } from '../typing/type-description'
 import type { ZenScriptDescriptionIndex } from '../workspace/description-index'
 import type { ZenScriptTypeComputer } from './type-computer'
+import type { Type } from './type-description'
 import type { ZenScriptTypeFeatures } from './type-features'
 import { AstUtils } from 'langium'
 import { isClassDeclaration, isConstructorDeclaration, isExpandFunctionDeclaration, isFunctionDeclaration, isFunctionExpression, isMemberAccess, isReferenceExpression, isScript } from '../generated/ast'
-import { FunctionType } from '../typing/type-description'
+import { hasOptionalArg, hasVararg } from '../utils/ast'
+import { FunctionType } from './type-description'
 
 export enum OverloadMatch {
   FullMatch = 0,
@@ -18,8 +19,7 @@ export enum OverloadMatch {
   NotMatch = 4,
 }
 
-export type CallableDeclaration = ConstructorDeclaration | FunctionDeclaration | ExpandFunctionDeclaration
-
+// TODO: remove
 export function isOptionalArgs(method: CallableDeclaration, before: number): boolean {
   let index = before
   if (index < 0) {
@@ -30,10 +30,6 @@ export function isOptionalArgs(method: CallableDeclaration, before: number): boo
   }
 
   return index < method.parameters.length && method.parameters[index].defaultValue !== undefined
-}
-
-export function isVarargs(method: CallableDeclaration): boolean {
-  return method.parameters.length > 0 && method.parameters[method.parameters.length - 1].varargs
 }
 
 export class ZenScriptOverloadResolver {
@@ -248,7 +244,7 @@ export class ZenScriptOverloadResolver {
     const paramterTypes = checkType ? paramters.map(p => this.typeComputer.inferType(p) || this.typeComputer.classTypeOf('any')) : []
 
     if (argumentLength > paramters.length) {
-      if (!isVarargs(method)) {
+      if (!hasVararg(method)) {
         return OverloadMatch.NotMatch
       }
 
@@ -269,7 +265,8 @@ export class ZenScriptOverloadResolver {
       }
     }
     else if (argumentLength < paramters.length) {
-      if (!isOptionalArgs(method, argumentLength)) {
+      // FIXME: replace me with hasOptionalArg
+      if (!hasOptionalArg(method, argumentLength)) {
         return OverloadMatch.NotMatch
       }
 
@@ -279,7 +276,7 @@ export class ZenScriptOverloadResolver {
 
       match = OverloadMatch.OptionalMatch
     }
-    else if (isVarargs(method)) {
+    else if (hasVararg(method)) {
       if (!checkType) {
         return OverloadMatch.PossibleMatch
       }
