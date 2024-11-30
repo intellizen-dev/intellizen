@@ -22,14 +22,24 @@ export class HierarchyTree<V> {
     return this.find(path)?.data ?? new Set()
   }
 
-  find(path: string): HierarchyNode<V> | undefined {
+  find(path: string | string[] | undefined): HierarchyNode<V> | undefined {
     if (path === undefined) {
       return
     }
-    if (path === this.root.name) {
-      return this.root
+
+    let names: string[]
+    if (typeof path === 'string') {
+      if (path === this.root.name) {
+        return this.root
+      }
+      names = path.split(this.separator)
     }
-    const names = path.split(this.separator)
+    else {
+      if (path.length === 0) {
+        return this.root
+      }
+      names = path
+    }
     return names.reduce<HierarchyNode<V> | undefined>((node, name) => node?.children.get(name), this.root)
   }
 }

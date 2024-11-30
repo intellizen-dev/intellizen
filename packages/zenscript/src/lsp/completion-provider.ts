@@ -1,16 +1,15 @@
 import type { AstNodeDescription, MaybePromise, Stream } from 'langium'
 import type { CompletionAcceptor, CompletionContext, CompletionProviderOptions, CompletionValueItem, NextFeature } from 'langium/lsp'
-import type { CompletionItemLabelDetails, Range } from 'vscode-languageserver'
+import type { CompletionItemLabelDetails } from 'vscode-languageserver'
 import type { BracketExpression, BracketLocation, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
-import type { BracketMirror } from '../resource'
 import type { TypeComputer } from '../typing/type-computer'
 import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
 import { substringBeforeLast } from '@intellizen/shared'
 import { GrammarUtils, stream } from 'langium'
 import { DefaultCompletionProvider } from 'langium/lsp'
-import { CompletionItemKind, TextEdit } from 'vscode-languageserver'
+import { CompletionItemKind } from 'vscode-languageserver'
 import { isBracketExpression, isBracketLocation, isBracketProperty, isExpressionTemplate } from '../generated/ast'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
@@ -21,7 +20,6 @@ type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CompletionIt
 
 export interface BracketCompletion {
   id: string
-  path: string[]
   name?: string
 }
 
@@ -29,7 +27,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private readonly typeComputer: TypeComputer
   private readonly bracketManager: ZenScriptBracketManager
   override readonly completionOptions: CompletionProviderOptions = {
-    triggerCharacters: ['.', '<', ':'],
+    triggerCharacters: ['.', '<', ':', '=', ','],
   }
 
   constructor(services: ZenScriptServices) {
@@ -38,48 +36,36 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     this.bracketManager = services.workspace.BracketManager
   }
 
-  private collectBracketFor(path: string[]): Stream<BracketCompletion> {
-    if (path.length === 0) {
-      // if do not type anything, return all items
-      return stream(this.bracketManager.mirrors)
-        .filter(mirror => mirror.type === 'crafttweaker.item.IItemStack')
-        .flatMap((mirror) => {
-          return this.collectBracketForMirror(mirror, path)
+  private collectBracketFor(path: string[], current: string): Stream<BracketCompletion> {
+    const hierarchy = this.bracketManager.entryTree.find(path)
+    if (!hierarchy) {
+      return stream([])
+    }
+
+    const children = hierarchy.children
+
+    const candidates = stream(children.values())
+      .filter(it => !current || this.fuzzyMatcher.match(current, it.name))
+      .toArray()
+
+    const entries = stream(candidates).filter(node => node.isDataNode())
+      .flatMap((node) => {
+        return stream(node.data).map((entry) => {
+          return {
+            id: node.name,
+            name: entry.name,
+          }
         })
-    }
-    const prefix = path.join(':')
-    const mirror = this.bracketManager.mirrors.find(mirror => mirror.regex.test(prefix))
-    if (mirror) {
-      return this.collectBracketForMirror(mirror, path)
-    }
-    return stream(this.bracketManager.mirrors).flatMap((mirror) => {
-      return this.collectBracketForMirror(mirror, path)
-    })
-  }
-
-  private collectBracketForMirror(mirror: BracketMirror, path: string[]): Stream<BracketCompletion> {
-    const isItem = (mirror.type === 'crafttweaker.item.IItemStack')
-    if (isItem && path.length > 0 && this.fuzzyMatcher.match(path[0], 'item')) {
-      path = path.slice(1)
-    }
-
-    return stream(mirror.entries.entries())
-      .filter((it) => {
-        const sourcePaths = it[0].split(':')
-        return sourcePaths.length >= path.length
-          && sourcePaths.slice(0, path.length).every(
-            (it, i) => this.fuzzyMatcher.match(path[i], it),
-          )
       })
-      .map((it) => {
-        const [id, entry] = it
 
+    const groups = stream(candidates).filter(node => node.isInternalNode())
+      .map((node) => {
         return {
-          id: isItem ? `item:${id}` : id,
-          path: isItem ? ['item', ...id.split(':')] : id.split(':'),
-          name: entry.name,
+          id: node.name,
         }
       })
+
+    return entries.concat(groups)
   }
 
   private tryCompletionForBracketProperty(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): boolean {
@@ -88,7 +74,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       return false
     }
 
-    let range: Range | undefined
+    const existingKeys = stream(bracket.properties?.map(it => it.key.value) ?? []).nonNullable().toSet()
+
     let key: string | undefined
     let value: string | undefined
     let bracketId: string
@@ -96,49 +83,25 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     if (isBracketExpression(context.node)) {
       bracketId = bracket.path.map(it => it.value).join(':')
-
-      const mirror = this.bracketManager.resolve(bracketId)
-      if (!mirror) {
-        return false
-      }
-
-      stream(Object.keys(mirror.properties))
-        .flatMap((key) => {
-          const propValues = (mirror.properties as any)[key]
-          if (!Array.isArray(propValues)) {
-            return []
-          }
-          return stream(propValues)
-            .filter(it => typeof it === 'string')
-            .map(it => `${key}=${it}`)
-        })
-        .forEach((it) => {
-          acceptor(context, {
-            label: it,
-            kind: CompletionItemKind.Property,
-          })
-        })
-
-      return true
     }
     // <blockstate:minecraft:furnace:faci|>  (with > here, no '=', not empty value)
     //                               ^^^^
-    if (isBracketLocation(context.node)) {
-      range = {
-        start: context.node.$cstNode!.range.start,
-        end: context.node.$cstNode!.range.end,
-      }
+    else if (isBracketLocation(context.node)) {
       key = context.node.value as string
       bracketId = bracket.path.slice(0, context.node.$containerIndex!).map(it => it.value).join(':')
     }
-    // <blockstate:minecraft:furnace:faci        (no > here)
+    // <blockstate:minecraft:furnace:faci=|>        (with '=' here)
+    //                               ^^^^
+    else if (isBracketProperty(context.node)) {
+      const property = context.node
+      key = property.key.value
+      value = ''
+      bracketId = bracket.path.map(it => it.value).join(':')
+    }
+    // <blockstate:minecraft:furnace:faci|        (no > here)
     //                               ^^^^
     else if (isBracketProperty(context.node?.$container)) {
       const property = context.node.$container
-      range = {
-        start: property.key.$cstNode!.range.start,
-        end: context.node!.$cstNode!.range.end,
-      }
 
       key = property.key.value
       value = property.value?.value?.toString()
@@ -154,24 +117,33 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       return false
     }
 
-    stream(Object.keys(mirror.properties))
-      .filter(it => this.fuzzyMatcher.match(key, it))
-      .flatMap((key) => {
-        const propValues = (mirror.properties as any)[key]
-        if (!Array.isArray(propValues)) {
-          return []
-        }
-        return stream(propValues)
-          .filter(it => typeof it === 'string')
-          .filter(it => !value || this.fuzzyMatcher.match(value, it))
-          .map(it => `${key}=${it}`)
-      })
+    if (value === undefined) {
+      stream(Object.keys(mirror.properties))
+        .filter(it => !existingKeys.has(it))
+        .filter(it => !key || this.fuzzyMatcher.match(key, it))
+        .forEach((it) => {
+          acceptor(context, {
+            label: it,
+            kind: CompletionItemKind.Property,
+            commitCharacters: ['='],
+          })
+        })
+
+      return true
+    }
+
+    const propValues = (mirror.properties as any)[key!]
+    if (!Array.isArray(propValues)) {
+      return false
+    }
+
+    stream(propValues)
+      .filter(it => !value || this.fuzzyMatcher.match(value, it))
       .forEach((it) => {
-        const textEdit = TextEdit.replace(range, it)
         acceptor(context, {
           label: it,
-          kind: CompletionItemKind.Property,
-          textEdit,
+          kind: CompletionItemKind.Constant,
+          commitCharacters: ['>', ','],
         })
       })
 
@@ -179,52 +151,44 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   private completionForBracket(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): MaybePromise<void> {
-    let path: (BracketLocation | { value: string })[] | undefined
-    // <item:minecraft:app|>  (with > here)
-    if (isBracketLocation(context.node)) {
-      path = bracket.path.slice(0, context.node.$containerIndex! + 1)
-    }
-    // <item:minecraft:app|        (no > here)
-    else {
-      if (bracket.properties.length === 0) {
-        path = bracket.path
-      }
-      else if (bracket.properties.length === 1 && !GrammarUtils.findNodeForKeyword(bracket.properties[0].$cstNode, '=')) {
-        // if the last property only has a key, may is be a wrong ast node, assume it as also a path
-        const lastText = bracket.properties[0].key.value
-        path = [...bracket.path, { value: lastText }]
-      }
-    }
-    if (!path || path.some(it => isExpressionTemplate(it))) {
+    if (bracket.path.some(it => isExpressionTemplate(it))) {
       return
     }
 
-    const candidate = this.collectBracketFor(path.map(it => it.value as string))
-
-    let editTextRange: Range | undefined
-
-    // completion for empty path, no text to replace
-    if (bracket.path.length > 0) {
-      editTextRange = {
-        start: bracket.path[0].$cstNode!.range.start,
-        end: context.node!.$cstNode!.range.end,
+    let path: BracketLocation[] | undefined
+    let current: string | undefined
+    // <item:minecraft:app|>  (with > here)
+    if (isBracketLocation(context.node)) {
+      path = bracket.path.slice(0, context.node.$containerIndex!)
+      current = context.node.value as string
+    }
+    // <item:minecraft:app|        (no > here)
+    else {
+      path = bracket.path
+      if (bracket.properties.length === 0) {
+        current = ''
+      }
+      else if (bracket.properties.length === 1 && !GrammarUtils.findNodeForKeyword(bracket.properties[0].$cstNode, '=')) {
+        // if the last property only has a key, may is be a wrong ast node, assume it as also a path
+        current = bracket.properties[0].key.value
       }
     }
 
-    const hasTrailingGT = GrammarUtils.findNodeForKeyword(bracket.$cstNode, '>')
+    if (current === undefined) {
+      return
+    }
+
+    const candidate = this.collectBracketFor(path.map(it => it.value as string), current)
 
     for (const completion of candidate) {
-      const textEditText = hasTrailingGT ? completion.id : `${completion.id}>`
-      const textEdit = editTextRange
-        ? TextEdit.replace(editTextRange, textEditText)
-        : TextEdit.insert(context.position, textEditText)
       acceptor(context, {
         label: completion.id,
-        kind: CompletionItemKind.EnumMember,
+        kind: completion.name ? CompletionItemKind.EnumMember : CompletionItemKind.Enum,
         labelDetails: {
           description: completion.name,
         },
-        textEdit,
+        commitCharacters: [':', '>'],
+
       })
     }
   }
@@ -235,10 +199,10 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       return context.node
     }
     let bracketNode
-    if (context.node?.$containerProperty === 'path') {
+    if (context.node?.$containerProperty === 'path' || context.node?.$containerProperty === 'properties') {
       bracketNode = context.node?.$container
     }
-    else if (context.node?.$containerProperty === 'key') {
+    else if (context.node?.$containerProperty === 'key' || context.node?.$containerProperty === 'value') {
       bracketNode = context.node?.$container?.$container
     }
 
@@ -251,7 +215,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     const bracket = this.findBracket(context)
     if (bracket) {
       // skip other features, only complete for bracket context once
-      if (next.feature.$containerIndex !== 0) {
+      if (next !== context.features[0]) {
         return
       }
       if (this.tryCompletionForBracketProperty(context, bracket, acceptor)) {
