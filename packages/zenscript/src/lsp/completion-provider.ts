@@ -166,7 +166,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     return true
   }
 
-  private completionForBracket(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): MaybePromise<void> {
+  private completionForBracketLocation(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): void {
     if (bracket.path.some(it => isExpressionTemplate(it))) {
       return
     }
@@ -230,32 +230,39 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private readonly bracketTriggerCharacters = new Set(['<', ':', '=', ','])
 
   private currentTriggerCharacter: string | undefined
-  private continue: boolean = false
+  private continue: boolean = true
 
   public override getCompletion(document: LangiumDocument, params: CompletionParams, _cancelToken?: CancellationToken): Promise<CompletionList | undefined> {
+    // store the current trigger character, and reset the continue flag
     this.currentTriggerCharacter = params.context?.triggerCharacter
-    this.continue = false
+    this.continue = true
     return super.getCompletion(document, params, _cancelToken)
   }
 
-  protected override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
+  private completionForBracket(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): boolean {
     const bracket = this.findBracket(context)
     if (bracket) {
-      // skip other features, only complete for bracket context once
-      if (next !== context.features[0]) {
-        return
-      }
-      // do not check completion for other features even no completion items
+      // stop completion here for we only complete for bracket context once, and do not check completion for other features even no completion items
       this.continue = false
       if (this.tryCompletionForBracketProperty(context, bracket, acceptor)) {
-        return
+        return false
       }
-      return this.completionForBracket(context, bracket, acceptor)
+      this.completionForBracketLocation(context, bracket, acceptor)
+      return false
     }
 
     // if the current trigger character is a bracket trigger character, skip other completions
     if (this.currentTriggerCharacter && this.bracketTriggerCharacters.has(this.currentTriggerCharacter)) {
       this.continue = false
+      return false
+    }
+
+    return true
+  }
+
+  protected override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
+    const continueCompletion = this.continue && this.completionForBracket(context, next, acceptor)
+    if (!continueCompletion) {
       return
     }
 
@@ -263,7 +270,9 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   protected override continueCompletion(items: CompletionItem[]): boolean {
-    if (this.continue) {
+    // because langium will attempt to use a different context to complete if they found no items,
+    // we need to check if we have already completed the bracket context, if so, we should not continue to other contexts
+    if (!this.continue) {
       return false
     }
     return super.continueCompletion(items)
