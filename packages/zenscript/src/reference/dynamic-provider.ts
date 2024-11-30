@@ -44,9 +44,9 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
         // dynamic arguments
         if (isCallExpression(source.$container) && source.$containerProperty === 'arguments') {
           const index = source.$containerIndex!
-          const callType = this.overloadResolver.predictCallType(source.$container)
-          if (isFunctionType(callType)) {
-            const paramType = callType.paramTypes[index]
+          const receiverType = this.typeComputer.inferType(source.$container.receiver)
+          if (isFunctionType(receiverType)) {
+            const paramType = receiverType.paramTypes[index]
             if (isClassType(paramType)) {
               yield * streamDeclaredFunctions(paramType.declaration)
                 .filter(isStatic)

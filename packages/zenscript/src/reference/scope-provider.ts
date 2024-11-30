@@ -1,7 +1,7 @@
 import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, ScopeOptions, Stream } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import type { ZenScriptOverloadResolver } from '../typing/overload-resolver'
+import type { OverloadResolver } from '../typing/overload-resolver'
 import type { ZenScriptDescriptionIndex } from '../workspace/description-index'
 import type { PackageManager } from '../workspace/package-manager'
 import type { DynamicProvider } from './dynamic-provider'
@@ -21,7 +21,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly memberProvider: MemberProvider
   private readonly dynamicProvider: DynamicProvider
   private readonly descriptionIndex: ZenScriptDescriptionIndex
-  private readonly overloadResolver: ZenScriptOverloadResolver
+  private readonly overloadResolver: OverloadResolver
 
   constructor(services: ZenScriptServices) {
     super(services)
@@ -90,12 +90,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .filter(it => it.name === refText)
       .map(it => it.node)
       .nonNullable()
+      .toArray()
 
-    const overloaded = this.overloadResolver.findOverloadMethod(source.container.$container, candidates, undefined)
+    const overloaded = this.overloadResolver.resolveCallables(source.container.$container, candidates)
     if (!overloaded) {
       return outside ?? EMPTY_SCOPE
     }
-
     const description = this.descriptionIndex.createDynamicDescription(overloaded, refText)
     return this.createScope([description], outside)
   }
@@ -144,7 +144,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             const callExpr = source.container.$container
             if (isCallExpression(callExpr) && source.container.$containerProperty === 'receiver') {
               const constructors = classDecl.members.filter(isConstructorDeclaration)
-              const overloaded = this.overloadResolver.resolveConstructor(callExpr, constructors)
+              const overloaded = this.overloadResolver.resolveCallables(callExpr, constructors)
               if (overloaded) {
                 return this.descriptionIndex.getDescription(overloaded)
               }
@@ -166,11 +166,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         return this.createScopeForNodes(members, outer)
       }
 
-      const overload = this.overloadResolver.findOverloadMethod(source.container.$container, members, source.reference.$refText)
-      if (!overload) {
+      const candidates = members.filter(it => this.nameProvider.getName(it) === source.reference.$refText).toArray()
+      const overloaded = this.overloadResolver.resolveCallables(source.container.$container, candidates)
+      if (!overloaded) {
         return outer
       }
-      return this.createScopeForNodes(stream([overload]), outer)
+      return this.createScopeForNodes(stream([overloaded]), outer)
     },
 
     NamedTypeReference: (source) => {

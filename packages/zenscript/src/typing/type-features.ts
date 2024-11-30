@@ -38,7 +38,11 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     this.memberProvider = services.references.MemberProvider
   }
 
-  isAssignable(target: Type, source: Type): boolean {
+  isAssignable(target: Type | undefined, source: Type | undefined): boolean {
+    if (target === undefined || source === undefined) {
+      return false
+    }
+
     // 1. are both types equal?
     if (this.areTypesEqual(source, target)) {
       return true
@@ -57,7 +61,11 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     return false
   }
 
-  areTypesEqual(first: Type, second: Type): boolean {
+  areTypesEqual(first: Type | undefined, second: Type | undefined): boolean {
+    if (first === undefined || second === undefined) {
+      return false
+    }
+
     if (first === second) {
       return true
     }
@@ -109,7 +117,10 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     },
   })
 
-  isConvertible(from: Type, to: Type): boolean {
+  isConvertible(from: Type | undefined, to: Type | undefined): boolean {
+    if (from === undefined || to === undefined) {
+      return false
+    }
     return this.typeConversionRules(from.$type)?.call(this, from, to) ?? false
   }
 
@@ -132,7 +143,11 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     },
   })
 
-  isSubType(subType: Type, superType: Type): boolean {
+  isSubType(subType: Type | undefined, superType: Type | undefined): boolean {
+    if (subType === undefined || superType === undefined) {
+      return false
+    }
+
     // ask the subtype
     if (this.subTypeRules(subType.$type)?.call(this, subType, superType)) {
       return true

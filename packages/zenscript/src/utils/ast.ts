@@ -1,5 +1,5 @@
 import type { AstNode, AstNodeDescription, Stream, URI } from 'langium'
-import type { BracketExpression, CallableDeclaration, ClassDeclaration, ClassMemberDeclaration, FunctionDeclaration, ImportDeclaration, OperatorFunctionDeclaration } from '../generated/ast'
+import type { BracketExpression, ClassDeclaration, ClassMemberDeclaration, FunctionDeclaration, ImportDeclaration, OperatorFunctionDeclaration } from '../generated/ast'
 import { AstUtils, isAstNodeDescription, stream } from 'langium'
 import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
@@ -30,14 +30,6 @@ export function isImportable(node: AstNode | undefined) {
   else {
     return isStatic(node) || isClassDeclaration(node)
   }
-}
-
-export function isOptionalArgAt(funcDecl: CallableDeclaration, index = 0): boolean {
-  return funcDecl.parameters.at(index)?.defaultValue !== undefined
-}
-
-export function isLastVararg(funcDecl: CallableDeclaration): boolean {
-  return funcDecl.parameters.at(-1)?.varargs !== undefined
 }
 
 export function getDocumentUri(node: AstNode | undefined): URI | undefined {
