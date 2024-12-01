@@ -11,36 +11,18 @@ export interface OverloadResolver {
 
 export enum OverloadMatch {
   ExactMatch,
-  OptionalArgMatch,
   VarargMatch,
+  OptionalArgMatch,
   SubtypeMatch,
   ImplicitCastMatch,
   NotMatch,
 }
 
-function numberToOverloadMatch(match: number): OverloadMatch {
-  switch (match) {
-    case 0:
-      return OverloadMatch.ExactMatch
-    case 1:
-      return OverloadMatch.OptionalArgMatch
-    case 2:
-      return OverloadMatch.VarargMatch
-    case 3:
-      return OverloadMatch.SubtypeMatch
-    case 4:
-      return OverloadMatch.ImplicitCastMatch
-    case 5:
-    default:
-      return OverloadMatch.NotMatch
+function highestBitPosition(bitset: number, fallback: number): number {
+  if (bitset === 0) {
+    return fallback
   }
-}
-
-function highestBitPosition(a: number): number {
-  if (a === 0) {
-    return -1
-  }
-  return Math.floor(Math.log2(a))
+  return Math.floor(Math.log2(bitset))
 }
 
 export class ZenScriptOverloadResolver implements OverloadResolver {
@@ -165,6 +147,6 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
         }
       }
     }
-    return numberToOverloadMatch(highestBitPosition(match))
+    return highestBitPosition(match, OverloadMatch.NotMatch)
   }
 }
