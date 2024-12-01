@@ -175,5 +175,9 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     IntersectionType: (superType, subType) => {
       return superType.types.some(it => this.isSubType(subType, it))
     },
+
+    CompoundType: (superType, subType) => {
+      return superType.types.some(it => this.isSubType(subType, it))
+    },
   })
 }

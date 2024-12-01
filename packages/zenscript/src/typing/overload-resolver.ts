@@ -123,33 +123,49 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
     const params = [...callable.parameters]
     const map = this.createParamToArgsMap(params, args)
     const NotMatch = Number.NaN
+
     let match = 1 << OverloadMatch.ExactMatch
     if (args.length > map.size) {
       match = NotMatch
     }
     else {
       for (const param of params) {
-        if (param.defaultValue) {
-          match |= 1 << OverloadMatch.OptionalArgMatch
-        }
-        else if (param.varargs) {
+        const arg = map.get(param).at(0)
+        // special checking
+        if (param.varargs) {
           match |= 1 << OverloadMatch.VarargMatch
+          if (!arg) {
+            continue
+          }
+        }
+        else if (param.defaultValue) {
+          match |= 1 << OverloadMatch.OptionalArgMatch
+          if (!arg) {
+            continue
+          }
         }
         else {
-          const paramType = this.typeComputer.inferType(param)
-          const argType = this.typeComputer.inferType(map.get(param)[0])
-          if (this.typeFeatures.areTypesEqual(paramType, argType)) {
-            match |= 1 << OverloadMatch.ExactMatch
-          }
-          else if (this.typeFeatures.isSubType(argType, paramType)) {
-            match |= 1 << OverloadMatch.SubtypeMatch
-          }
-          else if (this.typeFeatures.isConvertible(argType, paramType)) {
-            match |= 1 << OverloadMatch.ImplicitCastMatch
-          }
-          else {
+          if (!arg) {
             match = NotMatch
+            break
           }
+        }
+
+        // type checking
+        const paramType = this.typeComputer.inferType(param)
+        const argType = this.typeComputer.inferType(arg)
+        if (this.typeFeatures.areTypesEqual(paramType, argType)) {
+          match |= 1 << OverloadMatch.ExactMatch
+        }
+        else if (this.typeFeatures.isSubType(argType, paramType)) {
+          match |= 1 << OverloadMatch.SubtypeMatch
+        }
+        else if (this.typeFeatures.isConvertible(argType, paramType)) {
+          match |= 1 << OverloadMatch.ImplicitCastMatch
+        }
+        else {
+          match = NotMatch
+          break
         }
       }
     }
