@@ -15,12 +15,15 @@ export enum OverloadMatch {
   OptionalArgMatch,
   SubtypeMatch,
   ImplicitCastMatch,
-  NotMatch,
 }
 
-function highestBitPosition(bitset: number, fallback: number): number {
+export function isMatched(match: OverloadMatch): boolean {
+  return OverloadMatch[match] !== undefined
+}
+
+function highestBitPosition(bitset: number): number {
   if (bitset === 0) {
-    return fallback
+    return Number.NaN
   }
   return Math.floor(Math.log2(bitset))
 }
@@ -66,7 +69,7 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
       }))
       .toArray()
       .sort((a, b) => a.match - b.match)
-      .filter(it => it.match !== OverloadMatch.NotMatch)
+      .filter(it => isMatched(it.match))
     const groupedPossibles = Object.groupBy(possibles, it => it.match)
     const bestMatches = Object.values(groupedPossibles).at(0) ?? []
 
@@ -117,9 +120,10 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
   private matchSignature(callable: CallableDeclaration, args: Expression[]): OverloadMatch {
     const params = [...callable.parameters]
     const map = this.createParamToArgsMap(params, args)
+    const NotMatch = Number.NaN
     let match = OverloadMatch.ExactMatch
     if (args.length > map.size) {
-      match |= 1 << OverloadMatch.NotMatch
+      match = NotMatch
     }
     else {
       for (const param of params) {
@@ -142,11 +146,11 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
             match |= 1 << OverloadMatch.ImplicitCastMatch
           }
           else {
-            match |= 1 << OverloadMatch.NotMatch
+            match = NotMatch
           }
         }
       }
     }
-    return highestBitPosition(match, OverloadMatch.NotMatch)
+    return highestBitPosition(match)
   }
 }
