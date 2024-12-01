@@ -86,13 +86,13 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     }
 
     // TODO: Workaround for function overloading, may rework after langium supports multi-target references
-    const candidates = imports
+    const maybeCandidates = imports
       .filter(it => it.name === refText)
       .map(it => it.node)
       .nonNullable()
       .toArray()
 
-    const overloaded = this.overloadResolver.resolveCallables(source.container.$container, candidates)
+    const overloaded = this.overloadResolver.resolveCallables(source.container.$container, maybeCandidates)
     if (!overloaded) {
       return outside ?? EMPTY_SCOPE
     }
@@ -166,8 +166,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         return this.createScopeForNodes(members, outer)
       }
 
-      const candidates = members.filter(it => this.nameProvider.getName(it) === source.reference.$refText).toArray()
-      const overloaded = this.overloadResolver.resolveCallables(source.container.$container, candidates)
+      const maybeCandidates = members.filter(it => this.nameProvider.getName(it) === source.reference.$refText).toArray()
+      const overloaded = this.overloadResolver.resolveCallables(source.container.$container, maybeCandidates)
       if (!overloaded) {
         return outer
       }

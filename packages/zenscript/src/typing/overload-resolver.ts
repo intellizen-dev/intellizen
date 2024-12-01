@@ -1,4 +1,4 @@
-import type { CallableDeclaration, CallExpression, ConstructorDeclaration, Expression, FunctionDeclaration, ValueParameter } from '../generated/ast'
+import type { CallableDeclaration, CallExpression, Expression, ValueParameter } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptTypeComputer } from './type-computer'
 import type { ZenScriptTypeFeatures } from './type-features'
@@ -6,7 +6,7 @@ import { type AstNode, MultiMap } from 'langium'
 import { isClassDeclaration, isConstructorDeclaration, isFunctionDeclaration } from '../generated/ast'
 
 export interface OverloadResolver {
-  resolveCallables: (callExpr: CallExpression, candidates: AstNode[]) => CallableDeclaration | undefined
+  resolveCallables: (callExpr: CallExpression, maybeCandidates: AstNode[]) => CallableDeclaration | undefined
 }
 
 export enum OverloadMatch {
@@ -37,28 +37,30 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
     this.typeFeatures = services.typing.TypeFeatures
   }
 
-  public resolveCallables(callExpr: CallExpression, candidates: AstNode[]): CallableDeclaration | undefined {
-    const first = candidates.at(0)
+  public resolveCallables(callExpr: CallExpression, maybeCandidates: AstNode[]): CallableDeclaration | undefined {
+    const first = maybeCandidates.at(0)
+    let candidates: CallableDeclaration[]
     if (isClassDeclaration(first)) {
-      const constructors = first.members.filter(isConstructorDeclaration)
-      return this.resolveConstructors(callExpr, constructors)
+      candidates = first.members.filter(isConstructorDeclaration)
     }
     else if (isFunctionDeclaration(first)) {
-      return this.resolveFunctions(callExpr, candidates.filter(isFunctionDeclaration))
+      candidates = maybeCandidates.filter(isFunctionDeclaration)
     }
     else if (isConstructorDeclaration(first)) {
-      return this.resolveConstructors(callExpr, candidates.filter(isConstructorDeclaration))
+      candidates = maybeCandidates.filter(isConstructorDeclaration)
     }
-  }
+    else {
+      return
+    }
 
-  private resolveConstructors(callExpr: CallExpression, candidates: ConstructorDeclaration[]): ConstructorDeclaration | undefined {
-    const overloaded = this.analyzeOverloads(new Set(candidates), callExpr.arguments)
-    return overloaded[0] ?? candidates[0]
-  }
-
-  private resolveFunctions(callExpr: CallExpression, candidates: FunctionDeclaration[]): FunctionDeclaration | undefined {
-    const overloaded = this.analyzeOverloads(new Set(candidates), callExpr.arguments)
-    return overloaded[0] ?? candidates[0]
+    const overloads = this.analyzeOverloads(new Set(candidates), callExpr.arguments)
+    if (overloads.length === 1) {
+      return overloads[0]
+    }
+    else {
+      // TODO: Workaround, waiting for langium supports multi-target references
+      return overloads[0]
+    }
   }
 
   private analyzeOverloads<C extends CallableDeclaration>(candidates: Set<C>, args: Expression[]): C[] {
@@ -121,7 +123,7 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
     const params = [...callable.parameters]
     const map = this.createParamToArgsMap(params, args)
     const NotMatch = Number.NaN
-    let match = OverloadMatch.ExactMatch
+    let match = 1 << OverloadMatch.ExactMatch
     if (args.length > map.size) {
       match = NotMatch
     }
