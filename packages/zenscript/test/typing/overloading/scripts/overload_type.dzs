@@ -27,6 +27,4 @@ zenClass Overload {
 
   zenConstructor ();
   zenConstructor (intVal as int);
-
-  
 }

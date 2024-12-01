@@ -12,8 +12,6 @@ import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isC
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => Type | undefined
-  classTypeOf: (className: BuiltinTypes | string, substitutions?: TypeParameterSubstitutions) => ClassType
-  arrayTypeOf: (elementType: Type) => ClassType
 }
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
@@ -39,7 +37,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     return this.rules(node?.$type)?.call(this, node)
   }
 
-  public classTypeOf(className: BuiltinTypes | string, substitutions: TypeParameterSubstitutions = new Map()): ClassType {
+  private classTypeOf(className: BuiltinTypes | string, substitutions: TypeParameterSubstitutions = new Map()): ClassType {
     const classDecl = this.classDeclOf(className)
     if (!classDecl) {
       throw new Error(`Class "${className}" is not defined.`)
@@ -51,18 +49,13 @@ export class ZenScriptTypeComputer implements TypeComputer {
     return stream(this.packageManager.retrieve(className)).find(isClassDeclaration)
   }
 
-  public arrayTypeOf(elementType: Type): ClassType {
-    const arrayType = this.classTypeOf('Array')
-    const T = arrayType.declaration.typeParameters[0]
-    arrayType.substitutions.set(T, elementType)
-    return arrayType
-  }
-
   private readonly rules = defineRules<RuleMap>({
     // region TypeReference
     ArrayTypeReference: (source) => {
-      const elementType = this.inferType(source.value) ?? this.classTypeOf('any')
-      return this.arrayTypeOf(elementType)
+      const arrayType = this.classTypeOf('Array')
+      const T = arrayType.declaration.typeParameters[0]
+      arrayType.substitutions.set(T, this.inferType(source.value) ?? this.classTypeOf('any'))
+      return arrayType
     },
 
     ListTypeReference: (source) => {
