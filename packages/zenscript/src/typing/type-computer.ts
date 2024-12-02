@@ -21,19 +21,14 @@ export class ZenScriptTypeComputer implements TypeComputer {
   private readonly packageManager: PackageManager
   private readonly bracketManager: BracketManager
   private readonly memberProvider: () => MemberProvider
-  private readonly recursiveGuard: WeakMap<AstNode, Type>
 
   constructor(services: ZenScriptServices) {
     this.packageManager = services.workspace.PackageManager
     this.bracketManager = services.workspace.BracketManager
     this.memberProvider = () => services.references.MemberProvider
-    this.recursiveGuard = new WeakMap()
   }
 
   public inferType(node: AstNode | undefined): Type | undefined {
-    if (this.recursiveGuard.has(node!)) {
-      return this.recursiveGuard.get(node!)
-    }
     return this.rules(node?.$type)?.call(this, node)
   }
 
@@ -174,8 +169,6 @@ export class ZenScriptTypeComputer implements TypeComputer {
       }
 
       if (isFunctionExpression(source.$container)) {
-        this.recursiveGuard.set(source, this.classTypeOf('any'))
-
         const funcExpr = source.$container
         const index = source.$containerIndex!
 
@@ -189,11 +182,13 @@ export class ZenScriptTypeComputer implements TypeComputer {
         else if (isCallExpression(funcExpr.$container)) {
           const callArgIndex = funcExpr.$containerIndex!
           const receiverType = this.inferType(funcExpr.$container.receiver)
-          expectingType = isFunctionType(receiverType) ? receiverType.paramTypes.at(callArgIndex) : undefined
+          expectingType = isFunctionType(receiverType) ? receiverType.paramTypes.at(callArgIndex) : receiverType
         }
 
-        if (isFunctionType(expectingType)) {
-          this.recursiveGuard.delete(source)
+        if (isAnyType(expectingType)) {
+          return expectingType
+        }
+        else if (isFunctionType(expectingType)) {
           return expectingType.paramTypes.at(index)
         }
         else if (isClassType(expectingType)) {
@@ -201,7 +196,6 @@ export class ZenScriptTypeComputer implements TypeComputer {
             .filter(it => isFunctionDeclaration(it))
             .filter(it => it.prefix === 'lambda')
             .head()
-          this.recursiveGuard.delete(source)
           return this.inferType(lambdaDecl?.parameters.at(index))
         }
       }
@@ -250,7 +244,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
             .filter(it => it.op === source.op)
             .filter(it => it.parameters.length === 1)
             .head()
-          return this.inferType(operator?.returnTypeRef)
+          return this.inferType(operator?.returnTypeRef) ?? this.classTypeOf('any')
         }
         case 'has': // Containment
         case 'in': {
@@ -258,7 +252,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
             .filter(it => it.op === 'has')
             .filter(it => it.parameters.length === 1)
             .head()
-          return this.inferType(operator?.returnTypeRef)
+          return this.inferType(operator?.returnTypeRef) ?? this.classTypeOf('any')
         }
         case '..': // Range
         case 'to': {
@@ -266,7 +260,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
             .filter(it => it.op === '..')
             .filter(it => it.parameters.length === 1)
             .head()
-          return this.inferType(operator?.returnTypeRef)
+          return this.inferType(operator?.returnTypeRef) ?? this.classTypeOf('any')
         }
 
         case '&&': // Logical
@@ -321,10 +315,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
       // dynamic arguments
       if (isCallExpression(source.$container) && source.$containerProperty === 'arguments' && isFunctionDeclaration(source.target.ref)) {
-        this.recursiveGuard.set(source, this.classTypeOf('any'))
-        const result = this.inferType(source.target.ref.returnTypeRef)
-        this.recursiveGuard.delete(source)
-        return result
+        return this.inferType(source.target.ref.returnTypeRef)
       }
 
       return this.inferType(source.target.ref) ?? this.classTypeOf('any')
@@ -332,6 +323,12 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     MemberAccess: (source) => {
       const receiverType = this.inferType(source.receiver)
+
+      // Recursive Guard
+      const _ref = (source.target as any)._ref
+      if (typeof _ref === 'symbol' && _ref.description === 'ref_resolving') {
+        return this.classTypeOf('any')
+      }
 
       const targetContainer = source.target.ref?.$container
       if (isOperatorFunctionDeclaration(targetContainer) && targetContainer.op === '.') {
@@ -368,15 +365,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     CallExpression: (source) => {
       if (isReferenceExpression(source.receiver) || isMemberAccess(source.receiver)) {
-        this.recursiveGuard.set(source, this.classTypeOf('any'))
-
         const receiverRef = source.receiver.target.ref
         if (!receiverRef) {
-          this.recursiveGuard.delete(source)
           return
         }
         if (isConstructorDeclaration(receiverRef)) {
-          this.recursiveGuard.delete(source)
           return new ClassType(receiverRef.$container, new Map())
         }
       }

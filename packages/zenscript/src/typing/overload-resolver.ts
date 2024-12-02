@@ -6,7 +6,7 @@ import { type AstNode, MultiMap } from 'langium'
 import { isClassDeclaration, isConstructorDeclaration, isFunctionDeclaration } from '../generated/ast'
 
 export interface OverloadResolver {
-  resolveCallables: (callExpr: CallExpression, maybeCandidates: AstNode[]) => CallableDeclaration | undefined
+  resolveOverloads: (callExpr: CallExpression, maybeCandidates: AstNode[]) => CallableDeclaration | undefined
 }
 
 export enum OverloadMatch {
@@ -15,17 +15,11 @@ export enum OverloadMatch {
   OptionalArgMatch,
   SubtypeMatch,
   ImplicitCastMatch,
+  NotMatch,
 }
 
-export function isMatched(match: OverloadMatch): boolean {
-  return OverloadMatch[match] !== undefined
-}
-
-function highestBitPosition(bitset: number): number {
-  if (bitset === 0) {
-    return Number.NaN
-  }
-  return Math.floor(Math.log2(bitset))
+function worstMatch(matchSet: OverloadMatch[]): OverloadMatch {
+  return matchSet.sort((a, b) => b - a).at(0) ?? OverloadMatch.NotMatch
 }
 
 export class ZenScriptOverloadResolver implements OverloadResolver {
@@ -37,7 +31,7 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
     this.typeFeatures = services.typing.TypeFeatures
   }
 
-  public resolveCallables(callExpr: CallExpression, maybeCandidates: AstNode[]): CallableDeclaration | undefined {
+  public resolveOverloads(callExpr: CallExpression, maybeCandidates: AstNode[]): CallableDeclaration | undefined {
     const first = maybeCandidates.at(0)
     let candidates: CallableDeclaration[]
     if (isClassDeclaration(first)) {
@@ -53,6 +47,10 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
       return
     }
 
+    if (candidates.length === 1) {
+      return candidates[0]
+    }
+
     const overloads = this.analyzeOverloads(new Set(candidates), callExpr.arguments)
     if (overloads.length === 1) {
       return overloads[0]
@@ -63,15 +61,12 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
     }
   }
 
-  private analyzeOverloads<C extends CallableDeclaration>(candidates: Set<C>, args: Expression[]): C[] {
+  private analyzeOverloads(candidates: Set<CallableDeclaration>, args: Expression[]): CallableDeclaration[] {
     const possibles = candidates.values()
-      .map(candidate => ({
-        candidate,
-        match: this.matchSignature(candidate, args),
-      }))
+      .map(it => ({ candidate: it, match: this.matchSignature(it, args) }))
+      .filter(it => it.match !== OverloadMatch.NotMatch)
       .toArray()
       .sort((a, b) => a.match - b.match)
-      .filter(it => isMatched(it.match))
     const groupedPossibles = Object.groupBy(possibles, it => it.match)
     const bestMatches = Object.values(groupedPossibles).at(0) ?? []
 
@@ -122,31 +117,30 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
   private matchSignature(callable: CallableDeclaration, args: Expression[]): OverloadMatch {
     const params = [...callable.parameters]
     const map = this.createParamToArgsMap(params, args)
-    const NotMatch = Number.NaN
 
-    let match = 1 << OverloadMatch.ExactMatch
+    const matchSet = [OverloadMatch.ExactMatch]
     if (args.length > map.size) {
-      match = NotMatch
+      matchSet.push(OverloadMatch.NotMatch)
     }
     else {
       for (const param of params) {
         const arg = map.get(param).at(0)
         // special checking
         if (param.varargs) {
-          match |= 1 << OverloadMatch.VarargMatch
+          matchSet.push(OverloadMatch.VarargMatch)
           if (!arg) {
             continue
           }
         }
         else if (param.defaultValue) {
-          match |= 1 << OverloadMatch.OptionalArgMatch
+          matchSet.push(OverloadMatch.OptionalArgMatch)
           if (!arg) {
             continue
           }
         }
         else {
           if (!arg) {
-            match = NotMatch
+            matchSet.push(OverloadMatch.NotMatch)
             break
           }
         }
@@ -155,20 +149,20 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
         const paramType = this.typeComputer.inferType(param)
         const argType = this.typeComputer.inferType(arg)
         if (this.typeFeatures.areTypesEqual(paramType, argType)) {
-          match |= 1 << OverloadMatch.ExactMatch
+          matchSet.push(OverloadMatch.ExactMatch)
         }
         else if (this.typeFeatures.isSubType(argType, paramType)) {
-          match |= 1 << OverloadMatch.SubtypeMatch
+          matchSet.push(OverloadMatch.SubtypeMatch)
         }
         else if (this.typeFeatures.isConvertible(argType, paramType)) {
-          match |= 1 << OverloadMatch.ImplicitCastMatch
+          matchSet.push(OverloadMatch.ImplicitCastMatch)
         }
         else {
-          match = NotMatch
+          matchSet.push(OverloadMatch.NotMatch)
           break
         }
       }
     }
-    return highestBitPosition(match)
+    return worstMatch(matchSet)
   }
 }

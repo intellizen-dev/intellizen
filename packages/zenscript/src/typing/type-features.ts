@@ -2,7 +2,7 @@ import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
 import type { TypeComputer } from './type-computer'
 import type { Type, ZenScriptType } from './type-description'
-import { isOperatorFunctionDeclaration } from '../generated/ast'
+import { isFunctionDeclaration, isOperatorFunctionDeclaration } from '../generated/ast'
 import { streamClassChain } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 import { isAnyType, isClassType, isCompoundType, isFunctionType, isIntersectionType, isTypeVariable, isUnionType } from './type-description'
@@ -85,7 +85,21 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
 
   private readonly typeEqualityRules = defineRules<RuleMap>({
     ClassType: (self, other) => {
-      return isClassType(other) && self.declaration === other.declaration
+      if (!isClassType(other)) {
+        return false
+      }
+
+      if (self.declaration !== other.declaration) {
+        return false
+      }
+
+      if (self.declaration.typeParameters.length !== other.declaration.typeParameters.length) {
+        return false
+      }
+
+      const selfSubstitutions = self.declaration.typeParameters.map(it => self.substitutions.get(it)).filter(it => !!it)
+      const otherSubstitutions = other.declaration.typeParameters.map(it => other.substitutions.get(it)).filter(it => !!it)
+      return selfSubstitutions.every((type, index) => this.areTypesEqual(type, otherSubstitutions[index]))
     },
 
     FunctionType: (self, other) => {
@@ -136,6 +150,32 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
         .map(it => this.typeComputer.inferType(it.returnTypeRef))
         .nonNullable()
         .some(it => this.isSubType(to, it))
+    },
+
+    FunctionType: (from, to) => {
+      if (isAnyType(to)) {
+        return true
+      }
+
+      let toFuncType: Type | undefined
+      if (isFunctionType(to)) {
+        toFuncType = to
+      }
+      else if (isClassType(to)) {
+        const lambdaDecl = this.memberProvider.streamMembers(to)
+          .filter(isFunctionDeclaration)
+          .filter(it => it.prefix === 'lambda')
+          .head()
+        toFuncType = this.typeComputer.inferType(lambdaDecl)
+      }
+
+      if (!isFunctionType(toFuncType)) {
+        return false
+      }
+
+      return from.paramTypes.length === toFuncType.paramTypes.length
+        && this.isConvertible(from.returnType, toFuncType.returnType)
+        && from.paramTypes.every((param, index) => this.isConvertible(param, toFuncType.paramTypes[index]))
     },
 
     CompoundType: (from, to) => {

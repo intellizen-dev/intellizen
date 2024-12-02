@@ -92,7 +92,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .nonNullable()
       .toArray()
 
-    const overloaded = this.overloadResolver.resolveCallables(source.container.$container, maybeCandidates)
+    const overloaded = this.overloadResolver.resolveOverloads(source.container.$container, maybeCandidates)
     if (!overloaded) {
       return outside ?? EMPTY_SCOPE
     }
@@ -144,7 +144,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             const callExpr = source.container.$container
             if (isCallExpression(callExpr) && source.container.$containerProperty === 'receiver') {
               const constructors = classDecl.members.filter(isConstructorDeclaration)
-              const overloaded = this.overloadResolver.resolveCallables(callExpr, constructors)
+              const overloaded = this.overloadResolver.resolveOverloads(callExpr, constructors)
               if (overloaded) {
                 return this.descriptionIndex.getDescription(overloaded)
               }
@@ -167,7 +167,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       }
 
       const maybeCandidates = members.filter(it => this.nameProvider.getName(it) === source.reference.$refText).toArray()
-      const overloaded = this.overloadResolver.resolveCallables(source.container.$container, maybeCandidates)
+      const overloaded = this.overloadResolver.resolveOverloads(source.container.$container, maybeCandidates)
       if (!overloaded) {
         return outer
       }
