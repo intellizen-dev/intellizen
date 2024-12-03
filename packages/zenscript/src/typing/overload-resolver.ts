@@ -6,7 +6,7 @@ import { type AstNode, MultiMap } from 'langium'
 import { isClassDeclaration, isConstructorDeclaration, isFunctionDeclaration } from '../generated/ast'
 
 export interface OverloadResolver {
-  resolveOverloads: (callExpr: CallExpression, maybeCandidates: AstNode[]) => CallableDeclaration | undefined
+  resolveOverloads: (callExpr: CallExpression, maybeCandidates: AstNode[]) => AstNode[]
 }
 
 export enum OverloadMatch {
@@ -18,8 +18,8 @@ export enum OverloadMatch {
   NotMatch,
 }
 
-function worstMatch(matchSet: OverloadMatch[]): OverloadMatch {
-  return matchSet.sort((a, b) => b - a).at(0) ?? OverloadMatch.NotMatch
+function worstMatch(matchSet: Set<OverloadMatch>): OverloadMatch {
+  return Array.from(matchSet).sort((a, b) => a - b).at(-1) ?? OverloadMatch.NotMatch
 }
 
 export class ZenScriptOverloadResolver implements OverloadResolver {
@@ -31,8 +31,12 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
     this.typeFeatures = services.typing.TypeFeatures
   }
 
-  public resolveOverloads(callExpr: CallExpression, maybeCandidates: AstNode[]): CallableDeclaration | undefined {
+  public resolveOverloads(callExpr: CallExpression, maybeCandidates: AstNode[]): AstNode[] {
     const first = maybeCandidates.at(0)
+    if (!first) {
+      return []
+    }
+
     let candidates: CallableDeclaration[]
     if (isClassDeclaration(first)) {
       candidates = first.members.filter(isConstructorDeclaration)
@@ -44,20 +48,23 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
       candidates = maybeCandidates.filter(isConstructorDeclaration)
     }
     else {
-      return
+      console.error(`Invalid candidates for call expression: ${callExpr.$cstNode?.text}`)
+      return []
     }
 
     if (candidates.length === 1) {
-      return candidates[0]
+      return candidates
     }
 
     const overloads = this.analyzeOverloads(new Set(candidates), callExpr.arguments)
-    if (overloads.length === 1) {
-      return overloads[0]
+    if (overloads.length) {
+      return overloads
     }
     else {
-      // TODO: Workaround, waiting for langium supports multi-target references
-      return overloads[0]
+      // FIXME: overloading error
+      // For debugging, consider adding a breakpoint here or returning an empty array
+      console.error(`Error resolving overloads for call expression: ${callExpr.$cstNode?.text}`)
+      return candidates
     }
   }
 
@@ -118,29 +125,29 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
     const params = [...callable.parameters]
     const map = this.createParamToArgsMap(params, args)
 
-    const matchSet = [OverloadMatch.ExactMatch]
+    const matchSet = new Set([OverloadMatch.ExactMatch])
     if (args.length > map.size) {
-      matchSet.push(OverloadMatch.NotMatch)
+      matchSet.add(OverloadMatch.NotMatch)
     }
     else {
       for (const param of params) {
         const arg = map.get(param).at(0)
         // special checking
         if (param.varargs) {
-          matchSet.push(OverloadMatch.VarargMatch)
+          matchSet.add(OverloadMatch.VarargMatch)
           if (!arg) {
             continue
           }
         }
         else if (param.defaultValue) {
-          matchSet.push(OverloadMatch.OptionalArgMatch)
+          matchSet.add(OverloadMatch.OptionalArgMatch)
           if (!arg) {
             continue
           }
         }
         else {
           if (!arg) {
-            matchSet.push(OverloadMatch.NotMatch)
+            matchSet.add(OverloadMatch.NotMatch)
             break
           }
         }
@@ -149,16 +156,16 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
         const paramType = this.typeComputer.inferType(param)
         const argType = this.typeComputer.inferType(arg)
         if (this.typeFeatures.areTypesEqual(paramType, argType)) {
-          matchSet.push(OverloadMatch.ExactMatch)
+          matchSet.add(OverloadMatch.ExactMatch)
         }
         else if (this.typeFeatures.isSubType(argType, paramType)) {
-          matchSet.push(OverloadMatch.SubtypeMatch)
+          matchSet.add(OverloadMatch.SubtypeMatch)
         }
         else if (this.typeFeatures.isConvertible(argType, paramType)) {
-          matchSet.push(OverloadMatch.ImplicitCastMatch)
+          matchSet.add(OverloadMatch.ImplicitCastMatch)
         }
         else {
-          matchSet.push(OverloadMatch.NotMatch)
+          matchSet.add(OverloadMatch.NotMatch)
           break
         }
       }

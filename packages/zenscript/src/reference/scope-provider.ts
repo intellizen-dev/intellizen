@@ -1,4 +1,4 @@
-import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, ScopeOptions, Stream } from 'langium'
+import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, ScopeOptions } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { OverloadResolver } from '../typing/overload-resolver'
@@ -92,16 +92,13 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .nonNullable()
       .toArray()
 
-    const overloaded = this.overloadResolver.resolveOverloads(source.container.$container, maybeCandidates)
-    if (!overloaded) {
-      return outside ?? EMPTY_SCOPE
-    }
-    const description = this.descriptionIndex.createDynamicDescription(overloaded, refText)
-    return this.createScope([description], outside)
+    const overloads = this.overloadResolver.resolveOverloads(source.container.$container, maybeCandidates)
+    const descriptions = overloads.map(it => this.descriptionIndex.createDynamicDescription(it, refText))
+    return this.createScope(descriptions, outside)
   }
 
-  override createScopeForNodes(nodes: Stream<AstNode>, outerScope?: Scope, options?: ScopeOptions): Scope {
-    return new StreamScope(nodes.map(it => this.descriptionIndex.getDescription(it)), outerScope, options)
+  override createScopeForNodes(nodes: Iterable<AstNode>, outerScope?: Scope, options?: ScopeOptions): Scope {
+    return new StreamScope(stream(nodes).map(it => this.descriptionIndex.getDescription(it)), outerScope, options)
   }
 
   private readonly rules = defineRules<RuleMap>({
@@ -144,9 +141,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             const callExpr = source.container.$container
             if (isCallExpression(callExpr) && source.container.$containerProperty === 'receiver') {
               const constructors = classDecl.members.filter(isConstructorDeclaration)
-              const overloaded = this.overloadResolver.resolveOverloads(callExpr, constructors)
-              if (overloaded) {
-                return this.descriptionIndex.getDescription(overloaded)
+              const overloads = this.overloadResolver.resolveOverloads(callExpr, constructors)
+              if (overloads[0]) {
+                return this.descriptionIndex.getDescription(overloads[0])
               }
             }
             return desc
@@ -167,11 +164,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       }
 
       const maybeCandidates = members.filter(it => this.nameProvider.getName(it) === source.reference.$refText).toArray()
-      const overloaded = this.overloadResolver.resolveOverloads(source.container.$container, maybeCandidates)
-      if (!overloaded) {
-        return outer
-      }
-      return this.createScopeForNodes(stream([overloaded]), outer)
+      const overloads = this.overloadResolver.resolveOverloads(source.container.$container, maybeCandidates)
+      return this.createScopeForNodes(overloads, outer)
     },
 
     NamedTypeReference: (source) => {
