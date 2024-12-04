@@ -96,6 +96,21 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.streamMembers(type)
     },
 
+    ParenthesizedExpression: (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.streamMembers(type)
+    },
+
+    PrefixExpression: (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.streamMembers(type)
+    },
+
+    InfixExpression: (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.streamMembers(type)
+    },
+
     IndexingExpression: (source) => {
       const type = this.typeComputer.inferType(source)
       return this.streamMembers(type)

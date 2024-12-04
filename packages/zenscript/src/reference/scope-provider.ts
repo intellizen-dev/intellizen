@@ -159,13 +159,14 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       const outer = this.dynamicScope(source.container)
       const members = this.memberProvider.streamMembers(source.container.receiver)
 
-      if (source.reference.$refText === '' || !isCallExpression(source.container.$container) || source.container.$containerProperty !== 'receiver') {
+      if (source.reference.$refText && isCallExpression(source.container.$container) && source.container.$containerProperty === 'receiver') {
+        const maybeCandidates = members.filter(it => this.nameProvider.getName(it) === source.reference.$refText).toArray()
+        const overloads = this.overloadResolver.resolveOverloads(source.container.$container, maybeCandidates)
+        return this.createScopeForNodes(overloads, outer)
+      }
+      else {
         return this.createScopeForNodes(members, outer)
       }
-
-      const maybeCandidates = members.filter(it => this.nameProvider.getName(it) === source.reference.$refText).toArray()
-      const overloads = this.overloadResolver.resolveOverloads(source.container.$container, maybeCandidates)
-      return this.createScopeForNodes(overloads, outer)
     },
 
     NamedTypeReference: (source) => {

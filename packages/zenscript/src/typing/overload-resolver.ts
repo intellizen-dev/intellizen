@@ -32,23 +32,22 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
   }
 
   public resolveOverloads(callExpr: CallExpression, maybeCandidates: AstNode[]): AstNode[] {
-    const first = maybeCandidates.at(0)
-    if (!first) {
+    if (!maybeCandidates.length) {
       return []
     }
 
     let candidates: CallableDeclaration[]
-    if (isClassDeclaration(first)) {
-      candidates = first.members.filter(isConstructorDeclaration)
+    if (maybeCandidates.find(isClassDeclaration)) {
+      candidates = maybeCandidates.find(isClassDeclaration)!.members.filter(isConstructorDeclaration)
     }
-    else if (isFunctionDeclaration(first)) {
+    else if (maybeCandidates.find(isFunctionDeclaration)) {
       candidates = maybeCandidates.filter(isFunctionDeclaration)
     }
-    else if (isConstructorDeclaration(first)) {
+    else if (maybeCandidates.find(isConstructorDeclaration)) {
       candidates = maybeCandidates.filter(isConstructorDeclaration)
     }
     else {
-      console.error(`Invalid candidates for call expression: ${callExpr.$cstNode?.text}`)
+      console.error(`Invalid overload candidates for call expression: ${callExpr.$cstNode?.text}`)
       return []
     }
 
@@ -56,16 +55,20 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
       return candidates
     }
 
-    const overloads = this.analyzeOverloads(new Set(candidates), callExpr.arguments)
-    if (overloads.length) {
-      return overloads
+    const groupedCandidates = candidates.reduce<MultiMap<AstNode, CallableDeclaration>>((map, it) => map.add(it.$container, it), new MultiMap())
+    for (const container of groupedCandidates.keys()) {
+      const overloads = this.analyzeOverloads(new Set(groupedCandidates.get(container)), callExpr.arguments)
+      if (overloads.length) {
+        return overloads
+      }
+      else {
+        // FIXME: overloading error
+        // For debugging, consider adding a breakpoint here
+        console.error(`Could not resolve overloads for call expression: ${callExpr.$cstNode?.text}`)
+      }
     }
-    else {
-      // FIXME: overloading error
-      // For debugging, consider adding a breakpoint here or returning an empty array
-      console.error(`Error resolving overloads for call expression: ${callExpr.$cstNode?.text}`)
-      return candidates
-    }
+
+    return candidates
   }
 
   private analyzeOverloads(candidates: Set<CallableDeclaration>, args: Expression[]): CallableDeclaration[] {
@@ -78,13 +81,13 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
     const bestMatches = Object.values(groupedPossibles).at(0) ?? []
 
     if (bestMatches.length > 1) {
-      this.logAmbiguousOverload(possibles, args)
+      this.logAmbiguousOverloads(possibles, args)
     }
 
     return bestMatches.map(it => it.candidate)
   }
 
-  private logAmbiguousOverload(possibles: { candidate: CallableDeclaration, match: OverloadMatch }[], args: Expression[]) {
+  private logAmbiguousOverloads(possibles: { candidate: CallableDeclaration, match: OverloadMatch }[], args: Expression[]) {
     const first = possibles[0].candidate
     const name = isConstructorDeclaration(first) ? first.$container.name : first.name
     const types = args.map(it => this.typeComputer.inferType(it)?.toString()).join(', ')
