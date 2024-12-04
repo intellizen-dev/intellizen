@@ -956,7 +956,7 @@ describe('check operation of array', async () => {
 
     it('+=', () => {
       const type_add = inferType(next())
-      expect(type_add?.toString()).toBe('Array<Array<long>>')
+      expect(type_add?.toString()).toBe('void')
     })
   })
 

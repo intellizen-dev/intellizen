@@ -7,7 +7,7 @@ zenClass Array<T> {
 
     operator []=(index as int, value as T) as void;
 
-    operator +=(value as T) as Array<T>;
+    operator +=(value as T) as void;
 
     operator for(value as T) as void;
 
