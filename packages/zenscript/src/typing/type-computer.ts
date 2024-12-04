@@ -216,7 +216,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
             .filter(it => it.op === source.op)
             .filter(it => it.parameters.length === 1)
             .head()
-          return this.inferType(operator?.returnTypeRef)
+          let returnType = this.inferType(operator?.returnTypeRef)
+          if (isClassType(leftType)) {
+            returnType = returnType?.substituteTypeParameters(leftType.substitutions)
+          }
+          return returnType
         }
 
         case '=': {
