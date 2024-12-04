@@ -4,6 +4,8 @@ zenClass int {
     operator -() as int;
     operator !() as int;
 
+    operator ..(to as int) as IntRange;
+
     operator &(value as int) as int;
     operator |(value as int) as int;
     operator ^(value as int) as int;
@@ -21,7 +23,14 @@ zenClass int {
     operator ==(value as int) as bool;
     operator !=(value as int) as bool;
 
-    operator ..(to as int) as IntRange;
+    operator &=(value as int) as int;
+    operator |=(value as int) as int;
+    operator ^=(value as int) as int;
+    operator +=(value as int) as int;
+    operator -=(value as int) as int;
+    operator *=(value as int) as int;
+    operator /=(value as int) as int;
+    operator %=(value as int) as int;
 
     operator as() as byte, short, long, float, double, string;
 }

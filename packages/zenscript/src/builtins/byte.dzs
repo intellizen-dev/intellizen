@@ -19,5 +19,14 @@ zenClass byte {
     operator ==(value as byte) as bool;
     operator !=(value as byte) as bool;
 
+    operator &=(value as byte) as byte;
+    operator |=(value as byte) as byte;
+    operator ^=(value as byte) as byte;
+    operator +=(value as byte) as byte;
+    operator -=(value as byte) as byte;
+    operator *=(value as byte) as byte;
+    operator /=(value as byte) as byte;
+    operator %=(value as byte) as byte;
+
     operator as() as short, int, long, float, double, string;
 }

@@ -6,7 +6,7 @@ import type { BracketManager } from '../workspace/bracket-manager'
 import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
 import { type AstNode, stream } from 'langium'
-import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { isAssignment, isCallExpression, isClassDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isIndexingExpression, isOperatorFunctionDeclaration, isTypeParameter, isVariableDeclaration } from '../generated/ast'
 import { defineRules } from '../utils/rule'
 import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
 
@@ -200,8 +200,42 @@ export class ZenScriptTypeComputer implements TypeComputer {
     // endregion
 
     // region Expression
-    Assignment: () => {
-      return this.classTypeOf('void')
+    Assignment: (source) => {
+      switch (source.op) {
+        case '&=':
+        case '|=':
+        case '^=':
+        case '+=':
+        case '-=':
+        case '*=':
+        case '/=':
+        case '%=':
+        case '~=':{
+          const leftType = this.inferType(source.left)
+          const operator = this.memberProvider().streamOperators(leftType)
+            .filter(it => it.op === source.op)
+            .filter(it => it.parameters.length === 1)
+            .head()
+          let returnType = this.inferType(operator?.returnTypeRef)
+          if (isClassType(leftType)) {
+            returnType = returnType?.substituteTypeParameters(leftType.substitutions)
+          }
+          return returnType
+        }
+
+        case '=': {
+          if (isIndexingExpression(source.left)) {
+            const operator = this.memberProvider().streamOperators(source.left)
+              .filter(it => it.op === '[]=')
+              .filter(it => it.parameters.length === 2)
+              .head()
+            return this.inferType(operator?.returnTypeRef)
+          }
+          else {
+            return this.inferType(source.right)
+          }
+        }
+      }
     },
 
     ConditionalExpression: (source) => {

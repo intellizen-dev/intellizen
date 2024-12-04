@@ -14,5 +14,14 @@ zenClass float {
     operator ==(value as float) as bool;
     operator !=(value as float) as bool;
 
+    operator &=(value as float) as float;
+    operator |=(value as float) as float;
+    operator ^=(value as float) as float;
+    operator +=(value as float) as float;
+    operator -=(value as float) as float;
+    operator *=(value as float) as float;
+    operator /=(value as float) as float;
+    operator %=(value as float) as float;
+
     operator as() as byte, short, int, long, double, string;
 }
