@@ -23,5 +23,7 @@ zenClass int {
 
     operator ..(to as int) as IntRange;
 
+    operator +=(value as int) as int;
+
     operator as() as byte, short, long, float, double, string;
 }

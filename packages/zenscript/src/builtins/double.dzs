@@ -14,5 +14,7 @@ zenClass double {
     operator ==(value as double) as bool;
     operator !=(value as double) as bool;
 
+    operator +=(value as double) as void;
+
     operator as() as byte, short, int, long, float, string;
 }
