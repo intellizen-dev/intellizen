@@ -158,6 +158,11 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
         // type checking
         const paramType = this.typeComputer.inferType(param)
         const argType = this.typeComputer.inferType(arg)
+        if (!paramType || !argType) {
+          matchSet.add(OverloadMatch.ImplicitCastMatch)
+          continue
+        }
+
         if (this.typeFeatures.areTypesEqual(paramType, argType)) {
           matchSet.add(OverloadMatch.ExactMatch)
         }
