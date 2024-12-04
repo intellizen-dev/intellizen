@@ -19,7 +19,14 @@ zenClass long {
     operator ==(value as long) as bool;
     operator !=(value as long) as bool;
 
+    operator &=(value as long) as void;
+    operator |=(value as long) as void;
+    operator ^=(value as long) as void;
     operator +=(value as long) as void;
+    operator -=(value as long) as void;
+    operator *=(value as long) as void;
+    operator /=(value as long) as void;
+    operator %=(value as long) as void;
 
     operator as() as byte, short, int, float, double, string;
 }

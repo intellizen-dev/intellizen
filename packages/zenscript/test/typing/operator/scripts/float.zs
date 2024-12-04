@@ -1,16 +1,31 @@
 val one = 1.0f as float;
 
--one;
+// unary
+    -one;
 
-one + one;
-one - one;
-one * one;
-one / one;
-one % one;
+// binary
+    // arithmetic
+    one + one;
+    one - one;
+    one * one;
+    one / one;
+    one % one;
 
-one < one;
-one > one;
-one <= one;
-one >= one;
-one == one;
-one != one;
+    // comparison
+    one < one;
+    one > one;
+    one <= one;
+    one >= one;
+    one == one;
+    one != one;
+
+    // assignment
+    one &= one;
+    one |= one;
+    one ^= one;
+
+    one += one;
+    one -= one;
+    one *= one;
+    one /= one;
+    one %= one;

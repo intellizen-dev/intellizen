@@ -106,5 +106,7 @@ zenClass string {
 
     operator +=(value as string) as string;
 
+    operator ~=(value as string) as string;
+
     operator as() as bool, byte, int, short, long, float, double;
 }
