@@ -1,4 +1,13 @@
 zenClass string {
+    val length as int;
+    val isEmpty as bool;
+    val toLowerCase as string;
+    val toUpperCase as string;
+    val trim as string;
+    val intern as string;
+    val hashCode as int;
+    val toString as string;
+
     function toString() as string;
 
     function hashCode() as int;
@@ -94,6 +103,10 @@ zenClass string {
     operator ==(value as string) as bool;
 
     operator !=(value as string) as bool;
+
+    operator +=(value as string) as string;
+
+    operator ~=(value as string) as string;
 
     operator as() as bool, byte, int, short, long, float, double;
 }

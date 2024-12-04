@@ -20,6 +20,9 @@ describe('check operation of bool', async () => {
     it('!', () => {
       const type_not = inferType(next())
       expect(type_not?.toString()).toBe('bool')
+
+      const type_not_x2 = inferType(next())
+      expect(type_not_x2?.toString()).toBe('bool')
     })
   })
 
@@ -27,16 +30,25 @@ describe('check operation of bool', async () => {
     it('&', () => {
       const type_and = inferType(next())
       expect(type_and?.toString()).toBe('bool')
+
+      const type_and_x2 = inferType(next())
+      expect(type_and_x2?.toString()).toBe('bool')
     })
 
     it('|', () => {
       const type_or = inferType(next())
       expect(type_or?.toString()).toBe('bool')
+
+      const type_or_x2 = inferType(next())
+      expect(type_or_x2?.toString()).toBe('bool')
     })
 
     it('^', () => {
       const type_xor = inferType(next())
       expect(type_xor?.toString()).toBe('bool')
+
+      const type_xor_x2 = inferType(next())
+      expect(type_xor_x2?.toString()).toBe('bool')
     })
   })
 
@@ -44,11 +56,17 @@ describe('check operation of bool', async () => {
     it('==', () => {
       const type_eq = inferType(next())
       expect(type_eq?.toString()).toBe('bool')
+
+      const type_eq_x2 = inferType(next())
+      expect(type_eq_x2?.toString()).toBe('bool')
     })
 
     it('!=', () => {
       const type_ne = inferType(next())
       expect(type_ne?.toString()).toBe('bool')
+
+      const type_ne_x2 = inferType(next())
+      expect(type_ne_x2?.toString()).toBe('bool')
     })
   })
 })
@@ -87,6 +105,16 @@ describe('check operation of string', async () => {
     it('!=', () => {
       const type_ne = inferType(next())
       expect(type_ne?.toString()).toBe('bool')
+    })
+
+    it('+=', () => {
+      const type_add_assign = inferType(next())
+      expect(type_add_assign?.toString()).toBe('string')
+    })
+
+    it('~=', () => {
+      const type_concat_assign = inferType(next())
+      expect(type_concat_assign?.toString()).toBe('string')
     })
   })
 })
@@ -187,6 +215,48 @@ describe(`check operation of byte`, async () => {
       it('!=', () => {
         const type_ne = inferType(next())
         expect(type_ne?.toString()).toBe('bool')
+      })
+    })
+
+    suite('assignment', () => {
+      it('&=', () => {
+        const type_and_assign = inferType(next())
+        expect(type_and_assign?.toString()).toBe('byte')
+      })
+
+      it('|=', () => {
+        const type_or_assign = inferType(next())
+        expect(type_or_assign?.toString()).toBe('byte')
+      })
+
+      it('^=', () => {
+        const type_xor_assign = inferType(next())
+        expect(type_xor_assign?.toString()).toBe('byte')
+      })
+
+      it('+=', () => {
+        const type_add_assign = inferType(next())
+        expect(type_add_assign?.toString()).toBe('byte')
+      })
+
+      it('-=', () => {
+        const type_sub_assign = inferType(next())
+        expect(type_sub_assign?.toString()).toBe('byte')
+      })
+
+      it('*=', () => {
+        const type_mul_assign = inferType(next())
+        expect(type_mul_assign?.toString()).toBe('byte')
+      })
+
+      it('/=', () => {
+        const type_div_assign = inferType(next())
+        expect(type_div_assign?.toString()).toBe('byte')
+      })
+
+      it('%=', () => {
+        const type_mod_assign = inferType(next())
+        expect(type_mod_assign?.toString()).toBe('byte')
       })
     })
   })
@@ -290,6 +360,48 @@ describe(`check operation of short`, async () => {
         expect(type_ne?.toString()).toBe('bool')
       })
     })
+
+    suite('assignment', () => {
+      it('&=', () => {
+        const type_and_assign = inferType(next())
+        expect(type_and_assign?.toString()).toBe('short')
+      })
+
+      it('|=', () => {
+        const type_or_assign = inferType(next())
+        expect(type_or_assign?.toString()).toBe('short')
+      })
+
+      it('^=', () => {
+        const type_xor_assign = inferType(next())
+        expect(type_xor_assign?.toString()).toBe('short')
+      })
+
+      it('+=', () => {
+        const type_add_assign = inferType(next())
+        expect(type_add_assign?.toString()).toBe('short')
+      })
+
+      it('-=', () => {
+        const type_sub_assign = inferType(next())
+        expect(type_sub_assign?.toString()).toBe('short')
+      })
+
+      it('*=', () => {
+        const type_mul_assign = inferType(next())
+        expect(type_mul_assign?.toString()).toBe('short')
+      })
+
+      it('/=', () => {
+        const type_div_assign = inferType(next())
+        expect(type_div_assign?.toString()).toBe('short')
+      })
+
+      it('%=', () => {
+        const type_mod_assign = inferType(next())
+        expect(type_mod_assign?.toString()).toBe('short')
+      })
+    })
   })
 })
 
@@ -330,6 +442,18 @@ describe(`check operation of int`, async () => {
       it('^', () => {
         const type_xor = inferType(next())
         expect(type_xor?.toString()).toBe('int')
+      })
+    })
+
+    suite('range', () => {
+      it('..', () => {
+        const type_range = inferType(next())
+        expect(type_range?.toString()).toBe('IntRange')
+      })
+
+      it('to', () => {
+        const type_range = inferType(next())
+        expect(type_range?.toString()).toBe('IntRange')
       })
     })
 
@@ -389,6 +513,48 @@ describe(`check operation of int`, async () => {
       it('!=', () => {
         const type_ne = inferType(next())
         expect(type_ne?.toString()).toBe('bool')
+      })
+    })
+
+    suite('assignment', () => {
+      it('&=', () => {
+        const type_and_assign = inferType(next())
+        expect(type_and_assign?.toString()).toBe('int')
+      })
+
+      it('|=', () => {
+        const type_or_assign = inferType(next())
+        expect(type_or_assign?.toString()).toBe('int')
+      })
+
+      it('^=', () => {
+        const type_xor_assign = inferType(next())
+        expect(type_xor_assign?.toString()).toBe('int')
+      })
+
+      it('+=', () => {
+        const type_add_assign = inferType(next())
+        expect(type_add_assign?.toString()).toBe('int')
+      })
+
+      it('-=', () => {
+        const type_sub_assign = inferType(next())
+        expect(type_sub_assign?.toString()).toBe('int')
+      })
+
+      it('*=', () => {
+        const type_mul_assign = inferType(next())
+        expect(type_mul_assign?.toString()).toBe('int')
+      })
+
+      it('/=', () => {
+        const type_div_assign = inferType(next())
+        expect(type_div_assign?.toString()).toBe('int')
+      })
+
+      it('%=', () => {
+        const type_mod_assign = inferType(next())
+        expect(type_mod_assign?.toString()).toBe('int')
       })
     })
   })
@@ -492,6 +658,48 @@ describe(`check operation of long`, async () => {
         expect(type_ne?.toString()).toBe('bool')
       })
     })
+
+    suite('assignment', () => {
+      it('&=', () => {
+        const type_and_assign = inferType(next())
+        expect(type_and_assign?.toString()).toBe('void')
+      })
+
+      it('|=', () => {
+        const type_or_assign = inferType(next())
+        expect(type_or_assign?.toString()).toBe('void')
+      })
+
+      it('^=', () => {
+        const type_xor_assign = inferType(next())
+        expect(type_xor_assign?.toString()).toBe('void')
+      })
+
+      it('+=', () => {
+        const type_add_assign = inferType(next())
+        expect(type_add_assign?.toString()).toBe('void')
+      })
+
+      it('-=', () => {
+        const type_sub_assign = inferType(next())
+        expect(type_sub_assign?.toString()).toBe('void')
+      })
+
+      it('*=', () => {
+        const type_mul_assign = inferType(next())
+        expect(type_mul_assign?.toString()).toBe('void')
+      })
+
+      it('/=', () => {
+        const type_div_assign = inferType(next())
+        expect(type_div_assign?.toString()).toBe('void')
+      })
+
+      it('%=', () => {
+        const type_mod_assign = inferType(next())
+        expect(type_mod_assign?.toString()).toBe('void')
+      })
+    })
   })
 })
 
@@ -569,6 +777,48 @@ describe(`check operation of float`, async () => {
       it('!=', () => {
         const type_ne = inferType(next())
         expect(type_ne?.toString()).toBe('bool')
+      })
+    })
+
+    suite('assignment', () => {
+      it('&=', () => {
+        const type_and_assign = inferType(next())
+        expect(type_and_assign?.toString()).toBe('float')
+      })
+
+      it('|=', () => {
+        const type_or_assign = inferType(next())
+        expect(type_or_assign?.toString()).toBe('float')
+      })
+
+      it('^=', () => {
+        const type_xor_assign = inferType(next())
+        expect(type_xor_assign?.toString()).toBe('float')
+      })
+
+      it('+=', () => {
+        const type_add_assign = inferType(next())
+        expect(type_add_assign?.toString()).toBe('float')
+      })
+
+      it('-=', () => {
+        const type_sub_assign = inferType(next())
+        expect(type_sub_assign?.toString()).toBe('float')
+      })
+
+      it('*=', () => {
+        const type_mul_assign = inferType(next())
+        expect(type_mul_assign?.toString()).toBe('float')
+      })
+
+      it('/=', () => {
+        const type_div_assign = inferType(next())
+        expect(type_div_assign?.toString()).toBe('float')
+      })
+
+      it('%=', () => {
+        const type_mod_assign = inferType(next())
+        expect(type_mod_assign?.toString()).toBe('float')
       })
     })
   })
@@ -650,6 +900,33 @@ describe(`check operation of double`, async () => {
         expect(type_ne?.toString()).toBe('bool')
       })
     })
+
+    suite('assignment', () => {
+      it('+=', () => {
+        const type_add_assign = inferType(next())
+        expect(type_add_assign?.toString()).toBe('void')
+      })
+
+      it('-=', () => {
+        const type_sub_assign = inferType(next())
+        expect(type_sub_assign?.toString()).toBe('void')
+      })
+
+      it('*=', () => {
+        const type_mul_assign = inferType(next())
+        expect(type_mul_assign?.toString()).toBe('void')
+      })
+
+      it('/=', () => {
+        const type_div_assign = inferType(next())
+        expect(type_div_assign?.toString()).toBe('void')
+      })
+
+      it('%=', () => {
+        const type_mod_assign = inferType(next())
+        expect(type_mod_assign?.toString()).toBe('void')
+      })
+    })
   })
 })
 
@@ -671,12 +948,15 @@ describe('check operation of array', async () => {
 
     it('[]', () => {
       const type_index_get = inferType(next())
-      expect(type_index_get?.toString()).toBe('long')
+      expect(type_index_get?.toString()).toBe('Array<long>')
+
+      const type_index_get_x2 = inferType(next())
+      expect(type_index_get_x2?.toString()).toBe('long')
     })
 
     it('+=', () => {
-      const type_add = inferType(next())
-      expect(type_add?.toString()).toBe('void')
+      const type_add_assign = inferType(next())
+      expect(type_add_assign?.toString()).toBe('void')
     })
   })
 
@@ -706,12 +986,15 @@ describe('check operation of list', async () => {
 
     it('[]', () => {
       const type_index_get = inferType(next())
-      expect(type_index_get?.toString()).toBe('long')
+      expect(type_index_get?.toString()).toBe('List<long>')
+
+      const type_index_get_x2 = inferType(next())
+      expect(type_index_get_x2?.toString()).toBe('long')
     })
 
     it('+=', () => {
-      const type_add = inferType(next())
-      expect(type_add?.toString()).toBe('void')
+      const type_add_assign = inferType(next())
+      expect(type_add_assign?.toString()).toBe('void')
     })
   })
 
@@ -741,12 +1024,21 @@ describe('check operation of map', async () => {
 
     it('[]', () => {
       const type_index_get = inferType(next())
-      expect(type_index_get?.toString()).toBe('long')
+      expect(type_index_get?.toString()).toBe('Map<string, long>')
+
+      const type_index_get_x2 = inferType(next())
+      expect(type_index_get_x2?.toString()).toBe('long')
     })
 
     it('.', () => {
-      const type_add = inferType(next())
-      expect(type_add?.toString()).toBe('long')
+      const type_member_access_k = inferType(next())
+      expect(type_member_access_k?.toString()).toBe('Map<string, long>')
+
+      const type_member_access_k_length = inferType(next())
+      expect(type_member_access_k_length?.toString()).toBe('int')
+
+      const type_member_access_k_k = inferType(next())
+      expect(type_member_access_k_k?.toString()).toBe('long')
     })
   })
 

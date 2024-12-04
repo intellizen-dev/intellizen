@@ -43,15 +43,22 @@ export class ClassType extends NamedType<ClassDeclaration> {
   }
 
   override substituteTypeParameters(substitutions: TypeParameterSubstitutions) {
-    const newSubstitutions = new Map(stream(this.substitutions).map(([key, value]) => [key, value.substituteTypeParameters(substitutions)]))
-    return new ClassType(this.declaration, newSubstitutions)
+    if (!this.substitutions.size) {
+      return new ClassType(this.declaration, substitutions)
+    }
+    else {
+      const newSubstitutions = new Map(stream(this.substitutions).map(([key, value]) => [key, value.substituteTypeParameters(substitutions)]))
+      return new ClassType(this.declaration, newSubstitutions)
+    }
   }
 
   override toString(): string {
     let result = this.declaration.name
-    if (this.substitutions.size) {
+    if (this.declaration.typeParameters.length) {
       result += '<'
-      result += stream(this.substitutions.values()).map(it => it.toString()).join(', ')
+      result += this.declaration.typeParameters
+        .map(it => this.substitutions.get(it)?.toString() ?? it.name)
+        .join(', ')
       result += '>'
     }
     return result

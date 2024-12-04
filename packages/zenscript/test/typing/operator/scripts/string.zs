@@ -6,3 +6,6 @@ str[0];
 
 str == str;
 str != str;
+
+str += str;
+str ~= str;

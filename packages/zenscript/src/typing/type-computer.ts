@@ -6,7 +6,7 @@ import type { BracketManager } from '../workspace/bracket-manager'
 import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
 import { type AstNode, stream } from 'langium'
-import { isAssignment, isCallExpression, isClassDeclaration, isConstructorDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isMemberAccess, isOperatorFunctionDeclaration, isReferenceExpression, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { isAssignment, isCallExpression, isClassDeclaration, isConstructorDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isIndexingExpression, isMemberAccess, isOperatorFunctionDeclaration, isReferenceExpression, isTypeParameter, isVariableDeclaration } from '../generated/ast'
 import { defineRules } from '../utils/rule'
 import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
 
@@ -203,8 +203,42 @@ export class ZenScriptTypeComputer implements TypeComputer {
     // endregion
 
     // region Expression
-    Assignment: () => {
-      return this.classTypeOf('void')
+    Assignment: (source) => {
+      switch (source.op) {
+        case '&=':
+        case '|=':
+        case '^=':
+        case '+=':
+        case '-=':
+        case '*=':
+        case '/=':
+        case '%=':
+        case '~=':{
+          const leftType = this.inferType(source.left)
+          const operator = this.memberProvider().streamOperators(leftType)
+            .filter(it => it.op === source.op)
+            .filter(it => it.parameters.length === 1)
+            .head()
+          let returnType = this.inferType(operator?.returnTypeRef)
+          if (isClassType(leftType)) {
+            returnType = returnType?.substituteTypeParameters(leftType.substitutions)
+          }
+          return returnType
+        }
+
+        case '=': {
+          if (isIndexingExpression(source.left)) {
+            const operator = this.memberProvider().streamOperators(source.left)
+              .filter(it => it.op === '[]=')
+              .filter(it => it.parameters.length === 2)
+              .head()
+            return this.inferType(operator?.returnTypeRef)
+          }
+          else {
+            return this.inferType(source.right)
+          }
+        }
+      }
     },
 
     ConditionalExpression: (source) => {
@@ -212,10 +246,11 @@ export class ZenScriptTypeComputer implements TypeComputer {
     },
 
     PrefixExpression: (source) => {
+      const exprType = this.inferType(source.expr)
       switch (source.op) {
         case '-':
         case '!': {
-          const operator = this.memberProvider().streamOperators(source.expr)
+          const operator = this.memberProvider().streamOperators(exprType)
             .filter(it => it.op === source.op)
             .filter(it => it.parameters.length === 0)
             .head()
@@ -225,6 +260,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
     },
 
     InfixExpression: (source) => {
+      const leftType = this.inferType(source.left)
       switch (source.op) {
         case '&': // Bitwise
         case '|':
@@ -240,27 +276,27 @@ export class ZenScriptTypeComputer implements TypeComputer {
         case '>=':
         case '==':
         case '!=': {
-          const operator = this.memberProvider().streamOperators(source.left)
+          const operator = this.memberProvider().streamOperators(leftType)
             .filter(it => it.op === source.op)
             .filter(it => it.parameters.length === 1)
             .head()
-          return this.inferType(operator?.returnTypeRef) ?? this.classTypeOf('any')
+          return this.inferType(operator?.returnTypeRef)
         }
         case 'has': // Containment
         case 'in': {
-          const operator = this.memberProvider().streamOperators(source.left)
+          const operator = this.memberProvider().streamOperators(leftType)
             .filter(it => it.op === 'has')
             .filter(it => it.parameters.length === 1)
             .head()
-          return this.inferType(operator?.returnTypeRef) ?? this.classTypeOf('any')
+          return this.inferType(operator?.returnTypeRef)
         }
         case '..': // Range
         case 'to': {
-          const operator = this.memberProvider().streamOperators(source.left)
+          const operator = this.memberProvider().streamOperators(leftType)
             .filter(it => it.op === '..')
             .filter(it => it.parameters.length === 1)
             .head()
-          return this.inferType(operator?.returnTypeRef) ?? this.classTypeOf('any')
+          return this.inferType(operator?.returnTypeRef)
         }
 
         case '&&': // Logical
