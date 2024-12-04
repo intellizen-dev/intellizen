@@ -1,7 +1,7 @@
 import type { CallableDeclaration, CallExpression, Expression, ValueParameter } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import type { ZenScriptTypeComputer } from './type-computer'
-import type { ZenScriptTypeFeatures } from './type-features'
+import type { TypeComputer } from './type-computer'
+import type { TypeFeatures } from './type-features'
 import { type AstNode, MultiMap } from 'langium'
 import { isClassDeclaration, isConstructorDeclaration, isFunctionDeclaration } from '../generated/ast'
 
@@ -23,8 +23,8 @@ function worstMatch(matchSet: Set<OverloadMatch>): OverloadMatch {
 }
 
 export class ZenScriptOverloadResolver implements OverloadResolver {
-  private readonly typeComputer: ZenScriptTypeComputer
-  private readonly typeFeatures: ZenScriptTypeFeatures
+  private readonly typeComputer: TypeComputer
+  private readonly typeFeatures: TypeFeatures
 
   constructor(services: ZenScriptServices) {
     this.typeComputer = services.typing.TypeComputer
