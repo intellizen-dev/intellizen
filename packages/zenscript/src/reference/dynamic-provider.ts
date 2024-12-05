@@ -3,11 +3,12 @@ import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
 import type { DescriptionCreator } from '../workspace/description-creator'
-import { AstUtils, EMPTY_STREAM, stream } from 'langium'
+import { AstUtils, EMPTY_STREAM } from 'langium'
 import { isCallExpression, isClassDeclaration } from '../generated/ast'
 import { isClassType, isFunctionType } from '../typing/type-description'
 import { isStatic, streamDeclaredFunctions, streamDeclaredOperators } from '../utils/ast'
 import { defineRules } from '../utils/rule'
+import { toStream } from '../utils/stream'
 
 export interface DynamicProvider {
   streamDynamicDescriptions: (source: AstNode) => Stream<AstNodeDescription>
@@ -31,7 +32,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
 
   private readonly rules = defineRules<RuleMap>({
     ReferenceExpression: (source) => {
-      return stream(function *(this: ZenScriptDynamicProvider) {
+      return toStream(function* (this: ZenScriptDynamicProvider) {
         // dynamic this
         const classDecl = AstUtils.getContainerOfType(source, isClassDeclaration)
         if (classDecl) {
@@ -52,11 +53,11 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
             }
           }
         }
-      }.call(this))
+      }.bind(this))
     },
 
     MemberAccess: (source) => {
-      return stream(function *(this: ZenScriptDynamicProvider) {
+      return toStream(function* (this: ZenScriptDynamicProvider) {
         // dynamic member
         const receiverType = this.typeComputer.inferType(source.receiver)
         if (isClassType(receiverType)) {
@@ -68,7 +69,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
             yield this.descriptionCreator.createDynamicDescription(operatorDecl.parameters[0], source.target.$refText)
           }
         }
-      }.call(this))
+      }.bind(this))
     },
   })
 }
