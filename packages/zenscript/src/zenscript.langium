@@ -28,7 +28,7 @@ interface ClassDeclaration extends Declaration {
     members: ClassMemberDeclaration[];
 }
 
-type NamedElement = Script | ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | LoopParameter | MapEntry | ImportDeclaration;
+type NamedElement = Script | ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | LoopParameter | MapEntry | ImportDeclaration | ConstructorDeclaration;
 
 type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration | OperatorFunctionDeclaration;
 
@@ -86,7 +86,7 @@ PackageDeclaration returns PackageDeclaration:
 ;
 
 ImportDeclaration returns ImportDeclaration:
-    'import' (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID] ('as' alias=ID)? ';'?
+    'import' path+=[NamedElement:ID] ('.' path+=[NamedElement:ID])* ('as' alias=ID)? ';'?
 ;
 
 ClassDeclaration returns ClassDeclaration:
@@ -137,7 +137,7 @@ OperatorFunctionDeclaration returns OperatorFunctionDeclaration:
 Operator returns string
     : '+' | '-' | '*' | '/' | '%' | '~' | '|' | '&' | '^'
     | '+=' | '-=' | '*=' | '/=' | '%=' | '~=' | '|=' | '&=' | '^='
-    | '!' | '['']' | '['']''=' | '..' | 'has' | '.' | '.''=' | 'for' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
+    | '!' | '['']'('=')? | '..' | 'has' | '.' ('=')? | 'for' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
 ;
 
 ConstructorDeclaration returns ConstructorDeclaration:
@@ -608,13 +608,12 @@ interface ParenthesizedTypeReference extends TypeReference {
 
 interface ArrayTypeReference extends TypeReference {
     value: TypeReference;
-    orderly?: 'orderly'
 }
 
 interface MapTypeReference extends TypeReference {
     key: TypeReference;
     value: TypeReference;
-    orderly?: 'orderly'
+    orderly: boolean;
 }
 
 //endregion
@@ -639,9 +638,9 @@ CompoundType returns TypeReference:
 
 ComplexType returns TypeReference:
     PrimaryType ('['(
-        ({MapTypeReference.value=current} key=TypeReference) |
-        ({ArrayTypeReference.value=current})
-    )']' ('$' orderly='orderly')? )*
+        ({MapTypeReference.value=current} key=TypeReference ']' ('$' orderly?='orderly')?) |
+        ({ArrayTypeReference.value=current} ']')
+    ) )*
 ;
 
 fragment PrimaryType returns TypeReference:
@@ -663,7 +662,7 @@ FunctionType returns FunctionTypeReference:
 ;
 
 NamedType returns NamedTypeReference:
-    (path+=[NamedElement:ID] '.')* path+=[NamedElement:ID] ('<' typeArguments+=NamedType (',' typeArguments+=NamedType)* '>')?
+    path+=[NamedElement:ID] ('.' path+=[NamedElement:ID])* ('<' typeArguments+=NamedType (',' typeArguments+=NamedType)* '>')?
 ;
 
 //endregion TypeReference

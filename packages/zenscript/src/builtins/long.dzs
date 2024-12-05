@@ -1,1 +1,32 @@
-zenClass long
+zenClass long {
+    operator -() as long;
+    operator !() as long;
+
+    operator &(value as long) as long;
+    operator |(value as long) as long;
+    operator ^(value as long) as long;
+
+    operator +(value as long) as long;
+    operator -(value as long) as long;
+    operator *(value as long) as long;
+    operator /(value as long) as long;
+    operator %(value as long) as long;
+
+    operator <(value as long) as bool;
+    operator >(value as long) as bool;
+    operator <=(value as long) as bool;
+    operator >=(value as long) as bool;
+    operator ==(value as long) as bool;
+    operator !=(value as long) as bool;
+
+    operator &=(value as long) as void;
+    operator |=(value as long) as void;
+    operator ^=(value as long) as void;
+    operator +=(value as long) as void;
+    operator -=(value as long) as void;
+    operator *=(value as long) as void;
+    operator /=(value as long) as void;
+    operator %=(value as long) as void;
+
+    operator as() as byte, short, int, float, double, string;
+}

@@ -14,13 +14,13 @@ import { ZenScriptMemberProvider } from './reference/member-provider'
 import { ZenScriptNameProvider } from './reference/name-provider'
 import { ZenScriptScopeComputation } from './reference/scope-computation'
 import { ZenScriptScopeProvider } from './reference/scope-provider'
+import { ZenScriptOverloadResolver } from './typing/overload-resolver'
 import { ZenScriptTypeComputer } from './typing/type-computer'
 import { ZenScriptTypeFeatures } from './typing/type-features'
 import { registerValidationChecks, ZenScriptValidator } from './validation/validator'
-import { ZenScriptAstNodeDescriptionProvider } from './workspace/ast-descriptions'
 import { ZenScriptBracketManager } from './workspace/bracket-manager'
 import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
-import { ZenScriptDescriptionIndex } from './workspace/description-index'
+import { ZenScriptDescriptionCreator } from './workspace/description-creator'
 import { ZenScriptPackageManager } from './workspace/package-manager'
 import { ZenScriptWorkspaceManager } from './workspace/workspace-manager'
 
@@ -38,11 +38,11 @@ export interface ZenScriptAddedServices {
   typing: {
     TypeComputer: ZenScriptTypeComputer
     TypeFeatures: ZenScriptTypeFeatures
+    OverloadResolver: ZenScriptOverloadResolver
   }
   workspace: {
     PackageManager: ZenScriptPackageManager
     BracketManager: ZenScriptBracketManager
-    DescriptionIndex: ZenScriptDescriptionIndex
   }
 }
 
@@ -78,10 +78,9 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     DynamicProvider: services => new ZenScriptDynamicProvider(services),
   },
   workspace: {
-    AstNodeDescriptionProvider: services => new ZenScriptAstNodeDescriptionProvider(services),
+    AstNodeDescriptionProvider: services => new ZenScriptDescriptionCreator(services),
     PackageManager: services => new ZenScriptPackageManager(services),
     BracketManager: services => new ZenScriptBracketManager(services),
-    DescriptionIndex: services => new ZenScriptDescriptionIndex(services),
   },
   parser: {
     TokenBuilder: () => new CustomTokenBuilder(),
@@ -90,6 +89,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
   typing: {
     TypeComputer: services => new ZenScriptTypeComputer(services),
     TypeFeatures: services => new ZenScriptTypeFeatures(services),
+    OverloadResolver: services => new ZenScriptOverloadResolver(services),
   },
   lsp: {
     CompletionProvider: services => new ZenScriptCompletionProvider(services),

@@ -1,8 +1,9 @@
-import type { AstNode, AstNodeDescription, Stream } from 'langium'
+import type { AstNode, AstNodeDescription, Stream, URI } from 'langium'
 import type { BracketExpression, ClassDeclaration, ClassMemberDeclaration, FunctionDeclaration, ImportDeclaration, OperatorFunctionDeclaration } from '../generated/ast'
 import { AstUtils, isAstNodeDescription, stream } from 'langium'
 import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
+import { toStream } from './stream'
 
 export function isToplevel(node: AstNode | undefined): boolean {
   return isScript(node?.$container)
@@ -32,6 +33,16 @@ export function isImportable(node: AstNode | undefined) {
   }
 }
 
+export function getDocumentUri(node: AstNode | undefined): URI | undefined {
+  let current = node
+  while (current) {
+    if (current.$document) {
+      return current.$document.uri
+    }
+    current = current.$container
+  }
+}
+
 export function getPathAsString(importDecl: ImportDeclaration, index?: number): string
 export function getPathAsString(bracket: BracketExpression): string
 export function getPathAsString(astNode: ImportDeclaration | BracketExpression, index?: number): string {
@@ -55,21 +66,23 @@ export function toAstNode(item: AstNode | AstNodeDescription): AstNode | undefin
 }
 
 export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDeclaration> {
-  const visited = new Set<ClassDeclaration>()
-  return stream(function* () {
+  return toStream(function* () {
+    const visited = new Set<ClassDeclaration>()
     const deque = [classDecl]
     while (deque.length) {
-      const head = deque.shift()!
-      if (!visited.has(head)) {
-        yield head
-        visited.add(head)
-        head.superTypes
-          .map(it => it.path.at(-1)?.ref)
-          .filter(isClassDeclaration)
-          .forEach(it => deque.push(it))
+      const head = deque.shift()
+      if (!head || visited.has(head)) {
+        continue
       }
+
+      yield head
+      visited.add(head)
+      head.superTypes
+        .map(it => it.path.at(-1)?.ref)
+        .filter(isClassDeclaration)
+        .forEach(it => deque.push(it))
     }
-  }())
+  })
 }
 
 export function streamDeclaredMembers(classDecl: ClassDeclaration): Stream<ClassMemberDeclaration> {

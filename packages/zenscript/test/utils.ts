@@ -29,6 +29,7 @@ export async function getDocument(services: ZenScriptServices, docPath: string) 
 }
 
 export async function assertNoErrors(model: LangiumDocument<Script>) {
+  expect(model).toBeDefined()
   if (model.parseResult.lexerErrors.length > 0)
     console.error(model.parseResult.lexerErrors)
   expect(model.parseResult.lexerErrors).toHaveLength(0)
