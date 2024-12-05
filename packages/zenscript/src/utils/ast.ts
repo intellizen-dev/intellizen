@@ -65,9 +65,9 @@ export function toAstNode(item: AstNode | AstNodeDescription): AstNode | undefin
 }
 
 export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDeclaration> {
-  const visited = new Set<ClassDeclaration>()
-  return stream(function* () {
+  const generator = function* () {
     const deque = [classDecl]
+    const visited = new Set<ClassDeclaration>()
     while (deque.length) {
       const head = deque.shift()!
       if (!visited.has(head)) {
@@ -79,7 +79,13 @@ export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDecla
           .forEach(it => deque.push(it))
       }
     }
-  }())
+  }
+
+  return stream({
+    [Symbol.iterator]() {
+      return generator()[Symbol.iterator]()
+    },
+  })
 }
 
 export function streamDeclaredMembers(classDecl: ClassDeclaration): Stream<ClassMemberDeclaration> {

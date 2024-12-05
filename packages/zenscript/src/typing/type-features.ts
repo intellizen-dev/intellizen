@@ -2,7 +2,7 @@ import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
 import type { TypeComputer } from './type-computer'
 import type { Type, ZenScriptType } from './type-description'
-import { isOperatorFunctionDeclaration } from '../generated/ast'
+import { isFunctionDeclaration, isOperatorFunctionDeclaration } from '../generated/ast'
 import { streamClassChain } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 import { isAnyType, isClassType, isCompoundType, isFunctionType, isIntersectionType, isTypeVariable, isUnionType } from './type-description'
@@ -38,7 +38,11 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     this.memberProvider = services.references.MemberProvider
   }
 
-  isAssignable(target: Type, source: Type): boolean {
+  isAssignable(target: Type | undefined, source: Type | undefined): boolean {
+    if (target === undefined || source === undefined) {
+      return false
+    }
+
     // 1. are both types equal?
     if (this.areTypesEqual(source, target)) {
       return true
@@ -57,7 +61,11 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     return false
   }
 
-  areTypesEqual(first: Type, second: Type): boolean {
+  areTypesEqual(first: Type | undefined, second: Type | undefined): boolean {
+    if (first === undefined || second === undefined) {
+      return false
+    }
+
     if (first === second) {
       return true
     }
@@ -77,7 +85,21 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
 
   private readonly typeEqualityRules = defineRules<RuleMap>({
     ClassType: (self, other) => {
-      return isClassType(other) && self.declaration === other.declaration
+      if (!isClassType(other)) {
+        return false
+      }
+
+      if (self.declaration !== other.declaration) {
+        return false
+      }
+
+      if (self.declaration.typeParameters.length !== other.declaration.typeParameters.length) {
+        return false
+      }
+
+      const selfSubstitutions = self.declaration.typeParameters.map(it => self.substitutions.get(it)).filter(it => !!it)
+      const otherSubstitutions = other.declaration.typeParameters.map(it => other.substitutions.get(it)).filter(it => !!it)
+      return selfSubstitutions.every((type, index) => this.areTypesEqual(type, otherSubstitutions[index]))
     },
 
     FunctionType: (self, other) => {
@@ -109,7 +131,10 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     },
   })
 
-  isConvertible(from: Type, to: Type): boolean {
+  isConvertible(from: Type | undefined, to: Type | undefined): boolean {
+    if (from === undefined || to === undefined) {
+      return false
+    }
     return this.typeConversionRules(from.$type)?.call(this, from, to) ?? false
   }
 
@@ -124,7 +149,33 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
         .filter(it => it.op === 'as')
         .map(it => this.typeComputer.inferType(it.returnTypeRef))
         .nonNullable()
-        .some(it => this.isAssignable(to, it))
+        .some(it => this.isSubType(to, it))
+    },
+
+    FunctionType: (from, to) => {
+      if (isAnyType(to)) {
+        return true
+      }
+
+      let toFuncType: Type | undefined
+      if (isFunctionType(to)) {
+        toFuncType = to
+      }
+      else if (isClassType(to)) {
+        const lambdaDecl = this.memberProvider.streamMembers(to)
+          .filter(isFunctionDeclaration)
+          .filter(it => it.prefix === 'lambda')
+          .head()
+        toFuncType = this.typeComputer.inferType(lambdaDecl)
+      }
+
+      if (!isFunctionType(toFuncType)) {
+        return false
+      }
+
+      return from.paramTypes.length === toFuncType.paramTypes.length
+        && this.isConvertible(from.returnType, toFuncType.returnType)
+        && from.paramTypes.every((param, index) => this.isConvertible(param, toFuncType.paramTypes[index]))
     },
 
     CompoundType: (from, to) => {
@@ -132,7 +183,11 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     },
   })
 
-  isSubType(subType: Type, superType: Type): boolean {
+  isSubType(subType: Type | undefined, superType: Type | undefined): boolean {
+    if (subType === undefined || superType === undefined) {
+      return false
+    }
+
     // ask the subtype
     if (this.subTypeRules(subType.$type)?.call(this, subType, superType)) {
       return true
@@ -158,6 +213,10 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
     },
 
     IntersectionType: (superType, subType) => {
+      return superType.types.some(it => this.isSubType(subType, it))
+    },
+
+    CompoundType: (superType, subType) => {
       return superType.types.some(it => this.isSubType(subType, it))
     },
   })

@@ -4,7 +4,7 @@ import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
 import type { ZenScriptSyntheticAstType } from './synthetic'
 import { EMPTY_STREAM, stream } from 'langium'
-import { isClassDeclaration, isOperatorFunctionDeclaration, isVariableDeclaration } from '../generated/ast'
+import { isClassDeclaration, isOperatorFunctionDeclaration, isScript, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
 import { isStatic, streamClassChain, streamDeclaredMembers } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -80,7 +80,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
         return EMPTY_STREAM
       }
 
-      if (isSyntheticAstNode(target)) {
+      if (isSyntheticAstNode(target) || isScript(target)) {
         return this.streamMembers(target)
       }
 
@@ -93,6 +93,21 @@ export class ZenScriptMemberProvider implements MemberProvider {
       if (isClassType(receiverType)) {
         type = type?.substituteTypeParameters(receiverType.substitutions)
       }
+      return this.streamMembers(type)
+    },
+
+    ParenthesizedExpression: (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.streamMembers(type)
+    },
+
+    PrefixExpression: (source) => {
+      const type = this.typeComputer.inferType(source)
+      return this.streamMembers(type)
+    },
+
+    InfixExpression: (source) => {
+      const type = this.typeComputer.inferType(source)
       return this.streamMembers(type)
     },
 
