@@ -1,7 +1,7 @@
-import type { AstNode, AstNodeDescription } from 'langium'
+import type { AstNode, AstNodeDescription, LangiumDocument } from 'langium'
 import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import { CstUtils, DefaultAstNodeDescriptionProvider, stream, URI } from 'langium'
+import { AstUtils, CstUtils, DefaultAstNodeDescriptionProvider, stream, URI } from 'langium'
 import { isClassDeclaration, isFunctionDeclaration } from '../generated/ast'
 import { getDocumentUri, isStatic } from '../utils/ast'
 
@@ -121,5 +121,10 @@ export class ZenScriptDescriptionCreator extends DefaultAstNodeDescriptionProvid
         return _path
       },
     }
+  }
+
+  override createDescription(node: AstNode, name: string | undefined, document?: LangiumDocument): AstNodeDescription {
+    const uri = document?.uri ?? AstUtils.getDocument(node).uri
+    return this.createDescriptionWithUri(node, uri, name)
   }
 }
