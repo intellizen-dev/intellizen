@@ -2,7 +2,7 @@ import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, ScopeOptions } 
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { OverloadResolver } from '../typing/overload-resolver'
-import type { ZenScriptDescriptionIndex } from '../workspace/description-index'
+import type { DescriptionCreator } from '../workspace/description-creator'
 import type { PackageManager } from '../workspace/package-manager'
 import type { DynamicProvider } from './dynamic-provider'
 import type { MemberProvider } from './member-provider'
@@ -20,7 +20,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
   private readonly memberProvider: MemberProvider
   private readonly dynamicProvider: DynamicProvider
-  private readonly descriptionIndex: ZenScriptDescriptionIndex
+  private readonly descriptionCreator: DescriptionCreator
   private readonly overloadResolver: OverloadResolver
 
   constructor(services: ZenScriptServices) {
@@ -28,7 +28,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     this.packageManager = services.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
     this.dynamicProvider = services.references.DynamicProvider
-    this.descriptionIndex = services.workspace.DescriptionIndex
+    this.descriptionCreator = services.workspace.AstNodeDescriptionProvider
     this.overloadResolver = services.typing.OverloadResolver
   }
 
@@ -79,7 +79,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     const refText = source.reference.$refText
     const imports = stream(script.imports)
-      .flatMap(it => this.descriptionIndex.createImportedDescriptions(it))
+      .flatMap(it => this.descriptionCreator.createImportedDescriptions(it))
 
     if (refText === '' || !isCallExpression(source.container.$container) || source.container.$containerProperty !== 'receiver') {
       return this.createScope(imports, outside)
@@ -93,12 +93,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .toArray()
 
     const overloads = this.overloadResolver.resolveOverloads(source.container.$container, maybeCandidates)
-    const descriptions = overloads.map(it => this.descriptionIndex.createDynamicDescription(it, refText))
+    const descriptions = overloads.map(it => this.descriptionCreator.createDynamicDescription(it, refText))
     return this.createScope(descriptions, outside)
   }
 
   override createScopeForNodes(nodes: Iterable<AstNode>, outerScope?: Scope, options?: ScopeOptions): Scope {
-    return new StreamScope(stream(nodes).map(it => this.descriptionIndex.getDescription(it)), outerScope, options)
+    return new StreamScope(stream(nodes).map(it => this.descriptionCreator.getOrCreateDescription(it)), outerScope, options)
   }
 
   private readonly rules = defineRules<RuleMap>({
@@ -113,10 +113,10 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       const elements: AstNodeDescription[] = []
       for (const sibling of siblings) {
         if (sibling.isDataNode()) {
-          sibling.data.forEach(it => elements.push(this.descriptionIndex.getDescription(it)))
+          sibling.data.forEach(it => elements.push(this.descriptionCreator.getOrCreateDescription(it)))
         }
         else {
-          elements.push(this.descriptionIndex.getDescription(sibling))
+          elements.push(this.descriptionCreator.getOrCreateDescription(sibling))
         }
       }
       return this.createScope(elements)
@@ -143,7 +143,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
               const constructors = classDecl.members.filter(isConstructorDeclaration)
               const overloads = this.overloadResolver.resolveOverloads(callExpr, constructors)
               if (overloads[0]) {
-                return this.descriptionIndex.getDescription(overloads[0])
+                return this.descriptionCreator.getOrCreateDescription(overloads[0])
               }
             }
             return desc
@@ -179,7 +179,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             case ClassDeclaration:
               return desc
             case ImportDeclaration: {
-              return this.descriptionIndex.createImportedDescriptions(desc.node as ImportDeclaration)[0]
+              return this.descriptionCreator.createImportedDescriptions(desc.node as ImportDeclaration)[0]
             }
           }
         }

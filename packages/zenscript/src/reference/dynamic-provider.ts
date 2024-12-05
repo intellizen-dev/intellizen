@@ -2,7 +2,7 @@ import type { AstNode, AstNodeDescription, Stream } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
-import type { DescriptionIndex } from '../workspace/description-index'
+import type { DescriptionCreator } from '../workspace/description-creator'
 import { AstUtils, EMPTY_STREAM, stream } from 'langium'
 import { isCallExpression, isClassDeclaration } from '../generated/ast'
 import { isClassType, isFunctionType } from '../typing/type-description'
@@ -17,11 +17,11 @@ type SourceMap = ZenScriptAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => Stream<AstNodeDescription> }
 
 export class ZenScriptDynamicProvider implements DynamicProvider {
-  private readonly descriptionIndex: DescriptionIndex
+  private readonly descriptionCreator: DescriptionCreator
   private readonly typeComputer: TypeComputer
 
   constructor(services: ZenScriptServices) {
-    this.descriptionIndex = services.workspace.DescriptionIndex
+    this.descriptionCreator = services.workspace.AstNodeDescriptionProvider
     this.typeComputer = services.typing.TypeComputer
   }
 
@@ -35,7 +35,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
         // dynamic this
         const classDecl = AstUtils.getContainerOfType(source, isClassDeclaration)
         if (classDecl) {
-          yield this.descriptionIndex.getThisDescription(classDecl)
+          yield this.descriptionCreator.getOrCreateThisDescription(classDecl)
         }
 
         // dynamic arguments
@@ -48,7 +48,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
               yield * streamDeclaredFunctions(paramType.declaration)
                 .filter(isStatic)
                 .filter(it => it.parameters.length === 0)
-                .map(it => this.descriptionIndex.getDescription(it))
+                .map(it => this.descriptionCreator.getOrCreateDescription(it))
             }
           }
         }
@@ -65,7 +65,7 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
             .filter(it => it.parameters.length === 1)
             .head()
           if (operatorDecl) {
-            yield this.descriptionIndex.createDynamicDescription(operatorDecl.parameters[0], source.target.$refText)
+            yield this.descriptionCreator.createDynamicDescription(operatorDecl.parameters[0], source.target.$refText)
           }
         }
       }.call(this))
