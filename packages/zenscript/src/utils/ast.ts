@@ -3,6 +3,7 @@ import type { BracketExpression, ClassDeclaration, ClassMemberDeclaration, Funct
 import { AstUtils, isAstNodeDescription, stream } from 'langium'
 import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
+import { toStream } from './stream'
 
 export function isToplevel(node: AstNode | undefined): boolean {
   return isScript(node?.$container)
@@ -65,26 +66,22 @@ export function toAstNode(item: AstNode | AstNodeDescription): AstNode | undefin
 }
 
 export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDeclaration> {
-  const generator = function* () {
-    const deque = [classDecl]
+  return toStream(function* () {
     const visited = new Set<ClassDeclaration>()
+    const deque = [classDecl]
     while (deque.length) {
-      const head = deque.shift()!
-      if (!visited.has(head)) {
-        yield head
-        visited.add(head)
-        head.superTypes
-          .map(it => it.path.at(-1)?.ref)
-          .filter(isClassDeclaration)
-          .forEach(it => deque.push(it))
+      const head = deque.shift()
+      if (!head || visited.has(head)) {
+        continue
       }
-    }
-  }
 
-  return stream({
-    [Symbol.iterator]() {
-      return generator()[Symbol.iterator]()
-    },
+      yield head
+      visited.add(head)
+      head.superTypes
+        .map(it => it.path.at(-1)?.ref)
+        .filter(isClassDeclaration)
+        .forEach(it => deque.push(it))
+    }
   })
 }
 
