@@ -1,16 +1,18 @@
-import type { AstNodeDescription, LangiumDocument, MaybePromise, Stream } from 'langium'
+import type { AstNodeDescription, MaybePromise, Stream } from 'langium'
 import type { CompletionAcceptor, CompletionContext, CompletionProviderOptions, CompletionValueItem, NextFeature } from 'langium/lsp'
-import type { CancellationToken, CompletionItem, CompletionItemLabelDetails, CompletionList, CompletionParams, Range } from 'vscode-languageserver'
-import type { BracketExpression, BracketLocation, ZenScriptAstType } from '../generated/ast'
+import type { CompletionItemLabelDetails } from 'vscode-languageserver'
+import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
+import type { BracketEntry } from '../resource'
 import type { TypeComputer } from '../typing/type-computer'
+import type { HierarchyNode } from '../utils/hierarchy-tree'
 import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
 import { substringBeforeLast } from '@intellizen/shared'
-import { EMPTY_STREAM, GrammarUtils, stream } from 'langium'
+import { EMPTY_STREAM, stream } from 'langium'
 import { DefaultCompletionProvider } from 'langium/lsp'
-import { CompletionItemKind, TextEdit } from 'vscode-languageserver'
-import { isBracketExpression, isBracketLocation, isBracketProperty, isExpressionTemplate } from '../generated/ast'
+import { CompletionItemKind } from 'vscode-languageserver'
+import { isBracketExpression, isBracketLocation } from '../generated/ast'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -18,7 +20,13 @@ import { defineRules } from '../utils/rule'
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CompletionItemLabelDetails | undefined }
 
-export interface BracketCompletion {
+interface MiddleCompletion {
+  node: HierarchyNode<BracketEntry>
+  label: string
+}
+
+interface EndCompletion {
+  entry: BracketEntry
   label: string
   description?: string
 }
@@ -27,7 +35,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private readonly typeComputer: TypeComputer
   private readonly bracketManager: ZenScriptBracketManager
   override readonly completionOptions: CompletionProviderOptions = {
-    triggerCharacters: ['.', '<', ':', '=', ','],
+    triggerCharacters: ['.', '<'],
   }
 
   constructor(services: ZenScriptServices) {
@@ -36,233 +44,99 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     this.bracketManager = services.workspace.BracketManager
   }
 
-  private collectBracketCompletions(path: string[]): Stream<BracketCompletion> {
-    const tree = this.bracketManager.entryTree.find(path)
-    if (!tree) {
-      return EMPTY_STREAM
-    }
-    const ends = stream(tree.children.values())
-      .filter(node => node.isDataNode())
-      .flatMap(node => node.data)
-      .map(entry => ({
-        label: tree.name,
-        description: entry.name,
-      }))
-    const middles = stream(tree.children.values())
-      .filter(node => node.isInternalNode())
-      .map(node => ({
-        label: node.name,
-      }))
-    return stream(ends, middles)
-  }
-
-  private findBracketExpression(context: CompletionContext): BracketExpression | undefined {
-    if (isBracketExpression(context.node)) {
-      return context.node
-    }
-    let bracketNode
-    if (context.node?.$containerProperty === 'path' || context.node?.$containerProperty === 'properties') {
-      bracketNode = context.node?.$container
-    }
-    else if (context.node?.$containerProperty === 'key' || context.node?.$containerProperty === 'value') {
-      bracketNode = context.node?.$container?.$container
-    }
-
-    if (isBracketExpression(bracketNode)) {
-      return bracketNode
-    }
-  }
-
-  private completionForBracketExpression(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): boolean {
-    const bracket = this.findBracketExpression(context)
-    if (bracket) {
-      // stop completion here for we only complete for bracket context once, and do not check completion for other features even no completion items
-      this._continueCompletion = false
-      if (this.completionForBracketProperty(context, bracket, acceptor)) {
-        return false
-      }
-      this.completionForBracketLocation(context, bracket, acceptor)
-      return false
-    }
-
-    // if the current trigger character is a bracket trigger character, skip other completions
-    if (this.currentTriggerCharacter && this.bracketTriggerCharacters.has(this.currentTriggerCharacter)) {
-      this._continueCompletion = false
-      return false
-    }
-
-    return true
-  }
-
-  private completionForBracketProperty(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): boolean {
-    // do not complete for expression template because it is hard to determine the value
-    if (bracket.path.some(it => isExpressionTemplate(it))) {
-      return false
-    }
-
-    const existingKeys = stream(bracket.properties?.map(it => it.key.value) ?? []).nonNullable().toSet()
-
-    let key: string | undefined
-    let value: string | undefined
-    let bracketId: string
-    // need to manual provide range for vs may use '=', ':' to match the completion
-    let range: Range | undefined
-
-    // <blockstate:minecraft:furnace:|>  (with > here, empty property)
-    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    if (isBracketExpression(context.node)) {
-      bracketId = bracket.path.map(it => it.value).join(':')
-      range = {
-        start: context.position,
-        end: context.position,
-      }
-    }
-    // <blockstate:minecraft:furnace:faci|>  (with > here, no '=', not empty value)
-    //                               ^^^^
-    else if (isBracketLocation(context.node)) {
-      key = context.node.value as string
-      bracketId = bracket.path.slice(0, context.node.$containerIndex!).map(it => it.value).join(':')
-      range = context.node.$cstNode?.range
-    }
-    // <blockstate:minecraft:furnace:faci=|>        (with '=' here)
-    //                               ^^^^^
-    else if (isBracketProperty(context.node)) {
-      const property = context.node
-      key = property.key.value
-      value = ''
-      bracketId = bracket.path.map(it => it.value).join(':')
-      range = {
-        start: context.position,
-        end: context.position,
-      }
-    }
-    // <blockstate:minecraft:furnace:faci|        (no > here)
-    //                               ^^^^
-    else if (isBracketProperty(context.node?.$container)) {
-      const property = context.node.$container
-
-      key = property.key.value
-      value = property.value?.value?.toString()
-      bracketId = bracket.path.map(it => it.value).join(':')
-
-      range = context.node.$cstNode?.range
-    }
-    else {
-      return false
-    }
-
-    // completion for property
-    const mirror = this.bracketManager.resolve(bracketId)
-    if (!mirror) {
-      return false
-    }
-
-    if (value === undefined) {
-      stream(Object.keys(mirror.properties))
-        .filter(it => !existingKeys.has(it))
-        .filter(it => !key || this.fuzzyMatcher.match(key, it))
-        .forEach((it) => {
-          acceptor(context, {
-            label: it,
-            kind: CompletionItemKind.Property,
-            commitCharacters: ['='],
-            textEdit: range && TextEdit.replace(range, it),
-          })
-        })
-
-      return true
-    }
-
-    const propValues = (mirror.properties as any)[key!]
-    if (!Array.isArray(propValues)) {
-      return false
-    }
-
-    stream(propValues)
-      .filter(it => !value || this.fuzzyMatcher.match(value, it))
-      .forEach((it) => {
-        acceptor(context, {
-          label: it,
-          kind: CompletionItemKind.Constant,
-          commitCharacters: ['>', ','],
-          textEdit: range && TextEdit.replace(range, it),
-        })
-      })
-
-    return true
-  }
-
-  private completionForBracketLocation(context: CompletionContext, bracket: BracketExpression, acceptor: CompletionAcceptor): void {
-    if (bracket.path.some(it => isExpressionTemplate(it))) {
-      return
-    }
-
-    let path: BracketLocation[] | undefined
-    let current: string | undefined
-    // <item:minecraft:app|>  (with > here)
-    if (isBracketLocation(context.node)) {
-      path = bracket.path.slice(0, context.node.$containerIndex!)
-      current = context.node.value as string
-    }
-    // <item:minecraft:app|        (no > here)
-    else {
-      path = bracket.path
-      if (bracket.properties.length === 0) {
-        current = ''
-      }
-      else if (bracket.properties.length === 1 && !GrammarUtils.findNodeForKeyword(bracket.properties[0].$cstNode, '=')) {
-        // if the last property only has a key, may is be a wrong ast node, assume it as also a path
-        current = bracket.properties[0].key.value
-      }
-    }
-
-    if (current === undefined) {
-      return
-    }
-
-    const candidate = this.collectBracketCompletions(path.map(it => it.value as string))
-
-    for (const completion of candidate) {
-      acceptor(context, {
-        label: completion.label,
-        kind: completion.description ? CompletionItemKind.EnumMember : CompletionItemKind.Enum,
-        labelDetails: {
-          description: completion.description,
-        },
-        commitCharacters: [':', '>'],
-
-      })
-    }
-  }
-
-  private readonly bracketTriggerCharacters = new Set(['<', ':', '=', ','])
-  private currentTriggerCharacter: string | undefined
-  private _continueCompletion = true
-
-  public override getCompletion(document: LangiumDocument, params: CompletionParams, _cancelToken?: CancellationToken): Promise<CompletionList | undefined> {
-    // store the current trigger character, and reset the _continueCompletion flag
-    this.currentTriggerCharacter = params.context?.triggerCharacter
-    this._continueCompletion = true
-    return super.getCompletion(document, params, _cancelToken)
-  }
-
   protected override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
-    const continueCompletion = this._continueCompletion && this.completionForBracketExpression(context, next, acceptor)
-    if (continueCompletion) {
+    if (isBracketExpression(context.node)) {
+      this.completionForBracketExpression(context, acceptor)
+    }
+    else if (isBracketLocation(context.node)) {
+      this.completionForBracketLocation(context, acceptor)
+    }
+    else {
       return super.completionFor(context, next, acceptor)
     }
   }
 
-  protected override continueCompletion(items: CompletionItem[]): boolean {
-    // because langium will attempt to use a different context to complete if they found no items,
-    // we need to check if we have already completed the bracket context, if so, we should not _continueCompletion to other contexts
-    if (!this._continueCompletion) {
-      return false
+  private collectBracketCompletions(path: string): { middles: Stream<MiddleCompletion>, ends: Stream<EndCompletion> } {
+    const tree = this.bracketManager.entryTree.find(path)
+    if (!tree) {
+      return { middles: EMPTY_STREAM, ends: EMPTY_STREAM }
     }
-    return super.continueCompletion(items)
+    const middles: Stream<MiddleCompletion> = stream(tree.children.values())
+      .filter(node => node.isInternalNode())
+      .map(node => ({ node, label: node.name }))
+    const ends: Stream<EndCompletion> = stream(tree.children.values())
+      .filter(node => node.isDataNode())
+      .flatMap(node => node.data.values().map(entry => ({ entry, label: node.name, description: entry.name })))
+    return { middles, ends }
   }
 
-  protected override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
+  private completionForBracketExpression(context: CompletionContext, acceptor: CompletionAcceptor): void {
+    const node = isBracketExpression(context.node) ? context.node : undefined
+    const path = node ? getPathAsString(node, node.$containerIndex) : ''
+    const { middles, ends } = this.collectBracketCompletions(path)
+
+    for (const middle of middles) {
+      acceptor(context, {
+        label: middle.label,
+        kind: CompletionItemKind.EnumMember,
+        insertText: `${middle.label}:`,
+        labelDetails: {
+          detail: ':',
+          description: `+${middle.node.children.size + middle.node.data.size} items`,
+        },
+        command: {
+          title: 'Trigger Suggest',
+          command: 'editor.action.triggerSuggest',
+        },
+      })
+    }
+
+    for (const end of ends) {
+      acceptor(context, {
+        label: end.label,
+        kind: CompletionItemKind.EnumMember,
+        insertText: `${end.label}>`,
+        labelDetails: {
+          detail: '>',
+          description: end.description,
+        },
+      })
+    }
+  }
+
+  private completionForBracketLocation(context: CompletionContext, acceptor: CompletionAcceptor): void {
+    const location = isBracketLocation(context.node) ? context.node : undefined
+    const path = location ? substringBeforeLast(getPathAsString(location.$container, location.$containerIndex), ':') : ''
+    const { middles, ends } = this.collectBracketCompletions(path)
+    for (const middle of middles) {
+      acceptor(context, {
+        label: middle.label,
+        kind: CompletionItemKind.EnumMember,
+        insertText: `${middle.label}:`,
+        labelDetails: {
+          detail: ':',
+          description: `+${middle.node.children.size + middle.node.data.size} items`,
+        },
+        command: {
+          title: 'Trigger Suggest',
+          command: 'editor.action.triggerSuggest',
+        },
+      })
+    }
+    for (const end of ends) {
+      acceptor(context, {
+        label: end.label,
+        kind: CompletionItemKind.EnumMember,
+        insertText: `${end.label}>`,
+        labelDetails: {
+          detail: '>',
+          description: end.description,
+        },
+      })
+    }
+  }
+
+  override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
     const source = toAstNode(nodeDescription)
     const kind = this.nodeKindProvider.getCompletionItemKind(nodeDescription)
     const labelDetails = this.labelDetailRules(source?.$type)?.call(this, source)
