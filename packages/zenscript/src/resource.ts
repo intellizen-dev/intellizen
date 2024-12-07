@@ -33,7 +33,7 @@ export interface BracketMirror {
 
 export interface BracketEntry {
   name?: string
-  properties: Record<string, unknown>
+  properties: Record<string, string[]>
 }
 // endregion
 

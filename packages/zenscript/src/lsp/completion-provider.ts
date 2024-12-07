@@ -1,7 +1,7 @@
 import type { AstNodeDescription, MaybePromise, Stream } from 'langium'
 import type { CompletionAcceptor, CompletionContext, CompletionProviderOptions, CompletionValueItem, NextFeature } from 'langium/lsp'
 import type { CompletionItemLabelDetails } from 'vscode-languageserver'
-import type { ZenScriptAstType } from '../generated/ast'
+import type { BracketProperty, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { BracketEntry } from '../resource'
@@ -9,7 +9,7 @@ import type { TypeComputer } from '../typing/type-computer'
 import type { HierarchyNode } from '../utils/hierarchy-tree'
 import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
 import { substringBeforeLast } from '@intellizen/shared'
-import { CstUtils, stream } from 'langium'
+import { AstUtils, CstUtils, GrammarAST, stream } from 'langium'
 import { DefaultCompletionProvider } from 'langium/lsp'
 import { CompletionItemKind } from 'vscode-languageserver'
 import { isBracketExpression, isBracketLocation, isBracketProperty, isUnquotedString } from '../generated/ast'
@@ -35,7 +35,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private readonly typeComputer: TypeComputer
   private readonly bracketManager: ZenScriptBracketManager
   override readonly completionOptions: CompletionProviderOptions = {
-    triggerCharacters: ['.', '<'],
+    triggerCharacters: ['.', '<', ':'],
   }
 
   constructor(services: ZenScriptServices) {
@@ -45,27 +45,24 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
-    if (isBracketExpression(context.node)) {
-      this.completionForBracketLocation(context, acceptor)
-    }
-    else if (isBracketLocation(context.node)) {
-      this.completionForBracketLocation(context, acceptor)
-    }
-    else if (isBracketProperty(context.node?.$container)) {
-      this.completionForBracketLocation(context, acceptor)
+    if (AstUtils.getContainerOfType(context.node, isBracketExpression)) {
+      this.completionForBracketExpression(context, next, acceptor)
     }
     else {
       return super.completionFor(context, next, acceptor)
     }
   }
 
-  private completionForBracketLocation(context: CompletionContext, acceptor: CompletionAcceptor): void {
+  private completionForBracketExpression(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     let subPath: string
     if (isBracketExpression(context.node)) {
       subPath = getPathAsString(context.node)
     }
     else if (isBracketLocation(context.node)) {
       subPath = getPathAsString(context.node.$container, context.node.$containerIndex! - 1)
+    }
+    else if (isBracketProperty(context.node)) {
+      subPath = getPathAsString(context.node.$container)
     }
     else if (isUnquotedString(context.node) && isBracketProperty(context.node.$container)) {
       subPath = getPathAsString(context.node.$container.$container)
@@ -79,49 +76,138 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       return
     }
 
+    if (tree.isInternalNode()) {
+      this.completionForBracketLocation(tree, context, next, acceptor)
+    }
+    else if (tree.isDataNode()) {
+      this.completionForBracketProperty(tree, context, next, acceptor)
+    }
+  }
+
+  private completionForBracketLocation(tree: HierarchyNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     const middles: Stream<MiddleCompletion> = stream(tree.children.values())
       .filter(node => node.isInternalNode())
       .map(node => ({ node, label: node.name }))
 
     for (const middle of middles) {
-      acceptor(context, {
+      const item: CompletionValueItem = {
         label: middle.label,
         kind: CompletionItemKind.EnumMember,
-        insertText: `${middle.label}:`,
         labelDetails: {
           detail: ':',
           description: `+${middle.node.children.size + middle.node.data.size} item(s)`,
         },
-        command: {
+      }
+      if (!this.hasNextToken(context, ':')) {
+        item.insertText = `${middle.label}:`
+        item.command = {
           title: 'Trigger Suggest',
           command: 'editor.action.triggerSuggest',
-        },
-      })
+        }
+      }
+      acceptor(context, item)
     }
 
     const ends: Stream<EndCompletion> = stream(tree.children.values())
       .filter(node => node.isDataNode())
       .flatMap(node => node.data.values().map(entry => ({ entry, label: node.name, description: entry.name })))
 
-    const needClose = this.needCloseBracket(context)
     for (const end of ends) {
-      acceptor(context, {
+      const item: CompletionValueItem = {
         label: end.label,
         kind: CompletionItemKind.EnumMember,
-        insertText: needClose ? `${end.label}>` : undefined,
         labelDetails: {
           detail: '>',
           description: end.description,
         },
         detail: end.description,
-      })
+      }
+      if (!this.hasNextToken(context, '>')) {
+        item.insertText = `${end.label}>`
+      }
+      acceptor(context, item)
     }
   }
 
-  private needCloseBracket(context: CompletionContext): boolean {
+  private completionForBracketProperty(tree: HierarchyNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+    const entry = tree.data.values().next().value
+    if (!entry) {
+      return
+    }
+
+    this.completionForBracketPropertyKey(entry, context, next, acceptor)
+    this.completionForBracketPropertyValue(entry, context, next, acceptor)
+  }
+
+  private completionForBracketPropertyKey(entry: BracketEntry, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+    if ((GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER') || (GrammarAST.isKeyword(next.feature) && next.feature.value === '=')) {
+      const containerProperty = context.node?.$containerProperty
+      if (containerProperty === 'properties' || containerProperty === 'value') {
+        return
+      }
+
+      for (const key in entry.properties) {
+        const item: CompletionValueItem = {
+          label: key,
+          kind: CompletionItemKind.Property,
+          labelDetails: {
+            detail: '=',
+            description: `+${entry.properties[key].length} item(s)`,
+          },
+        }
+        if (!this.hasNextToken(context, '=')) {
+          item.insertText = `${key}=`
+          item.command = {
+            title: 'Trigger Suggest',
+            command: 'editor.action.triggerSuggest',
+          }
+        }
+        acceptor(context, item)
+      }
+    }
+  }
+
+  private completionForBracketPropertyValue(entry: BracketEntry, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+    if (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER') {
+      const containerProperty = context.node?.$containerProperty
+      if (containerProperty === 'path') {
+        return
+      }
+
+      let propertyNode: BracketProperty
+      if (isBracketProperty(context.node)) {
+        propertyNode = context.node
+      }
+      else if (isUnquotedString(context.node) && isBracketProperty(context.node.$container)) {
+        propertyNode = context.node.$container
+      }
+      else {
+        return
+      }
+
+      const key = propertyNode.key.$cstNode?.text
+      if (!key) {
+        return
+      }
+
+      const items = entry.properties[key]
+      if (!items) {
+        return
+      }
+
+      for (const item of items) {
+        acceptor(context, {
+          label: item,
+          kind: CompletionItemKind.Constant,
+        })
+      }
+    }
+  }
+
+  private hasNextToken(context: CompletionContext, token: string): boolean {
     const container = context.node?.$cstNode?.container
     const leaf = container ? CstUtils.findLeafNodeAtOffset(container, context.tokenEndOffset) : undefined
-    return leaf?.text !== '>'
+    return leaf?.text === token
   }
 
   override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
