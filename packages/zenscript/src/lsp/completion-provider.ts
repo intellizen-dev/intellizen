@@ -9,10 +9,10 @@ import type { TypeComputer } from '../typing/type-computer'
 import type { HierarchyNode } from '../utils/hierarchy-tree'
 import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
 import { substringBeforeLast } from '@intellizen/shared'
-import { EMPTY_STREAM, stream } from 'langium'
+import { CstUtils, stream } from 'langium'
 import { DefaultCompletionProvider } from 'langium/lsp'
 import { CompletionItemKind } from 'vscode-languageserver'
-import { isBracketExpression, isBracketLocation } from '../generated/ast'
+import { isBracketExpression, isBracketLocation, isBracketProperty, isUnquotedString } from '../generated/ast'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -44,11 +44,14 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     this.bracketManager = services.workspace.BracketManager
   }
 
-  protected override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
+  override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
     if (isBracketExpression(context.node)) {
-      this.completionForBracketExpression(context, acceptor)
+      this.completionForBracketLocation(context, acceptor)
     }
     else if (isBracketLocation(context.node)) {
+      this.completionForBracketLocation(context, acceptor)
+    }
+    else if (isBracketProperty(context.node?.$container)) {
       this.completionForBracketLocation(context, acceptor)
     }
     else {
@@ -56,84 +59,69 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
   }
 
-  private collectBracketCompletions(path: string): { middles: Stream<MiddleCompletion>, ends: Stream<EndCompletion> } {
-    const tree = this.bracketManager.entryTree.find(path)
-    if (!tree) {
-      return { middles: EMPTY_STREAM, ends: EMPTY_STREAM }
+  private completionForBracketLocation(context: CompletionContext, acceptor: CompletionAcceptor): void {
+    let subPath: string
+    if (isBracketExpression(context.node)) {
+      subPath = getPathAsString(context.node)
     }
+    else if (isBracketLocation(context.node)) {
+      subPath = getPathAsString(context.node.$container, context.node.$containerIndex! - 1)
+    }
+    else if (isUnquotedString(context.node) && isBracketProperty(context.node.$container)) {
+      subPath = getPathAsString(context.node.$container.$container)
+    }
+    else {
+      subPath = ''
+    }
+
+    const tree = this.bracketManager.entryTree.find(subPath)
+    if (!tree) {
+      return
+    }
+
     const middles: Stream<MiddleCompletion> = stream(tree.children.values())
       .filter(node => node.isInternalNode())
       .map(node => ({ node, label: node.name }))
+
+    for (const middle of middles) {
+      acceptor(context, {
+        label: middle.label,
+        kind: CompletionItemKind.EnumMember,
+        insertText: `${middle.label}:`,
+        labelDetails: {
+          detail: ':',
+          description: `+${middle.node.children.size + middle.node.data.size} item(s)`,
+        },
+        command: {
+          title: 'Trigger Suggest',
+          command: 'editor.action.triggerSuggest',
+        },
+      })
+    }
+
     const ends: Stream<EndCompletion> = stream(tree.children.values())
       .filter(node => node.isDataNode())
       .flatMap(node => node.data.values().map(entry => ({ entry, label: node.name, description: entry.name })))
-    return { middles, ends }
-  }
 
-  private completionForBracketExpression(context: CompletionContext, acceptor: CompletionAcceptor): void {
-    const node = isBracketExpression(context.node) ? context.node : undefined
-    const path = node ? getPathAsString(node, node.$containerIndex) : ''
-    const { middles, ends } = this.collectBracketCompletions(path)
-
-    for (const middle of middles) {
-      acceptor(context, {
-        label: middle.label,
-        kind: CompletionItemKind.EnumMember,
-        insertText: `${middle.label}:`,
-        labelDetails: {
-          detail: ':',
-          description: `+${middle.node.children.size + middle.node.data.size} items`,
-        },
-        command: {
-          title: 'Trigger Suggest',
-          command: 'editor.action.triggerSuggest',
-        },
-      })
-    }
-
+    const needClose = this.needCloseBracket(context)
     for (const end of ends) {
       acceptor(context, {
         label: end.label,
         kind: CompletionItemKind.EnumMember,
-        insertText: `${end.label}>`,
+        insertText: needClose ? `${end.label}>` : undefined,
         labelDetails: {
           detail: '>',
           description: end.description,
         },
+        detail: end.description,
       })
     }
   }
 
-  private completionForBracketLocation(context: CompletionContext, acceptor: CompletionAcceptor): void {
-    const location = isBracketLocation(context.node) ? context.node : undefined
-    const path = location ? substringBeforeLast(getPathAsString(location.$container, location.$containerIndex), ':') : ''
-    const { middles, ends } = this.collectBracketCompletions(path)
-    for (const middle of middles) {
-      acceptor(context, {
-        label: middle.label,
-        kind: CompletionItemKind.EnumMember,
-        insertText: `${middle.label}:`,
-        labelDetails: {
-          detail: ':',
-          description: `+${middle.node.children.size + middle.node.data.size} items`,
-        },
-        command: {
-          title: 'Trigger Suggest',
-          command: 'editor.action.triggerSuggest',
-        },
-      })
-    }
-    for (const end of ends) {
-      acceptor(context, {
-        label: end.label,
-        kind: CompletionItemKind.EnumMember,
-        insertText: `${end.label}>`,
-        labelDetails: {
-          detail: '>',
-          description: end.description,
-        },
-      })
-    }
+  private needCloseBracket(context: CompletionContext): boolean {
+    const container = context.node?.$cstNode?.container
+    const leaf = container ? CstUtils.findLeafNodeAtOffset(container, context.tokenEndOffset) : undefined
+    return leaf?.text !== '>'
   }
 
   override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
