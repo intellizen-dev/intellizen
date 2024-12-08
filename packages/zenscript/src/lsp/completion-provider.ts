@@ -1,7 +1,7 @@
 import type { AstNodeDescription, MaybePromise } from 'langium'
 import type { CompletionAcceptor, CompletionContext, CompletionProviderOptions, CompletionValueItem, NextFeature } from 'langium/lsp'
 import type { CompletionItemLabelDetails } from 'vscode-languageserver'
-import type { BracketProperty, ZenScriptAstType } from '../generated/ast'
+import type { BracketExpression, BracketProperty, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { BracketEntry } from '../resource'
@@ -34,27 +34,28 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
-    if (AstUtils.getContainerOfType(context.node, isBracketExpression)) {
-      this.completionForBracketExpression(context, next, acceptor)
+    const bracket = AstUtils.getContainerOfType(context.node, isBracketExpression)
+    if (bracket) {
+      return this.completionForBracketExpression(bracket, context, next, acceptor)
     }
     else {
       return super.completionFor(context, next, acceptor)
     }
   }
 
-  private completionForBracketExpression(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+  private completionForBracketExpression(bracket: BracketExpression, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     let subPath: string
     if (isBracketExpression(context.node)) {
-      subPath = getPathAsString(context.node)
+      subPath = getPathAsString(bracket)
     }
     else if (isBracketLocation(context.node)) {
-      subPath = getPathAsString(context.node.$container, context.node.$containerIndex! - 1)
+      subPath = getPathAsString(bracket, context.node.$containerIndex! - 1)
     }
     else if (isBracketProperty(context.node)) {
-      subPath = getPathAsString(context.node.$container)
+      subPath = getPathAsString(bracket)
     }
     else if (isUnquotedString(context.node) && isBracketProperty(context.node.$container)) {
-      subPath = getPathAsString(context.node.$container.$container)
+      subPath = getPathAsString(bracket)
     }
     else {
       subPath = ''
@@ -65,15 +66,17 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       return
     }
 
-    if (tree.isInternalNode()) {
-      this.completionForBracketLocation(tree, context, next, acceptor)
-    }
-    else if (tree.isDataNode()) {
-      this.completionForBracketProperty(tree, context, next, acceptor)
-    }
+    this.completionForBracketLocation(tree, context, next, acceptor)
+    this.completionForBracketProperty(tree, context, next, acceptor)
   }
 
   private completionForBracketLocation(tree: HierarchyNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+    const requiredNextFeature
+      = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
+    if (!requiredNextFeature) {
+      return
+    }
+
     const middles = stream(tree.children.values())
       .filter(node => node.isInternalNode())
       .map(node => ({ node, label: node.name }))
@@ -131,7 +134,6 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private completionForBracketPropertyKey(entry: BracketEntry, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     const requiredNextFeature
       = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
-      || (GrammarAST.isKeyword(next.feature) && next.feature.value === '=')
     if (!requiredNextFeature) {
       return
     }
@@ -165,7 +167,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
   private completionForBracketPropertyValue(entry: BracketEntry, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     const requiredNextFeature
-       = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
+      = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
+      || (GrammarAST.isKeyword(next.feature) && next.feature.value === '=')
     if (!requiredNextFeature) {
       return
     }
