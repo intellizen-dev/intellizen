@@ -2,11 +2,12 @@ import type { SemanticTokenAcceptor } from 'langium/lsp'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
-import { type AstNode, CstUtils, stream } from 'langium'
+import { type AstNode, stream } from 'langium'
 import { AbstractSemanticTokenProvider } from 'langium/lsp'
 import { SemanticTokenModifiers, SemanticTokenTypes } from 'vscode-languageserver'
-import { isLocation } from '../generated/ast'
+import { isBracketLocation } from '../generated/ast'
 import { isStringType } from '../typing/type-description'
+import { firstTokenTypeName } from '../utils/cst'
 import { defineRules } from '../utils/rule'
 
 type SourceMap = ZenScriptAstType
@@ -52,10 +53,10 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
     },
 
     BracketExpression: (source, acceptor) => {
-      const locations = stream(source.path).filter(isLocation)
+      const locations = stream(source.path).filter(isBracketLocation)
       const [first, ...rest] = locations
 
-      switch (CstUtils.flattenCst(first.$cstNode!).head()?.tokenType.name) {
+      switch (firstTokenTypeName(first)) {
         case 'IDENTIFIER':
           acceptor({
             node: first,
@@ -66,7 +67,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
       }
 
       rest.forEach((it) => {
-        switch (CstUtils.flattenCst(it.$cstNode!).head()?.tokenType.name) {
+        switch (firstTokenTypeName(it)) {
           case 'IDENTIFIER':
             acceptor({
               node: it,
