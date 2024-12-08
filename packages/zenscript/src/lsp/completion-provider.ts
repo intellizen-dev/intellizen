@@ -1,4 +1,4 @@
-import type { AstNodeDescription, MaybePromise, Stream } from 'langium'
+import type { AstNodeDescription, MaybePromise } from 'langium'
 import type { CompletionAcceptor, CompletionContext, CompletionProviderOptions, CompletionValueItem, NextFeature } from 'langium/lsp'
 import type { CompletionItemLabelDetails } from 'vscode-languageserver'
 import type { BracketProperty, ZenScriptAstType } from '../generated/ast'
@@ -19,17 +19,6 @@ import { defineRules } from '../utils/rule'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
 type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CompletionItemLabelDetails | undefined }
-
-interface MiddleCompletion {
-  node: HierarchyNode<BracketEntry>
-  label: string
-}
-
-interface EndCompletion {
-  entry: BracketEntry
-  label: string
-  description?: string
-}
 
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private readonly typeComputer: TypeComputer
@@ -85,7 +74,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   private completionForBracketLocation(tree: HierarchyNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
-    const middles: Stream<MiddleCompletion> = stream(tree.children.values())
+    const middles = stream(tree.children.values())
       .filter(node => node.isInternalNode())
       .map(node => ({ node, label: node.name }))
 
@@ -108,9 +97,9 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       acceptor(context, item)
     }
 
-    const ends: Stream<EndCompletion> = stream(tree.children.values())
+    const ends = stream(tree.children.values())
       .filter(node => node.isDataNode())
-      .flatMap(node => node.data.values().map(entry => ({ entry, label: node.name, description: entry.name })))
+      .flatMap(node => node.data.values().map(entry => ({ label: node.name, description: entry.name })))
 
     for (const end of ends) {
       const item: CompletionValueItem = {
@@ -140,67 +129,79 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   private completionForBracketPropertyKey(entry: BracketEntry, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
-    if ((GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER') || (GrammarAST.isKeyword(next.feature) && next.feature.value === '=')) {
-      const containerProperty = context.node?.$containerProperty
-      if (containerProperty === 'properties' || containerProperty === 'value') {
-        return
-      }
+    const requiredNextFeature
+      = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
+      || (GrammarAST.isKeyword(next.feature) && next.feature.value === '=')
+    if (!requiredNextFeature) {
+      return
+    }
 
-      for (const key in entry.properties) {
-        const item: CompletionValueItem = {
-          label: key,
-          kind: CompletionItemKind.Property,
-          labelDetails: {
-            detail: '=',
-            description: `+${entry.properties[key].length} item(s)`,
-          },
-        }
-        if (!this.hasNextToken(context, '=')) {
-          item.insertText = `${key}=`
-          item.command = {
-            title: 'Trigger Suggest',
-            command: 'editor.action.triggerSuggest',
-          }
-        }
-        acceptor(context, item)
+    const invalidContainerProperty
+      = (context.node?.$containerProperty === 'properties')
+      || (context.node?.$containerProperty === 'value')
+    if (invalidContainerProperty) {
+      return
+    }
+
+    for (const key in entry.properties) {
+      const item: CompletionValueItem = {
+        label: key,
+        kind: CompletionItemKind.Property,
+        labelDetails: {
+          detail: '=',
+          description: `+${entry.properties[key].length} item(s)`,
+        },
       }
+      if (!this.hasNextToken(context, '=')) {
+        item.insertText = `${key}=`
+        item.command = {
+          title: 'Trigger Suggest',
+          command: 'editor.action.triggerSuggest',
+        }
+      }
+      acceptor(context, item)
     }
   }
 
   private completionForBracketPropertyValue(entry: BracketEntry, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
-    if (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER') {
-      const containerProperty = context.node?.$containerProperty
-      if (containerProperty === 'path') {
-        return
-      }
+    const requiredNextFeature
+       = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
+    if (!requiredNextFeature) {
+      return
+    }
 
-      let propertyNode: BracketProperty
-      if (isBracketProperty(context.node)) {
-        propertyNode = context.node
-      }
-      else if (isUnquotedString(context.node) && isBracketProperty(context.node.$container)) {
-        propertyNode = context.node.$container
-      }
-      else {
-        return
-      }
+    const invalidContainerProperty
+      = (context.node?.$containerProperty === 'path')
+    if (invalidContainerProperty) {
+      return
+    }
 
-      const key = propertyNode.key.$cstNode?.text
-      if (!key) {
-        return
-      }
+    let propertyNode: BracketProperty
+    if (isBracketProperty(context.node)) {
+      propertyNode = context.node
+    }
+    else if (isUnquotedString(context.node) && isBracketProperty(context.node.$container)) {
+      propertyNode = context.node.$container
+    }
+    else {
+      return
+    }
 
-      const items = entry.properties[key]
-      if (!items) {
-        return
-      }
+    const key = propertyNode.key.$cstNode?.text
+    if (!key) {
+      return
+    }
 
-      for (const item of items) {
-        acceptor(context, {
-          label: item,
-          kind: CompletionItemKind.Constant,
-        })
-      }
+    const items = entry.properties[key]
+    if (!items) {
+      return
+    }
+
+    for (const item of items) {
+      acceptor(context, {
+        label: item,
+        kind: CompletionItemKind.Constant,
+      })
     }
   }
 
