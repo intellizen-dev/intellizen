@@ -195,14 +195,14 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       return
     }
 
-    const items = entry.properties[key]
-    if (!items) {
+    const values = entry.properties[key]
+    if (!values) {
       return
     }
 
-    for (const item of items) {
+    for (const value of values) {
       acceptor(context, {
-        label: item,
+        label: value,
         kind: CompletionItemKind.Constant,
       })
     }
