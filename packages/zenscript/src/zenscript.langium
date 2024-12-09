@@ -336,7 +336,7 @@ interface CallExpression extends Expression {
 
 interface InstanceofExpression extends Expression {
     expr: Expression;
-    typeRef: TypeReference;
+    typeRef: NamedTypeReference;
 }
 
 interface ReferenceExpression extends Expression {
@@ -447,7 +447,7 @@ PostfixExpression returns Expression:
         ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
         ({IndexingExpression.receiver=current} '[' argument=Expression ']') |
         ({CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
-        ({InstanceofExpression.expr=current} 'instanceof' typeRef=TypeReference)
+        ({InstanceofExpression.expr=current} 'instanceof' typeRef=NamedType)
     )*
 ;
 
