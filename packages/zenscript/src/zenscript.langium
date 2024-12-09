@@ -176,7 +176,7 @@ interface WhileStatement extends Statement {
 interface ForStatement extends Statement {
     parameters: LoopParameter[];
     range: Expression;
-    body: Statement[];
+    body: Statement;
 }
 
 interface LoopParameter extends Declaration {
@@ -234,9 +234,7 @@ WhileStatement returns WhileStatement:
 ;
 
 ForStatement returns ForStatement:
-    'for' parameters+=LoopParameter (',' parameters+=LoopParameter)* 'in' range=Expression '{'
-        (body+=Statement)*
-    '}'
+    'for' parameters+=LoopParameter (',' parameters+=LoopParameter)* 'in' range=Expression body=Statement
 ;
 
 LoopParameter returns LoopParameter:
