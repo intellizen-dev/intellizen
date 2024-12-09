@@ -548,7 +548,7 @@ terminal fragment IN_TEMPLATE_LITERAL:
     /[^$`\\]|\\./;
 
 BracketExpression returns BracketExpression:
-    '<' path+=BracketLocation (':' path+=(BracketLocation | ExpressionTemplate)*)*
+    '<' path+=BracketLocation (':' path+=(BracketLocation | ExpressionTemplate)+)*
         (':' properties+=BracketProperty (',' properties+=BracketProperty)*)?
     '>'
 ;
