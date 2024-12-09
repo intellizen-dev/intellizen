@@ -23,9 +23,6 @@ export class HierarchyTree<V> {
   }
 
   find(path: string): HierarchyNode<V> | undefined {
-    if (path === undefined) {
-      return
-    }
     if (path === this.root.name) {
       return this.root
     }
