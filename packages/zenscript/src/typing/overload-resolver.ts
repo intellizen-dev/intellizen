@@ -1,9 +1,11 @@
-import type { CallableDeclaration, CallExpression, Expression, ValueParameter } from '../generated/ast'
+import type { CallableDeclaration, CallExpression, Expression, FieldDeclaration, ValueParameter } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from './type-computer'
+import type { FunctionType, Type } from './type-description'
 import type { TypeFeatures } from './type-features'
 import { type AstNode, MultiMap } from 'langium'
-import { isClassDeclaration, isConstructorDeclaration, isFunctionDeclaration } from '../generated/ast'
+import { isCallableDeclaration, isClassDeclaration, isConstructorDeclaration, isFieldDeclaration } from '../generated/ast'
+import { isFunctionType } from './type-description'
 
 export interface OverloadResolver {
   resolveOverloads: (callExpr: CallExpression, maybeCandidates: AstNode[]) => AstNode[]
@@ -15,6 +17,7 @@ export enum OverloadMatch {
   OptionalArgMatch,
   SubtypeMatch,
   ImplicitCastMatch,
+  FunctionPropertyMatch,
   NotMatch,
 }
 
@@ -32,30 +35,12 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
   }
 
   public resolveOverloads(callExpr: CallExpression, maybeCandidates: AstNode[]): AstNode[] {
-    if (!maybeCandidates.length) {
-      return []
-    }
-
-    let candidates: CallableDeclaration[]
-    if (maybeCandidates.find(isClassDeclaration)) {
-      candidates = maybeCandidates.find(isClassDeclaration)!.members.filter(isConstructorDeclaration)
-    }
-    else if (maybeCandidates.find(isFunctionDeclaration)) {
-      candidates = maybeCandidates.filter(isFunctionDeclaration)
-    }
-    else if (maybeCandidates.find(isConstructorDeclaration)) {
-      candidates = maybeCandidates.filter(isConstructorDeclaration)
-    }
-    else {
-      console.error(`Invalid overload candidates for call expression: ${callExpr.$cstNode?.text}`)
-      return []
-    }
-
-    if (candidates.length === 1) {
+    const candidates = maybeCandidates.flatMap(maybe => isClassDeclaration(maybe) ? maybe.members.filter(isConstructorDeclaration) : maybe)
+    if (candidates.length <= 1) {
       return candidates
     }
 
-    const groupedCandidates = candidates.reduce<MultiMap<AstNode, CallableDeclaration>>((map, it) => map.add(it.$container, it), new MultiMap())
+    const groupedCandidates = candidates.reduce((map, it) => map.add(it.$container!, it), new MultiMap<AstNode, AstNode>())
     for (const container of groupedCandidates.keys()) {
       const overloads = this.analyzeOverloads(new Set(groupedCandidates.get(container)), callExpr.arguments)
       if (overloads.length) {
@@ -71,9 +56,9 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
     return candidates
   }
 
-  private analyzeOverloads(candidates: Set<CallableDeclaration>, args: Expression[]): CallableDeclaration[] {
+  private analyzeOverloads(candidates: Set<AstNode>, args: Expression[]): AstNode[] {
     const possibles = candidates.values()
-      .map(it => ({ candidate: it, match: this.matchSignature(it, args) }))
+      .map(it => ({ candidate: it, match: this.match(it, args) }))
       .filter(it => it.match !== OverloadMatch.NotMatch)
       .toArray()
       .sort((a, b) => a.match - b.match)
@@ -81,32 +66,77 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
     const bestMatches = Object.values(groupedPossibles).at(0) ?? []
 
     if (bestMatches.length > 1) {
-      this.logAmbiguousOverloads(possibles, args)
+      this.logAmbiguous(possibles, args)
     }
 
     return bestMatches.map(it => it.candidate)
   }
 
-  private logAmbiguousOverloads(possibles: { candidate: CallableDeclaration, match: OverloadMatch }[], args: Expression[]) {
-    const first = possibles[0].candidate
-    const name = isConstructorDeclaration(first) ? first.$container.name : first.name
-    const types = args.map(it => this.typeComputer.inferType(it)?.toString()).join(', ')
-    console.warn(`ambiguous overload for ${name}(${types})`)
+  private logAmbiguous(possibles: { candidate: AstNode, match: OverloadMatch }[], args: Expression[]) {
+    const argTypes = args.map(it => this.typeComputer.inferType(it)?.toString() ?? 'undefined').join(', ')
+    console.warn(`ambiguous overload for (${argTypes})`)
     for (const { candidate, match } of possibles) {
-      const params = candidate.parameters
-        .map((it) => {
-          const str = this.typeComputer.inferType(it)?.toString() ?? 'undefined'
-          if (it.varargs) {
-            return `...${str}`
-          }
-          else if (it.defaultValue) {
-            return `${str}?`
-          }
-          else {
-            return str
-          }
-        }).join(', ')
-      console.warn(`----- ${OverloadMatch[match]} ${name}(${params})`)
+      const name = 'name' in candidate ? candidate.name : 'Unnamed'
+      const funcType = this.typeComputer.inferType(candidate) as FunctionType
+      const paramTypes = funcType.paramTypes.map(it => it.toString()).join(', ')
+      console.warn(`----- ${OverloadMatch[match]} ${name}(${paramTypes})`)
+    }
+  }
+
+  private match(node: AstNode, args: Expression[]): OverloadMatch {
+    const matchSet = new Set([OverloadMatch.ExactMatch])
+    if (isCallableDeclaration(node)) {
+      this.matchCallable(node, args, matchSet)
+    }
+    else if (isFieldDeclaration(node)) {
+      this.matchFunctionProperty(node, args, matchSet)
+    }
+    else {
+      matchSet.add(OverloadMatch.NotMatch)
+    }
+    return worstMatch(matchSet)
+  }
+
+  private matchCallable(callable: CallableDeclaration, args: Expression[], matchSet: Set<OverloadMatch>) {
+    const params = [...callable.parameters]
+    const map = this.createParamToArgsMap(params, args)
+
+    if (args.length > map.size) {
+      matchSet.add(OverloadMatch.NotMatch)
+      return
+    }
+
+    for (const param of params) {
+      const arg = map.get(param).at(0)
+      // special checking
+      if (param.varargs) {
+        matchSet.add(OverloadMatch.VarargMatch)
+        if (!arg) {
+          continue
+        }
+      }
+      else if (param.defaultValue) {
+        matchSet.add(OverloadMatch.OptionalArgMatch)
+        if (!arg) {
+          continue
+        }
+      }
+      else {
+        if (!arg) {
+          matchSet.add(OverloadMatch.NotMatch)
+          break
+        }
+      }
+
+      // type checking
+      const paramType = this.typeComputer.inferType(param)
+      const argType = this.typeComputer.inferType(arg)
+      if (!paramType || !argType) {
+        matchSet.add(OverloadMatch.ImplicitCastMatch)
+      }
+      else {
+        this.matchType(paramType, argType, matchSet)
+      }
     }
   }
 
@@ -124,60 +154,43 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
     return map
   }
 
-  private matchSignature(callable: CallableDeclaration, args: Expression[]): OverloadMatch {
-    const params = [...callable.parameters]
-    const map = this.createParamToArgsMap(params, args)
+  private matchFunctionProperty(property: FieldDeclaration, args: Expression[], matchSet: Set<OverloadMatch>) {
+    matchSet.add(OverloadMatch.FunctionPropertyMatch)
 
-    const matchSet = new Set([OverloadMatch.ExactMatch])
-    if (args.length > map.size) {
+    const funcType = this.typeComputer.inferType(property)
+    if (!isFunctionType(funcType)) {
       matchSet.add(OverloadMatch.NotMatch)
+      return
+    }
+
+    if (funcType.paramTypes.length !== args.length) {
+      matchSet.add(OverloadMatch.NotMatch)
+      return
+    }
+
+    funcType.paramTypes.forEach((paramType, index) => {
+      const argType = this.typeComputer.inferType(args[index])
+      if (!argType) {
+        matchSet.add(OverloadMatch.ImplicitCastMatch)
+      }
+      else {
+        this.matchType(paramType, argType, matchSet)
+      }
+    })
+  }
+
+  private matchType(paramType: Type, argType: Type, matchSet: Set<OverloadMatch>) {
+    if (this.typeFeatures.areTypesEqual(paramType, argType)) {
+      matchSet.add(OverloadMatch.ExactMatch)
+    }
+    else if (this.typeFeatures.isSubType(argType, paramType)) {
+      matchSet.add(OverloadMatch.SubtypeMatch)
+    }
+    else if (this.typeFeatures.isConvertible(argType, paramType)) {
+      matchSet.add(OverloadMatch.ImplicitCastMatch)
     }
     else {
-      for (const param of params) {
-        const arg = map.get(param).at(0)
-        // special checking
-        if (param.varargs) {
-          matchSet.add(OverloadMatch.VarargMatch)
-          if (!arg) {
-            continue
-          }
-        }
-        else if (param.defaultValue) {
-          matchSet.add(OverloadMatch.OptionalArgMatch)
-          if (!arg) {
-            continue
-          }
-        }
-        else {
-          if (!arg) {
-            matchSet.add(OverloadMatch.NotMatch)
-            break
-          }
-        }
-
-        // type checking
-        const paramType = this.typeComputer.inferType(param)
-        const argType = this.typeComputer.inferType(arg)
-        if (!paramType || !argType) {
-          matchSet.add(OverloadMatch.ImplicitCastMatch)
-          continue
-        }
-
-        if (this.typeFeatures.areTypesEqual(paramType, argType)) {
-          matchSet.add(OverloadMatch.ExactMatch)
-        }
-        else if (this.typeFeatures.isSubType(argType, paramType)) {
-          matchSet.add(OverloadMatch.SubtypeMatch)
-        }
-        else if (this.typeFeatures.isConvertible(argType, paramType)) {
-          matchSet.add(OverloadMatch.ImplicitCastMatch)
-        }
-        else {
-          matchSet.add(OverloadMatch.NotMatch)
-          break
-        }
-      }
+      matchSet.add(OverloadMatch.NotMatch)
     }
-    return worstMatch(matchSet)
   }
 }

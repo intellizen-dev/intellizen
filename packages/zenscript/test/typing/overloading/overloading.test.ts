@@ -18,6 +18,26 @@ function findOverloadForCall(call: Statement): AstNode {
   return target!
 }
 
+describe('function property', async () => {
+  const document = await getDocument(services, path.resolve(__dirname, 'scripts', 'function-property.zs'))
+  const script = document.parseResult.value
+
+  it('syntax', () => {
+    assertNoErrors(document)
+  })
+
+  it('function property', () => {
+    const foo_function_empty = findOverloadForCall(script.statements[1])
+    expect(foo_function_empty.$cstNode?.text).toBe('function foo() {}')
+
+    const foo_property_double = findOverloadForCall(script.statements[2])
+    expect(foo_property_double.$cstNode?.text).toBe('val foo as function(double)void;')
+
+    const foo_function_double_array = findOverloadForCall(script.statements[3])
+    expect(foo_function_double_array.$cstNode?.text).toBe('function foo(arr as double[]) {}')
+  })
+})
+
 describe('check overload', async () => {
   const document_overload_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'overload.zs'))
   const script_overload_zs = document_overload_zs.parseResult.value
