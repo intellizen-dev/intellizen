@@ -80,13 +80,13 @@ export class ZenScriptMemberProvider implements MemberProvider {
         return EMPTY_STREAM
       }
 
-      if (isSyntheticAstNode(target) || isScript(target)) {
+      if (isSyntheticAstNode(target) || isScript(target) || isClassDeclaration(target)) {
         return this.streamMembers(target)
       }
 
       const receiverType = this.typeComputer.inferType(source.receiver)
       if (!receiverType) {
-        return this.streamMembers(target)
+        return EMPTY_STREAM
       }
 
       let type = this.typeComputer.inferType(source)
