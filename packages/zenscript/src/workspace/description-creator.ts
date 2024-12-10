@@ -1,8 +1,8 @@
 import type { AstNode, AstNodeDescription, LangiumDocument } from 'langium'
-import type { ClassDeclaration, ImportDeclaration } from '../generated/ast'
+import type { ClassDeclaration, FunctionDeclaration, ImportDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import { AstUtils, CstUtils, DefaultAstNodeDescriptionProvider, stream, URI } from 'langium'
-import { isClassDeclaration, isFunctionDeclaration } from '../generated/ast'
+import { isClassDeclaration, isFunctionDeclaration, isScript } from '../generated/ast'
 import { getDocumentUri, isStatic } from '../utils/ast'
 
 declare module 'langium' {
@@ -69,16 +69,22 @@ export class ZenScriptDescriptionCreator extends DefaultAstNodeDescriptionProvid
 
     // TODO: Workaround for function overloading, may rework after langium supports multi-target references
     if (isFunctionDeclaration(target)) {
-      const classDecl = importDecl.path.at(-2)?.ref
-      if (!isClassDeclaration(classDecl)) {
+      const parent = importDecl.path.at(-2)?.ref
+
+      let members: FunctionDeclaration[]
+      if (isClassDeclaration(parent)) {
+        members = parent.members.filter(isFunctionDeclaration).filter(isStatic)
+      }
+      else if (isScript(parent)) {
+        members = parent.functions
+      }
+      else {
         return []
       }
 
-      return stream(classDecl.members)
-        .filter(isFunctionDeclaration)
-        .filter(isStatic)
+      return stream(members)
         .filter(it => it.name === target.name)
-        .map(it => this.createDynamicDescription(it, it.name))
+        .map(it => this.createDynamicDescription(it, importDecl.alias ?? it.name))
         .toArray()
     }
 
