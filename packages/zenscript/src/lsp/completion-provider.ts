@@ -1,4 +1,4 @@
-import type { AstNodeDescription, MaybePromise } from 'langium'
+import type { AstNodeDescription, MaybePromise, ReferenceInfo, Stream } from 'langium'
 import type { CompletionAcceptor, CompletionContext, CompletionProviderOptions, CompletionValueItem, NextFeature } from 'langium/lsp'
 import type { CompletionItemLabelDetails } from 'vscode-languageserver'
 import type { BracketExpression, BracketProperty, ZenScriptAstType } from '../generated/ast'
@@ -12,7 +12,7 @@ import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, CstUtils, GrammarAST, stream } from 'langium'
 import { DefaultCompletionProvider } from 'langium/lsp'
 import { CompletionItemKind } from 'vscode-languageserver'
-import { isBracketExpression, isBracketLocation, isBracketProperty, isUnquotedString } from '../generated/ast'
+import { isBracketExpression, isBracketLocation, isBracketProperty, isOperatorFunctionDeclaration, isUnquotedString } from '../generated/ast'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -277,4 +277,16 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       }
     },
   })
+
+  override getReferenceCandidates(refInfo: ReferenceInfo, context: CompletionContext): Stream<AstNodeDescription> {
+    return this.scopeProvider.getScope(refInfo).getAllElements().filter(desc => this.filterReference(context, desc))
+  }
+
+  filterReference(context: CompletionContext, desc: AstNodeDescription): boolean {
+    return ZenScriptCompletionProvider.ReferenceBlackList.every(predict => !predict(desc.node))
+  }
+
+  static readonly ReferenceBlackList = [
+    isOperatorFunctionDeclaration,
+  ]
 }
