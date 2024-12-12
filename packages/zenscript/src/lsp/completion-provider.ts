@@ -280,7 +280,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   })
 
   override filterKeyword(context: CompletionContext, keyword: GrammarAST.Keyword): boolean {
-    if (isZs(context.document) && ZenScriptCompletionProvider.ZsKeywordBlackList.has(keyword.value)) {
+    if (isZs(context.document) && this.ZsKeywordBlackList.has(keyword.value)) {
       return false
     }
     else {
@@ -288,7 +288,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
   }
 
-  static readonly ZsKeywordBlackList = new Set([
+  readonly ZsKeywordBlackList = new Set([
     'default',
     'expand',
     'lambda',
@@ -301,10 +301,10 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   filterReference(context: CompletionContext, desc: AstNodeDescription): boolean {
-    return ZenScriptCompletionProvider.ReferenceBlackList.every(predict => !predict(desc.node))
+    return this.ReferenceBlackList.every(predict => !predict(desc.node))
   }
 
-  static readonly ReferenceBlackList = [
+  readonly ReferenceBlackList = [
     isOperatorFunctionDeclaration,
   ]
 }
