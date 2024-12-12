@@ -15,6 +15,7 @@ import { CompletionItemKind } from 'vscode-languageserver'
 import { isBracketExpression, isBracketLocation, isBracketProperty, isOperatorFunctionDeclaration, isUnquotedString } from '../generated/ast'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
+import { isZs } from '../utils/document'
 import { defineRules } from '../utils/rule'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
@@ -277,6 +278,23 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       }
     },
   })
+
+  override filterKeyword(context: CompletionContext, keyword: GrammarAST.Keyword): boolean {
+    if (isZs(context.document) && ZenScriptCompletionProvider.ZsKeywordBlackList.has(keyword.value)) {
+      return false
+    }
+    else {
+      return super.filterKeyword(context, keyword)
+    }
+  }
+
+  static readonly ZsKeywordBlackList = new Set([
+    'default',
+    'expand',
+    'lambda',
+    'operator',
+    'package',
+  ])
 
   override getReferenceCandidates(refInfo: ReferenceInfo, context: CompletionContext): Stream<AstNodeDescription> {
     return this.scopeProvider.getScope(refInfo).getAllElements().filter(desc => this.filterReference(context, desc))
