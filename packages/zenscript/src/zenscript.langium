@@ -1,13 +1,25 @@
 grammar ZenScript
 
 entry Script:
-    package=PackageDeclaration?
-    ( imports+=ImportDeclaration
-    | functions+=FunctionDeclaration
-    | expands+=(ExpandDeclaration | ExpandFunctionDeclaration)
-    | classes+=ClassDeclaration
-    | statements+=Statement
-    )*
+    (
+        // dzs since expand will be ambiguous with expression, assuming dzs must be started with package
+        package=PackageDeclaration
+        ( imports+=ImportDeclaration
+        | functions+=FunctionDeclaration
+        | expands+=(ExpandDeclaration | ExpandFunctionDeclaration)
+        | classes+=ClassDeclaration
+        | statements+=VariableDeclaration
+        )*
+    ) |
+    ( 
+        // zs
+        ( imports+=ImportDeclaration
+        | functions+=FunctionDeclaration
+        | expands+=ExpandFunctionDeclaration
+        | classes+=ClassDeclaration
+        | statements+=Statement
+        )*
+    )
 ;
 
 interface Declaration {}
@@ -105,7 +117,7 @@ FieldDeclaration returns FieldDeclaration:
 ;
 
 ValueParameter returns ValueParameter:
-    (varargs?='...')? name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=('default' | Expression))?
+    (varargs?='...')? name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=('default' | ReservedKeywordExpression))?
 ;
 
 TypeParameter returns TypeParameter:
@@ -250,7 +262,7 @@ ReturnStatement returns ReturnStatement:
 ;
 
 ExpressionStatement returns ExpressionStatement:
-    expr=Expression ';'
+    expr=ReservedLiteralExpression ';'
 ;
 
 BreakStatement returns BreakStatement:
@@ -385,6 +397,233 @@ interface MapEntry {
 }
 
 //endregion Expression Interface
+//region SpecialExpression
+
+// For ambiguous of ('function', '{' ) | Expression
+ReservedLiteralExpression returns Expression:
+    ReservedLiteralAssignment
+;
+
+ReservedLiteralAssignment returns Expression:
+    ReservedLiteralConditionalExpression ({Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)? 
+;
+
+
+ReservedLiteralConditionalExpression returns Expression:
+    ReservedLiteralOrOrExpression ({ConditionalExpression.first=current} '?' second=ConditionalExpression ':' third=ConditionalExpression)?
+;
+
+ReservedLiteralOrOrExpression returns Expression:
+    ReservedLiteralAndAndExpression ({InfixExpression.left=current} op='||' right=AndAndExpression)*
+;
+
+ReservedLiteralAndAndExpression returns Expression:
+    ReservedLiteralOrExpression ({InfixExpression.left=current} op='&&' right=OrExpression)*
+;
+
+ReservedLiteralOrExpression returns Expression:
+    ReservedLiteralXorExpression ({InfixExpression.left=current} op='|' right=XorExpression)*
+;
+
+ReservedLiteralXorExpression returns Expression:
+    ReservedLiteralAndExpression ({InfixExpression.left=current} op='^' right=AndExpression)*
+;
+
+ReservedLiteralAndExpression returns Expression:
+    ReservedLiteralRelationalExpression ({InfixExpression.left=current} op='&' right=RelationalExpression)*
+;
+
+ReservedLiteralRelationalExpression returns Expression:
+    ReservedLiteralAdditiveExpression  ({InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpression)*
+;
+
+ReservedLiteralAdditiveExpression returns Expression:
+    ReservedLiteralMultiplicativeExpression ({InfixExpression.left=current} op=('+'|'-'|'~') right=MultiplicativeExpression)*
+;
+
+ReservedLiteralMultiplicativeExpression returns Expression:
+    ReservedLiteralPrefixExpression ({InfixExpression.left=current} op=('*'|'/'|'%') right=PrefixExpression)*
+;
+
+ReservedLiteralPrefixExpression returns Expression:
+    ({PrefixExpression} op=('!'|'-') expr=PrefixExpression) | ReservedLiteralPostfixExpression
+;
+
+ReservedLiteralPostfixExpression returns Expression:
+    ReservedLiteralPrimaryExpression (
+        ({MemberAccess.receiver=current} '.' target=[NamedElement:MemberAccessName] ) |
+        ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
+        ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
+        ({IndexingExpression.receiver=current} '[' argument=Expression ']') |
+        ({CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
+        ({InstanceofExpression.expr=current} 'instanceof' typeRef=NamedType)
+    )*
+;
+
+
+fragment ReservedLiteralPrimaryExpression returns Expression:
+    ParenthesizedExpression | ReferenceExpression | ReservedLiteralLiteralExpression | BracketExpression
+;
+
+ReservedLiteralLiteralExpression returns LiteralExpression:
+    StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | ArrayLiteral | NullLiteral
+;
+
+
+// For ambiguous of UnquotedString | Expression
+NoReferenceExpression returns Expression:
+    NoReferenceAssignment
+;
+
+NoReferenceAssignment returns Expression:
+    NoReferenceConditionalExpression ({Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)? 
+;
+
+
+NoReferenceConditionalExpression returns Expression:
+    NoReferenceOrOrExpression ({ConditionalExpression.first=current} '?' second=ConditionalExpression ':' third=ConditionalExpression)?
+;
+
+NoReferenceOrOrExpression returns Expression:
+    NoReferenceAndAndExpression ({InfixExpression.left=current} op='||' right=AndAndExpression)*
+;
+
+NoReferenceAndAndExpression returns Expression:
+    NoReferenceOrExpression ({InfixExpression.left=current} op='&&' right=OrExpression)*
+;
+
+NoReferenceOrExpression returns Expression:
+    NoReferenceXorExpression ({InfixExpression.left=current} op='|' right=XorExpression)*
+;
+
+NoReferenceXorExpression returns Expression:
+    NoReferenceAndExpression ({InfixExpression.left=current} op='^' right=AndExpression)*
+;
+
+NoReferenceAndExpression returns Expression:
+    NoReferenceRelationalExpression ({InfixExpression.left=current} op='&' right=RelationalExpression)*
+;
+
+NoReferenceRelationalExpression returns Expression:
+    NoReferenceAdditiveExpression  ({InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpression)*
+;
+
+NoReferenceAdditiveExpression returns Expression:
+    NoReferenceMultiplicativeExpression ({InfixExpression.left=current} op=('+'|'-'|'~') right=MultiplicativeExpression)*
+;
+
+NoReferenceMultiplicativeExpression returns Expression:
+    NoReferencePrefixExpression ({InfixExpression.left=current} op=('*'|'/'|'%') right=PrefixExpression)*
+;
+
+NoReferencePrefixExpression returns Expression:
+    ({PrefixExpression} op=('!'|'-') expr=PrefixExpression) | NoReferencePostfixExpression
+;
+
+NoReferencePostfixExpression returns Expression:
+    NoReferencePrimaryExpression (
+        ({MemberAccess.receiver=current} '.' target=[NamedElement:MemberAccessName] ) |
+        ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
+        ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
+        ({IndexingExpression.receiver=current} '[' argument=Expression ']') |
+        ({CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
+        ({InstanceofExpression.expr=current} 'instanceof' typeRef=NamedType)
+    )*
+;
+
+
+fragment NoReferencePrimaryExpression returns Expression:
+    ParenthesizedExpression | UnquotedString | NoReferenceLiteralExpression | BracketExpression
+;
+
+NoReferenceLiteralExpression returns LiteralExpression:
+    StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | ArrayLiteral | NullLiteral
+;
+
+
+// for ambiguous of ('default' | Expression)
+ReservedKeywordExpression returns Expression:
+    ReservedKeywordAssignment
+;
+
+ReservedKeywordAssignment returns Expression:
+    ReservedKeywordConditionalExpression ({Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)? 
+;
+
+
+ReservedKeywordConditionalExpression returns Expression:
+    ReservedKeywordOrOrExpression ({ConditionalExpression.first=current} '?' second=ConditionalExpression ':' third=ConditionalExpression)?
+;
+
+ReservedKeywordOrOrExpression returns Expression:
+    ReservedKeywordAndAndExpression ({InfixExpression.left=current} op='||' right=AndAndExpression)*
+;
+
+ReservedKeywordAndAndExpression returns Expression:
+    ReservedKeywordOrExpression ({InfixExpression.left=current} op='&&' right=OrExpression)*
+;
+
+ReservedKeywordOrExpression returns Expression:
+    ReservedKeywordXorExpression ({InfixExpression.left=current} op='|' right=XorExpression)*
+;
+
+ReservedKeywordXorExpression returns Expression:
+    ReservedKeywordAndExpression ({InfixExpression.left=current} op='^' right=AndExpression)*
+;
+
+ReservedKeywordAndExpression returns Expression:
+    ReservedKeywordRelationalExpression ({InfixExpression.left=current} op='&' right=RelationalExpression)*
+;
+
+ReservedKeywordRelationalExpression returns Expression:
+    ReservedKeywordAdditiveExpression  ({InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpression)*
+;
+
+ReservedKeywordAdditiveExpression returns Expression:
+    ReservedKeywordMultiplicativeExpression ({InfixExpression.left=current} op=('+'|'-'|'~') right=MultiplicativeExpression)*
+;
+
+ReservedKeywordMultiplicativeExpression returns Expression:
+    ReservedKeywordPrefixExpression ({InfixExpression.left=current} op=('*'|'/'|'%') right=PrefixExpression)*
+;
+
+ReservedKeywordPrefixExpression returns Expression:
+    ({PrefixExpression} op=('!'|'-') expr=PrefixExpression) | ReservedKeywordPostfixExpression
+;
+
+ReservedKeywordPostfixExpression returns Expression:
+    ReservedKeywordPrimaryExpression (
+        ({MemberAccess.receiver=current} '.' target=[NamedElement:MemberAccessName] ) |
+        ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
+        ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
+        ({IndexingExpression.receiver=current} '[' argument=Expression ']') |
+        ({CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
+        ({InstanceofExpression.expr=current} 'instanceof' typeRef=NamedType)
+    )*
+;
+
+
+fragment ReservedKeywordPrimaryExpression returns Expression:
+    ParenthesizedExpression | FunctionExpression | ReservedKeywordReferenceExpression | LiteralExpression | BracketExpression
+;
+
+
+ReservedKeywordReferenceExpression returns ReferenceExpression:
+    target=[NamedElement:ReservedKeywordID]
+;
+
+ReservedKeywordID returns string
+    : IDENTIFIER
+    | 'to'
+    | 'extends'  // dzs
+    | 'operator' // dzs
+    | 'lambda'   // dzs
+    | 'expand'   // dzs
+    | 'orderly'  // zenutils
+;
+
+
+//endregion SpecialExpression
 
 //region Expression
 
@@ -480,7 +719,7 @@ MapLiteral returns MapLiteral:
 ;
 
 MapEntry returns MapEntry:
-    key=(UnquotedString | Expression) ':' value=Expression
+    key=NoReferenceExpression ':' value=Expression
 ;
 
 ReferenceExpression returns ReferenceExpression:
@@ -546,7 +785,7 @@ terminal fragment IN_TEMPLATE_LITERAL:
     /[^$`\\]|\\./;
 
 BracketExpression returns BracketExpression:
-    '<' path+=BracketLocation (':' path+=(BracketLocation | ExpressionTemplate)+)*
+    '<' path+=BracketLocation (':' path+=BracketLocation+)*
         (':' properties+=BracketProperty (',' properties+=BracketProperty)*)?
     '>'
 ;
