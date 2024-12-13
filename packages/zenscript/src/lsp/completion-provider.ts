@@ -1,4 +1,4 @@
-import type { AstNodeDescription, MaybePromise } from 'langium'
+import type { AstNodeDescription, MaybePromise, ReferenceInfo, Stream } from 'langium'
 import type { CompletionAcceptor, CompletionContext, CompletionProviderOptions, CompletionValueItem, NextFeature } from 'langium/lsp'
 import type { CompletionItemLabelDetails } from 'vscode-languageserver'
 import type { BracketExpression, BracketProperty, ZenScriptAstType } from '../generated/ast'
@@ -12,9 +12,10 @@ import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, CstUtils, GrammarAST, stream } from 'langium'
 import { DefaultCompletionProvider } from 'langium/lsp'
 import { CompletionItemKind } from 'vscode-languageserver'
-import { isBracketExpression, isBracketLocation, isBracketProperty, isUnquotedString } from '../generated/ast'
+import { isBracketExpression, isBracketLocation, isBracketProperty, isOperatorFunctionDeclaration, isUnquotedString } from '../generated/ast'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
+import { isZs } from '../utils/document'
 import { defineRules } from '../utils/rule'
 
 type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
@@ -277,4 +278,33 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       }
     },
   })
+
+  override filterKeyword(context: CompletionContext, keyword: GrammarAST.Keyword): boolean {
+    if (isZs(context.document) && this.ZsKeywordBlackList.has(keyword.value)) {
+      return false
+    }
+    else {
+      return super.filterKeyword(context, keyword)
+    }
+  }
+
+  readonly ZsKeywordBlackList = new Set([
+    'default',
+    'expand',
+    'lambda',
+    'operator',
+    'package',
+  ])
+
+  override getReferenceCandidates(refInfo: ReferenceInfo, context: CompletionContext): Stream<AstNodeDescription> {
+    return this.scopeProvider.getScope(refInfo).getAllElements().filter(desc => this.filterReference(context, desc))
+  }
+
+  filterReference(context: CompletionContext, desc: AstNodeDescription): boolean {
+    return this.ReferenceBlackList.every(predict => !predict(desc.node))
+  }
+
+  readonly ReferenceBlackList = [
+    isOperatorFunctionDeclaration,
+  ]
 }
