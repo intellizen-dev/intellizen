@@ -119,16 +119,16 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         return EMPTY_SCOPE
       }
 
-      const elements: AstNodeDescription[] = []
-      for (const child of tree.children.values()) {
+      const elements = stream(tree.children.values()).flatMap((child) => {
         if (child.isDataNode()) {
-          child.data.forEach(it => elements.push(this.descriptionCreator.getOrCreateDescription(it)))
+          return child.data.values().map(it => this.descriptionCreator.getOrCreateDescription(it))
         }
         else {
-          elements.push(this.descriptionCreator.getOrCreateDescription(child))
+          return this.descriptionCreator.getOrCreateDescription(child)
         }
-      }
-      return this.createScope(elements)
+      })
+
+      return new StreamScope(elements)
     },
 
     ReferenceExpression: (source) => {
