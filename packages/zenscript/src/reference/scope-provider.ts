@@ -103,23 +103,32 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
   private readonly rules = defineRules<RuleMap>({
     ImportDeclaration: (source) => {
-      const path = getPathAsString(source.container, source.index)
-      const parentPath = substringBeforeLast(path, '.')
-      const siblings = this.packageManager.find(parentPath)?.children.values()
-      if (!siblings) {
+      const fullPath = getPathAsString(source.container, source.index)
+
+      let subPath: string
+      const endsWithDot = source.container.$cstNode?.text.endsWith('.') ?? false
+      if (source.index === undefined && endsWithDot) {
+        subPath = fullPath
+      }
+      else {
+        subPath = substringBeforeLast(fullPath, '.')
+      }
+
+      const tree = this.packageManager.find(subPath)
+      if (!tree) {
         return EMPTY_SCOPE
       }
 
-      const elements: AstNodeDescription[] = []
-      for (const sibling of siblings) {
-        if (sibling.isDataNode()) {
-          sibling.data.forEach(it => elements.push(this.descriptionCreator.getOrCreateDescription(it)))
+      const elements = stream(tree.children.values()).flatMap((child) => {
+        if (child.isDataNode()) {
+          return child.data.values().map(it => this.descriptionCreator.getOrCreateDescription(it))
         }
         else {
-          elements.push(this.descriptionCreator.getOrCreateDescription(sibling))
+          return this.descriptionCreator.getOrCreateDescription(child)
         }
-      }
-      return this.createScope(elements)
+      })
+
+      return new StreamScope(elements)
     },
 
     ReferenceExpression: (source) => {
