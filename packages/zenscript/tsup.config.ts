@@ -9,6 +9,7 @@ const builtinsDest = resolve(__dirname, outDir, 'builtins')
 
 export default defineConfig({
   ...DefaultConfig,
+  entry: ['src/main.ts', 'src/parser/worker.ts'],
   outDir,
   noExternal: ['vscode-languageserver', 'langium', '@intellizen/shared'],
   async onSuccess() {
