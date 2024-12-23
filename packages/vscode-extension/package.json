@@ -15,14 +15,15 @@
   "bugs": {
     "url": "https://github.com/intellizen-dev/intellizen/issues"
   },
-  "main": "../../out/extension/main.cjs",
+  "main": "out/extension/main.cjs",
   "files": [
     "LICENSE",
+    "language-configuration.json",
     "out/**/*",
     "syntaxes"
   ],
   "engines": {
-    "vscode": "^1.92.0"
+    "vscode": "^1.95.0"
   },
   "contributes": {
     "languages": [
@@ -46,6 +47,9 @@
         "path": "syntaxes/zenscript.tmLanguage.json"
       }
     ]
+  },
+  "vsce": {
+    "dependencies": false
   },
   "scripts": {
     "dev": "pnpm build --watch",
