@@ -10,6 +10,7 @@ import { ZenScriptInlayHintProvider } from './lsp/inlay-hint-provider'
 import { ZenScriptNodeKindProvider } from './lsp/node-kind-provider'
 import { ZenScriptSemanticTokenProvider } from './lsp/semantic-token-provider'
 import { ZenScriptDynamicProvider } from './reference/dynamic-provider'
+import { ZenScriptLinker } from './reference/linker'
 import { ZenScriptMemberProvider } from './reference/member-provider'
 import { ZenScriptNameProvider } from './reference/name-provider'
 import { ZenScriptScopeComputation } from './reference/scope-computation'
@@ -76,6 +77,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     ScopeProvider: services => new ZenScriptScopeProvider(services),
     MemberProvider: services => new ZenScriptMemberProvider(services),
     DynamicProvider: services => new ZenScriptDynamicProvider(services),
+    Linker: services => new ZenScriptLinker(services),
   },
   workspace: {
     AstNodeDescriptionProvider: services => new ZenScriptDescriptionCreator(services),
