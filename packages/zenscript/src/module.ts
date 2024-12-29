@@ -22,6 +22,7 @@ import { registerValidationChecks, ZenScriptValidator } from './validation/valid
 import { ZenScriptBracketManager } from './workspace/bracket-manager'
 import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
 import { ZenScriptDescriptionCreator } from './workspace/description-creator'
+import { ZenScriptDocumentBuilder } from './workspace/document-builder'
 import { ZenScriptPackageManager } from './workspace/package-manager'
 import { ZenScriptWorkspaceManager } from './workspace/workspace-manager'
 
@@ -104,6 +105,7 @@ export const ZenScriptSharedModule: Module<ZenScriptSharedServices, PartialLangi
   workspace: {
     WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
     ConfigurationManager: services => new ZenScriptConfigurationManager(services),
+    DocumentBuilder: services => new ZenScriptDocumentBuilder(services),
   },
   lsp: {
     NodeKindProvider: () => new ZenScriptNodeKindProvider(),
