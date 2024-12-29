@@ -1,10 +1,10 @@
 import type { AstNode, Stream } from 'langium'
-import type { OperatorFunctionDeclaration, ZenScriptAstType } from '../generated/ast'
+import type { ClassDeclaration, OperatorFunctionDeclaration, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
 import type { ZenScriptSyntheticAstType } from './synthetic'
 import { EMPTY_STREAM, stream } from 'langium'
-import { isClassDeclaration, isOperatorFunctionDeclaration, isScript, isVariableDeclaration } from '../generated/ast'
+import { isClassDeclaration, isConstructorDeclaration, isFunctionDeclaration, isMemberAccess, isOperatorFunctionDeclaration, isReferenceExpression, isScript, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
 import { isStatic, streamClassChain, streamDeclaredMembers } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -86,7 +86,8 @@ export class ZenScriptMemberProvider implements MemberProvider {
 
       const receiverType = this.typeComputer.inferType(source.receiver)
       if (!receiverType) {
-        return EMPTY_STREAM
+        // may be static declaration
+        return this.streamMembers(target)
       }
 
       let type = this.typeComputer.inferType(source)
@@ -124,6 +125,20 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     CallExpression: (source) => {
+      const receiver = source.receiver
+      if (isReferenceExpression(receiver) || isMemberAccess(receiver)) {
+        const target = receiver.target.ref
+        if (isConstructorDeclaration(target)) {
+          const owner = target.$container as ClassDeclaration
+          return this.streamMembers(new ClassType(owner, new Map()))
+        }
+
+        if (isFunctionDeclaration(target)) {
+          const returnType = this.typeComputer.inferType(target.returnTypeRef)
+          return this.streamMembers(returnType)
+        }
+      }
+
       const receiverType = this.typeComputer.inferType(source.receiver)
       if (isFunctionType(receiverType)) {
         return this.streamMembers(receiverType.returnType)
