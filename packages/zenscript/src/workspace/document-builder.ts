@@ -1,53 +1,68 @@
 import type { BuildOptions, LangiumDocument, URI } from 'langium'
+import type { Connection } from 'vscode-languageserver'
+import type { ZenScriptSharedServices } from '../module'
 import { DefaultDocumentBuilder, DocumentState, interruptAndCheck, stream } from 'langium'
 import { CancellationToken } from 'vscode-languageserver'
 
 export class ZenScriptDocumentBuilder extends DefaultDocumentBuilder {
+  private connection: Connection | undefined
+
+  constructor(services: ZenScriptSharedServices) {
+    super(services)
+    this.connection = services.lsp.Connection
+  }
+
   /* eslint-disable no-console */
   protected async buildDocuments(documents: LangiumDocument[], options: BuildOptions, cancelToken: CancellationToken): Promise<void> {
     console.log(`Building ${documents.length} documents`)
+
     console.group()
+    console.time('Finished building')
 
-    console.time('Prepare done')
-    this.prepareBuild(documents, options)
-    console.timeEnd('Prepare done')
+    try {
+      console.time('Prepare done')
+      this.prepareBuild(documents, options)
+      console.timeEnd('Prepare done')
 
-    console.time('Parse done')
-    await this.runCancelable(documents, DocumentState.Parsed, cancelToken, doc =>
-      this.langiumDocumentFactory.update(doc, cancelToken))
-    console.timeEnd('Parse done')
+      console.time('Parse done')
+      await this.runCancelable(documents, DocumentState.Parsed, cancelToken, doc =>
+        this.langiumDocumentFactory.update(doc, cancelToken))
+      console.timeEnd('Parse done')
 
-    console.time('Compute exports done')
-    await this.runCancelable(documents, DocumentState.IndexedContent, cancelToken, doc =>
-      this.indexManager.updateContent(doc, cancelToken))
-    console.timeEnd('Compute exports done')
+      console.time('Compute exports done')
+      await this.runCancelable(documents, DocumentState.IndexedContent, cancelToken, doc =>
+        this.indexManager.updateContent(doc, cancelToken))
+      console.timeEnd('Compute exports done')
 
-    console.time('Compute scope done')
-    await this.runCancelable(documents, DocumentState.ComputedScopes, cancelToken, async (doc) => {
-      const scopeComputation = this.serviceRegistry.getServices(doc.uri).references.ScopeComputation
-      doc.precomputedScopes = await scopeComputation.computeLocalScopes(doc, cancelToken)
-    })
-    console.timeEnd('Compute scope done')
+      console.time('Compute scope done')
+      await this.runCancelable(documents, DocumentState.ComputedScopes, cancelToken, async (doc) => {
+        const scopeComputation = this.serviceRegistry.getServices(doc.uri).references.ScopeComputation
+        doc.precomputedScopes = await scopeComputation.computeLocalScopes(doc, cancelToken)
+      })
+      console.timeEnd('Compute scope done')
 
-    console.time('Link done')
-    await this.runCancelable(documents, DocumentState.Linked, cancelToken, (doc) => {
-      const linker = this.serviceRegistry.getServices(doc.uri).references.Linker
-      return linker.link(doc, cancelToken)
-    })
-    console.timeEnd('Link done')
+      console.time('Link done')
+      await this.runCancelable(documents, DocumentState.Linked, cancelToken, (doc) => {
+        const linker = this.serviceRegistry.getServices(doc.uri).references.Linker
+        return linker.link(doc, cancelToken)
+      })
+      console.timeEnd('Link done')
 
-    console.time('Index references done')
-    await this.runCancelable(documents, DocumentState.IndexedReferences, cancelToken, doc =>
-      this.indexManager.updateReferences(doc, cancelToken))
-    console.timeEnd('Index references done')
+      console.time('Index references done')
+      await this.runCancelable(documents, DocumentState.IndexedReferences, cancelToken, doc =>
+        this.indexManager.updateReferences(doc, cancelToken))
+      console.timeEnd('Index references done')
 
-    console.time('Validation done')
-    const toBeValidated = documents.filter(doc => this.shouldValidate(doc))
-    await this.runCancelable(toBeValidated, DocumentState.Validated, cancelToken, doc =>
-      this.validate(doc, cancelToken))
-    console.timeEnd('Validation done')
-
-    console.groupEnd()
+      console.time('Validation done')
+      const toBeValidated = documents.filter(doc => this.shouldValidate(doc))
+      await this.runCancelable(toBeValidated, DocumentState.Validated, cancelToken, doc =>
+        this.validate(doc, cancelToken))
+      console.timeEnd('Validation done')
+    }
+    finally {
+      console.timeEnd('Finished building')
+      console.groupEnd()
+    }
 
     // If we've made it to this point without being cancelled, we can mark the build state as completed.
     for (const doc of documents) {
@@ -106,5 +121,7 @@ export class ZenScriptDocumentBuilder extends DefaultDocumentBuilder {
         .toArray(),
     )
     await this.buildDocuments(rebuildDocuments, this.updateBuildOptions, cancelToken)
+    // Workaround, should be removed after Langium supports workspace lock
+    this.connection?.languages.semanticTokens.refresh()
   }
 }
