@@ -32,6 +32,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     super(services)
     this.typeComputer = services.typing.TypeComputer
     this.bracketManager = services.workspace.BracketManager
+
+    this.completionParser.mainRule = this.completionParser.allRules.get('ZenScriptEntry')!
   }
 
   override completionFor(context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): MaybePromise<void> {
