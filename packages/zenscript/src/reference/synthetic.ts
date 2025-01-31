@@ -5,6 +5,7 @@ import { URI } from 'langium'
 export interface ZenScriptSyntheticAstType {
   SyntheticHierarchyNode: HierarchyNode<AstNode>
   SyntheticUnknown: AstNode
+  SyntheticStringLiteral: AstNode
 }
 export function createStringLiteralAstDescription(name: string): AstNodeDescription {
   return {
