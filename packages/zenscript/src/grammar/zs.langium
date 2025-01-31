@@ -10,7 +10,6 @@ ZenScriptEntry returns Script:
         | classes+=ClassDeclaration
         | statements+=Statement
         )*
-    EOF
 ;
 
 
@@ -237,14 +236,15 @@ NoReferencePrefixExpression returns Expression:
 ;
 
 NoReferencePostfixExpression returns Expression:
-    NoReferencePrimaryExpression (
+    PrimaryExpression (
         ({MemberAccess.receiver=current} '.' target=[NamedElement:MemberAccessName] ) |
         ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
         ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
         ({IndexingExpression.receiver=current} '[' argument=Expression ']') |
         ({CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
         ({InstanceofExpression.expr=current} 'instanceof' typeRef=NamedType)
-    )*
+    )+ |
+    NoReferencePrimaryExpression
 ;
 
 
@@ -253,7 +253,7 @@ fragment NoReferencePrimaryExpression returns Expression:
 ;
 
 NoReferenceLiteralExpression returns LiteralExpression:
-    StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | ArrayLiteral | NullLiteral
+    StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | MapLiteral | ArrayLiteral | NullLiteral
 ;
 
 //endregion SpecialExpression

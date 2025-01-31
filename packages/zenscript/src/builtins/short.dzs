@@ -1,3 +1,4 @@
+package;
 zenClass short {
     operator -() as short;
     operator !() as short;

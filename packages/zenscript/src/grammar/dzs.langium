@@ -89,7 +89,11 @@ DZSVariableDeclaration returns VariableDeclaration:
 ;
 
 
-DZSLiteralExpression returns LiteralExpression:
-    StringLiteral  | NumberLiteral | BooleanLiteral  | NullLiteral
+DZSLiteralExpression returns Expression:
+    StringLiteral  | DZSNumberLiteralExpression | BooleanLiteral  | NullLiteral
 ;
 
+DZSNumberLiteralExpression returns Expression:
+    '-' NumberLiteral | 
+    NumberLiteral
+;
