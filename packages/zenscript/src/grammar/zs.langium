@@ -184,78 +184,6 @@ ReservedLiteralLiteralExpression returns LiteralExpression:
     StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | ArrayLiteral | NullLiteral
 ;
 
-
-// For ambiguous of UnquotedString | Expression
-NoReferenceExpression returns Expression:
-    NoReferenceAssignment
-;
-
-NoReferenceAssignment returns Expression:
-    NoReferenceConditionalExpression ({Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)?
-;
-
-
-NoReferenceConditionalExpression returns Expression:
-    NoReferenceOrOrExpression ({ConditionalExpression.first=current} '?' second=ConditionalExpression ':' third=ConditionalExpression)?
-;
-
-NoReferenceOrOrExpression returns Expression:
-    NoReferenceAndAndExpression ({InfixExpression.left=current} op='||' right=AndAndExpression)*
-;
-
-NoReferenceAndAndExpression returns Expression:
-    NoReferenceOrExpression ({InfixExpression.left=current} op='&&' right=OrExpression)*
-;
-
-NoReferenceOrExpression returns Expression:
-    NoReferenceXorExpression ({InfixExpression.left=current} op='|' right=XorExpression)*
-;
-
-NoReferenceXorExpression returns Expression:
-    NoReferenceAndExpression ({InfixExpression.left=current} op='^' right=AndExpression)*
-;
-
-NoReferenceAndExpression returns Expression:
-    NoReferenceRelationalExpression ({InfixExpression.left=current} op='&' right=RelationalExpression)*
-;
-
-NoReferenceRelationalExpression returns Expression:
-    NoReferenceAdditiveExpression  ({InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpression)*
-;
-
-NoReferenceAdditiveExpression returns Expression:
-    NoReferenceMultiplicativeExpression ({InfixExpression.left=current} op=('+'|'-'|'~') right=MultiplicativeExpression)*
-;
-
-NoReferenceMultiplicativeExpression returns Expression:
-    NoReferencePrefixExpression ({InfixExpression.left=current} op=('*'|'/'|'%') right=PrefixExpression)*
-;
-
-NoReferencePrefixExpression returns Expression:
-    ({PrefixExpression} op=('!'|'-') expr=PrefixExpression) | NoReferencePostfixExpression
-;
-
-NoReferencePostfixExpression returns Expression:
-    PrimaryExpression (
-        ({MemberAccess.receiver=current} '.' target=[NamedElement:MemberAccessName] ) |
-        ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
-        ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
-        ({IndexingExpression.receiver=current} '[' argument=Expression ']') |
-        ({CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
-        ({InstanceofExpression.expr=current} 'instanceof' typeRef=NamedType)
-    )+ |
-    NoReferencePrimaryExpression
-;
-
-
-fragment NoReferencePrimaryExpression returns Expression:
-    ParenthesizedExpression | UnquotedString | NoReferenceLiteralExpression | BracketExpression
-;
-
-NoReferenceLiteralExpression returns LiteralExpression:
-    StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | MapLiteral | ArrayLiteral | NullLiteral
-;
-
 //endregion SpecialExpression
 
 //region Expression
@@ -353,7 +281,7 @@ MapLiteral returns MapLiteral:
 ;
 
 MapEntry returns MapEntry:
-    key=NoReferenceExpression ':' value=Expression
+    key=Expression ':' value=Expression
 ;
 
 StringTemplate returns StringTemplate:

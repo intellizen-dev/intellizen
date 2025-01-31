@@ -10,5 +10,8 @@
       }
     }
   ],
-  "out": "src/generated"
+  "out": "src/generated",
+  "chevrotainParserConfig": {
+    "maxLookahead": 2
+  }
 }
