@@ -7,6 +7,7 @@ import { type AstNode, MultiMap } from 'langium'
 import { isCallableDeclaration, isClassDeclaration, isConstructorDeclaration, isFieldDeclaration } from '../generated/ast'
 import { isFunctionType } from './type-description'
 
+const ENABLE_OVERLOAD_LOGGING = false
 export interface OverloadResolver {
   resolveOverloads: (callExpr: CallExpression, maybeCandidates: AstNode[]) => AstNode[]
 }
@@ -46,7 +47,7 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
       if (overloads.length) {
         return overloads
       }
-      else {
+      else if (ENABLE_OVERLOAD_LOGGING) {
         // FIXME: overloading error
         // For debugging, consider adding a breakpoint here
         console.error(`Could not resolve overloads for call expression: ${callExpr.$cstNode?.text}`)
@@ -73,6 +74,9 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
   }
 
   private logAmbiguous(possibles: { candidate: AstNode, match: OverloadMatch }[], args: Expression[]) {
+    if (!ENABLE_OVERLOAD_LOGGING) {
+      return
+    }
     const argTypes = args.map(it => this.typeComputer.inferType(it)?.toString() ?? 'undefined').join(', ')
     console.warn(`ambiguous overload for (${argTypes})`)
     for (const { candidate, match } of possibles) {
