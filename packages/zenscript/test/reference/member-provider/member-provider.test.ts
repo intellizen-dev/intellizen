@@ -24,8 +24,16 @@ describe(`static accessing`, async () => {
     expect(members_red[0], 'should be a constructor').satisfies(isConstructorDeclaration)
   })
 
+  it('accessing top-level static variable GREEN', () => {
+    const statement = script.statements[1] as ExpressionStatement
+    const expression = statement.expr as MemberAccess
+    const members = getMembers(expression)
+    expect(members.length, 'should have exactly 1 member').toBe(1)
+    expect(members[0], 'should be a constructor').satisfies(isConstructorDeclaration)
+  })
+
   it('accessing class Color', () => {
-    const statement_color = script.statements[1] as ExpressionStatement
+    const statement_color = script.statements[2] as ExpressionStatement
     const expression_color = statement_color.expr as MemberAccess
     const members_color = getMembers(expression_color)
     expect(members_color.length, 'should have exactly 1 member').toBe(1)
@@ -34,7 +42,7 @@ describe(`static accessing`, async () => {
   })
 
   it('accessing class static function randomColor', () => {
-    const statement_random_color = script.statements[2] as ExpressionStatement
+    const statement_random_color = script.statements[3] as ExpressionStatement
     const expression_random_color = statement_random_color.expr as MemberAccess
     const members_random_color = getMembers(expression_random_color)
     expect(members_random_color.length, 'should have exactly 1 member').toBe(1)
@@ -42,7 +50,7 @@ describe(`static accessing`, async () => {
   })
 
   it('accessing top-level static variable NOTHING', () => {
-    const statement_nothing = script.statements[3] as ExpressionStatement
+    const statement_nothing = script.statements[4] as ExpressionStatement
     const expression_nothing = statement_nothing.expr as MemberAccess
     const members_nothing = getMembers(expression_nothing)
     expect(members_nothing.length, 'should have no members').toBe(0)
