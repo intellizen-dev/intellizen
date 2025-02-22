@@ -46,7 +46,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .map(container => precomputed?.get(container))
       .nonNullable()
       .map(descriptions => stream(descriptions).map(processor).nonNullable())
-      .reduce((outer, descriptions) => this.createScope(descriptions, outer), outside as Scope)
+      .reduceRight((outer, descriptions) => this.createScope(descriptions, outer), outside as Scope)
   }
 
   private dynamicScope(astNode: AstNode, outside?: Scope) {
