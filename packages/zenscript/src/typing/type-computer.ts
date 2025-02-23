@@ -6,7 +6,7 @@ import type { BracketManager } from '../workspace/bracket-manager'
 import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
 import { type AstNode, stream } from 'langium'
-import { isAssignment, isCallExpression, isClassDeclaration, isConstructorDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isIndexingExpression, isMapEntry, isMemberAccess, isOperatorFunctionDeclaration, isReferenceExpression, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { isAssignment, isCallExpression, isClassDeclaration, isConstructorDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isIndexingExpression, isMemberAccess, isOperatorFunctionDeclaration, isReferenceExpression, isTypeParameter, isVariableDeclaration } from '../generated/ast'
 import { defineRules } from '../utils/rule'
 import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
 
@@ -23,8 +23,8 @@ export class ZenScriptTypeComputer implements TypeComputer {
   private readonly memberProvider: () => MemberProvider
 
   constructor(services: ZenScriptServices) {
-    this.packageManager = services.workspace.PackageManager
-    this.bracketManager = services.workspace.BracketManager
+    this.packageManager = services.shared.workspace.PackageManager
+    this.bracketManager = services.shared.workspace.BracketManager
     this.memberProvider = () => services.references.MemberProvider
   }
 

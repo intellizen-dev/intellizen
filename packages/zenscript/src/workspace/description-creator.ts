@@ -1,6 +1,7 @@
 import type { AstNode, AstNodeDescription, LangiumDocument } from 'langium'
 import type { ClassDeclaration, FunctionDeclaration, ImportDeclaration } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
+import type { ZenScriptDescriptionCache } from './description-cache'
 import { AstUtils, CstUtils, DefaultAstNodeDescriptionProvider, stream, URI } from 'langium'
 import { isClassDeclaration, isFunctionDeclaration, isScript } from '../generated/ast'
 import { getDocumentUri, isStatic } from '../utils/ast'
@@ -20,35 +21,29 @@ export interface DescriptionCreator {
 }
 
 export class ZenScriptDescriptionCreator extends DefaultAstNodeDescriptionProvider {
-  readonly astDescriptions: WeakMap<AstNode, AstNodeDescription>
-  readonly thisDescriptions: WeakMap<ClassDeclaration, AstNodeDescription>
+  private readonly descriptionCache: ZenScriptDescriptionCache
 
   constructor(services: ZenScriptServices) {
     super(services)
-    this.astDescriptions = new WeakMap()
-    this.thisDescriptions = new WeakMap()
+    this.descriptionCache = services.shared.workspace.DescriptionCache
   }
 
   public getOrCreateDescription(astNode: AstNode): AstNodeDescription {
-    if (!this.astDescriptions.has(astNode)) {
-      const uri = getDocumentUri(astNode)
-      const desc = this.createDescriptionWithUri(astNode, uri)
-      this.astDescriptions.set(astNode, desc)
-    }
-    return this.astDescriptions.get(astNode)!
+    return this.descriptionCache.getOrCreateDescription(astNode, (node) => {
+      const uri = getDocumentUri(node)
+      return this.createDescriptionWithUri(node, uri)
+    })
   }
 
   public getOrCreateThisDescription(classDecl: ClassDeclaration): AstNodeDescription {
-    if (!this.thisDescriptions.has(classDecl)) {
-      const uri = getDocumentUri(classDecl)
-      const desc = this.createDescriptionWithUri(classDecl, uri, 'this')
-      this.thisDescriptions.set(classDecl, desc)
-    }
-    return this.thisDescriptions.get(classDecl)!
+    return this.descriptionCache.getOrCreateThisDescription(classDecl, (node) => {
+      const uri = getDocumentUri(node)
+      return this.createDescriptionWithUri(node, uri)
+    })
   }
 
   public createDynamicDescription(astNode: AstNode, name: string): AstNodeDescription {
-    const existing = this.astDescriptions.get(astNode)
+    const existing = this.descriptionCache.getCachedDescription(astNode)
     if (existing?.name === name) {
       return existing
     }

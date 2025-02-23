@@ -1,4 +1,4 @@
-import type { AsyncParser, LangiumParser, Module } from 'langium'
+import type { LangiumParser, Module } from 'langium'
 import type { DefaultSharedModuleContext, LangiumServices, LangiumSharedServices, PartialLangiumServices, PartialLangiumSharedServices } from 'langium/lsp'
 import { createLangiumParser, inject } from 'langium'
 import { createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
@@ -21,6 +21,7 @@ import { ZenScriptTypeFeatures } from './typing/type-features'
 import { registerValidationChecks, ZenScriptValidator } from './validation/validator'
 import { ZenScriptBracketManager } from './workspace/bracket-manager'
 import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
+import { ZenScriptDescriptionCache } from './workspace/description-cache'
 import { ZenScriptDescriptionCreator } from './workspace/description-creator'
 import { ZenScriptDocumentUpdateHandler } from './workspace/document-update-handler'
 import { ZenScriptPackageManager } from './workspace/package-manager'
@@ -42,10 +43,6 @@ export interface ZenScriptAddedServices {
     TypeFeatures: ZenScriptTypeFeatures
     OverloadResolver: ZenScriptOverloadResolver
   }
-  workspace: {
-    PackageManager: ZenScriptPackageManager
-    BracketManager: ZenScriptBracketManager
-  }
   parser: {
     DeclarationParser: LangiumParser
   }
@@ -55,6 +52,9 @@ export interface ZenScriptAddedSharedServices {
   workspace: {
     WorkspaceManager: ZenScriptWorkspaceManager
     ConfigurationManager: ZenScriptConfigurationManager
+    PackageManager: ZenScriptPackageManager
+    BracketManager: ZenScriptBracketManager
+    DescriptionCache: ZenScriptDescriptionCache
   }
 }
 
@@ -85,8 +85,6 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
   },
   workspace: {
     AstNodeDescriptionProvider: services => new ZenScriptDescriptionCreator(services),
-    PackageManager: services => new ZenScriptPackageManager(services),
-    BracketManager: services => new ZenScriptBracketManager(services),
   },
   parser: {
     TokenBuilder: () => new CustomTokenBuilder(),
@@ -109,6 +107,9 @@ export const ZenScriptSharedModule: Module<ZenScriptSharedServices, PartialLangi
   workspace: {
     WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
     ConfigurationManager: services => new ZenScriptConfigurationManager(services),
+    PackageManager: services => new ZenScriptPackageManager(services),
+    BracketManager: services => new ZenScriptBracketManager(services),
+    DescriptionCache: () => new ZenScriptDescriptionCache(),
   },
   lsp: {
     NodeKindProvider: () => new ZenScriptNodeKindProvider(),
