@@ -1,6 +1,6 @@
 import type { FileSystemProvider, URI } from 'langium'
 import type { WorkspaceFolder } from 'vscode-languageserver'
-import type { ZenScriptServices } from '../module'
+import type { ZenScriptSharedServices } from '../module'
 import type { BracketEntry, BracketMirror } from '../resource'
 import { BracketsJsonSchema } from '../resource'
 import { existsFileUri } from '../utils/fs'
@@ -24,11 +24,11 @@ export class ZenScriptBracketManager implements BracketManager {
   readonly mirrors: BracketMirror[]
   readonly entryTree: HierarchyTree<BracketEntry>
 
-  constructor(services: ZenScriptServices) {
-    this.fileSystemProvider = services.shared.workspace.FileSystemProvider
+  constructor(services: ZenScriptSharedServices) {
+    this.fileSystemProvider = services.workspace.FileSystemProvider
     this.mirrors = []
     this.entryTree = new HierarchyTree<BracketEntry>(':')
-    services.shared.workspace.ConfigurationManager.onLoaded(async (folders) => {
+    services.workspace.ConfigurationManager.onLoaded(async (folders) => {
       await this.initializeMirrors(folders)
       await this.initializeEntryTree()
     })

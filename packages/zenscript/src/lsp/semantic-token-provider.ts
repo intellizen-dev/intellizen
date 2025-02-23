@@ -171,6 +171,15 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
             modifier: SemanticTokenModifiers.readonly,
           })
           break
+
+        // @ts-expect-error SyntheticStringLiteral
+        case 'SyntheticStringLiteral':
+          acceptor({
+            node: source,
+            property: 'target',
+            type: SemanticTokenTypes.string,
+          })
+          break
       }
     },
 

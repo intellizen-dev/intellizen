@@ -23,7 +23,7 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
     super()
     this.nameProvider = services.references.NameProvider
     this.typeComputer = services.typing.TypeComputer
-    this.bracketManager = services.workspace.BracketManager
+    this.bracketManager = services.shared.workspace.BracketManager
   }
 
   computeInlayHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {

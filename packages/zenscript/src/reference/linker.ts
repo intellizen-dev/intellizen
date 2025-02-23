@@ -1,8 +1,8 @@
 import type { AstNodeDescription, LinkingError, ReferenceInfo } from 'langium'
 import type { ZenScriptServices } from '../module'
 import { DefaultLinker } from 'langium'
-import { isImportDeclaration, isNamedTypeReference } from '../generated/ast'
-import { createUnknownAstDescription } from './synthetic'
+import { isImportDeclaration, isMapEntry, isNamedTypeReference, isReferenceExpression } from '../generated/ast'
+import { createStringLiteralAstDescription, createUnknownAstDescription } from './synthetic'
 
 export class ZenScriptLinker extends DefaultLinker {
   constructor(services: ZenScriptServices) {
@@ -10,6 +10,13 @@ export class ZenScriptLinker extends DefaultLinker {
   }
 
   override getCandidate(refInfo: ReferenceInfo): AstNodeDescription | LinkingError {
+    if (isReferenceExpression(refInfo.container)) {
+      const reference = refInfo.container
+      if (isMapEntry(reference.$container) && reference.$containerProperty === 'key') {
+        return createStringLiteralAstDescription(refInfo.reference.$refText)
+      }
+    }
+
     const scope = this.scopeProvider.getScope(refInfo)
     const description = scope.getElement(refInfo.reference.$refText)
     if (description) {

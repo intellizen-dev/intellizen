@@ -23,8 +23,8 @@ export class ZenScriptTypeComputer implements TypeComputer {
   private readonly memberProvider: () => MemberProvider
 
   constructor(services: ZenScriptServices) {
-    this.packageManager = services.workspace.PackageManager
-    this.bracketManager = services.workspace.BracketManager
+    this.packageManager = services.shared.workspace.PackageManager
+    this.bracketManager = services.shared.workspace.BracketManager
     this.memberProvider = () => services.references.MemberProvider
   }
 
@@ -479,6 +479,10 @@ export class ZenScriptTypeComputer implements TypeComputer {
       mapType.substitutions.set(K, this.inferType(source.entries[0]?.key) ?? this.classTypeOf('any'))
       mapType.substitutions.set(V, this.inferType(source.entries[0]?.value) ?? this.classTypeOf('any'))
       return mapType
+    },
+
+    SyntheticStringLiteral: () => {
+      return this.classTypeOf('string')
     },
     // endregion
   })

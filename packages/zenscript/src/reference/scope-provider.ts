@@ -25,7 +25,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
   constructor(services: ZenScriptServices) {
     super(services)
-    this.packageManager = services.workspace.PackageManager
+    this.packageManager = services.shared.workspace.PackageManager
     this.memberProvider = services.references.MemberProvider
     this.dynamicProvider = services.references.DynamicProvider
     this.descriptionCreator = services.workspace.AstNodeDescriptionProvider
