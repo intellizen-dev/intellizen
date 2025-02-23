@@ -1,8 +1,10 @@
+grammar ZenScript
+
 import "./interfaces";
 import "./common";
 
 
-ZenScriptEntry returns Script:
+entry ZenScriptEntry returns Script:
     // zs
     ( imports+=ImportDeclaration
         | functions+=FunctionDeclaration

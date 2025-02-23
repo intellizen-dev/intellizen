@@ -1,17 +1,16 @@
+grammar ZenScriptDeclaration
 import "./interfaces";
 import "./common";
 
 
-DZSEntry returns Script:
-    // dzs since expand will be ambiguous with expression, assuming dzs must be started with package
-    package=PackageDeclaration
+entry DZSEntry returns Script:
+    package=PackageDeclaration?
         ( imports+=ImportDeclaration
         | functions+=DZSFunctionDeclaration
         | expands+=(DZSExpandDeclaration | DZSExpandFunctionDeclaration)
         | classes+=DZSClassDeclaration
         | statements+=DZSVariableDeclaration
         )*
-    EOF
 ;
 
 

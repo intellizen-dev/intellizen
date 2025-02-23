@@ -1,8 +1,8 @@
-import type { Module } from 'langium'
+import type { AsyncParser, LangiumParser, Module } from 'langium'
 import type { DefaultSharedModuleContext, LangiumServices, LangiumSharedServices, PartialLangiumServices, PartialLangiumSharedServices } from 'langium/lsp'
-import { inject } from 'langium'
+import { createLangiumParser, inject } from 'langium'
 import { createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
-import { ZenScriptGeneratedModule, ZenScriptGeneratedSharedModule } from './generated/module'
+import { ZenScriptDeclarationGeneratedModule, ZenScriptGeneratedModule, ZenScriptGeneratedSharedModule } from './generated/module'
 import { CustomTokenBuilder } from './lexer/token-builder'
 import { CustomValueConverter } from './lexer/value-converter'
 import { ZenScriptCompletionProvider } from './lsp/completion-provider'
@@ -46,6 +46,9 @@ export interface ZenScriptAddedServices {
     PackageManager: ZenScriptPackageManager
     BracketManager: ZenScriptBracketManager
   }
+  parser: {
+    DeclarationParser: LangiumParser
+  }
 }
 
 export interface ZenScriptAddedSharedServices {
@@ -88,6 +91,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
   parser: {
     TokenBuilder: () => new CustomTokenBuilder(),
     ValueConverter: () => new CustomValueConverter(),
+    DeclarationParser: services => createLangiumParser(services),
   },
   typing: {
     TypeComputer: services => new ZenScriptTypeComputer(services),
@@ -138,7 +142,14 @@ export function createZenScriptServices(context: DefaultSharedModuleContext): Ze
     ZenScriptGeneratedModule,
     ZenScriptModule,
   )
+  const declaration = inject(
+    createDefaultModule({ shared }),
+    ZenScriptDeclarationGeneratedModule,
+    ZenScriptModule,
+  )
+
   shared.ServiceRegistry.register(zenscript)
+  shared.ServiceRegistry.register(declaration)
   registerValidationChecks(zenscript)
   if (!context.connection) {
     // We don't run inside a language server

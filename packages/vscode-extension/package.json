@@ -33,7 +33,17 @@
           "zenscript"
         ],
         "extensions": [
-          ".zs",
+          ".zs"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "zenscript-declaration",
+        "aliases": [
+          "ZenScript Declaration",
+          "zenscript declaration"
+        ],
+        "extensions": [
           ".dzs"
         ],
         "configuration": "./language-configuration.json"
@@ -44,6 +54,12 @@
         "language": "zenscript",
         "scopeName": "source.zenscript",
         "path": "syntaxes/zenscript.tmLanguage.json"
+      },
+
+      {
+        "language": "zenscript",
+        "scopeName": "source.zenscript-declaration",
+        "path": "syntaxes/zenscript-declaration.tmLanguage.json"
       }
     ]
   },
