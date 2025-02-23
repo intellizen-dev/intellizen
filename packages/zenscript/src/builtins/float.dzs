@@ -1,4 +1,3 @@
-package;
 zenClass float {
     operator -() as float;
 

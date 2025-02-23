@@ -1,4 +1,3 @@
-package;
 zenClass Map<K, V> {
     val length as int;
 

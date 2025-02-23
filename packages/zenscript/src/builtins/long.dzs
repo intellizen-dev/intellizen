@@ -1,4 +1,3 @@
-package;
 zenClass long {
     operator -() as long;
     operator !() as long;

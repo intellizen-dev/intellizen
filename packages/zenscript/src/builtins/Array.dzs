@@ -1,4 +1,3 @@
-package;
 zenClass Array<T> {
     val length as int;
 

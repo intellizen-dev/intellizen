@@ -1,4 +1,3 @@
-package;
 zenClass string {
     val length as int;
     val isEmpty as bool;

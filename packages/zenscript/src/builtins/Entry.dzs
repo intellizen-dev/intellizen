@@ -1,4 +1,3 @@
-package;
 zenClass Entry<K, V> {
     val key as K;
 

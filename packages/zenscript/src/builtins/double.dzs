@@ -1,4 +1,3 @@
-package;
 zenClass double {
     operator -() as double;
 

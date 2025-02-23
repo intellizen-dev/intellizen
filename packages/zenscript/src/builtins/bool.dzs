@@ -1,4 +1,3 @@
-package;
 zenClass bool {
     operator !() as bool;
 
