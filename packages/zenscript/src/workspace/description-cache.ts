@@ -3,10 +3,10 @@ import type { ClassDeclaration } from '../generated/ast'
 
 export interface DescriptionCache {
 
+  readonly astDescriptions: WeakMap<AstNode, AstNodeDescription>
+  readonly thisDescriptions: WeakMap<ClassDeclaration, AstNodeDescription>
   getOrCreateDescription: (astNode: AstNode, factory: (astNode: AstNode) => AstNodeDescription) => AstNodeDescription
   getOrCreateThisDescription: (classDecl: ClassDeclaration, factory: (classDecl: ClassDeclaration) => AstNodeDescription) => AstNodeDescription
-
-  getCachedDescription: (astNode: AstNode) => AstNodeDescription | undefined
 }
 
 export class ZenScriptDescriptionCache implements DescriptionCache {
@@ -32,9 +32,5 @@ export class ZenScriptDescriptionCache implements DescriptionCache {
       this.thisDescriptions.set(classDecl, desc)
     }
     return this.thisDescriptions.get(classDecl)!
-  }
-
-  public getCachedDescription(astNode: AstNode): AstNodeDescription | undefined {
-    return this.astDescriptions.get(astNode)
   }
 }

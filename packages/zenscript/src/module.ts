@@ -1,6 +1,6 @@
-import type { LangiumParser, Module } from 'langium'
+import type { Module } from 'langium'
 import type { DefaultSharedModuleContext, LangiumServices, LangiumSharedServices, PartialLangiumServices, PartialLangiumSharedServices } from 'langium/lsp'
-import { createLangiumParser, inject } from 'langium'
+import { inject } from 'langium'
 import { createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
 import { ZenScriptDeclarationGeneratedModule, ZenScriptGeneratedModule, ZenScriptGeneratedSharedModule } from './generated/module'
 import { CustomTokenBuilder } from './lexer/token-builder'
@@ -42,9 +42,6 @@ export interface ZenScriptAddedServices {
     TypeComputer: ZenScriptTypeComputer
     TypeFeatures: ZenScriptTypeFeatures
     OverloadResolver: ZenScriptOverloadResolver
-  }
-  parser: {
-    DeclarationParser: LangiumParser
   }
 }
 
@@ -89,7 +86,6 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
   parser: {
     TokenBuilder: () => new CustomTokenBuilder(),
     ValueConverter: () => new CustomValueConverter(),
-    DeclarationParser: services => createLangiumParser(services),
   },
   typing: {
     TypeComputer: services => new ZenScriptTypeComputer(services),

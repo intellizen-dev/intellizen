@@ -11,8 +11,6 @@ declare module 'langium' {
 }
 
 export interface DescriptionCreator {
-  readonly astDescriptions: WeakMap<AstNode, AstNodeDescription>
-  readonly thisDescriptions: WeakMap<ClassDeclaration, AstNodeDescription>
   getOrCreateDescription: (astNode: AstNode) => AstNodeDescription
   getOrCreateThisDescription: (classDecl: ClassDeclaration) => AstNodeDescription
   createDynamicDescription: (astNode: AstNode, name: string) => AstNodeDescription
@@ -43,7 +41,7 @@ export class ZenScriptDescriptionCreator extends DefaultAstNodeDescriptionProvid
   }
 
   public createDynamicDescription(astNode: AstNode, name: string): AstNodeDescription {
-    const existing = this.descriptionCache.getCachedDescription(astNode)
+    const existing = this.descriptionCache.astDescriptions.get(astNode)
     if (existing?.name === name) {
       return existing
     }
