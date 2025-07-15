@@ -144,7 +144,6 @@ export function createZenScriptServices(context: DefaultSharedModuleContext): Ze
     ZenScriptDeclarationGeneratedModule,
     ZenScriptModule,
   )
-
   shared.ServiceRegistry.register(zenscript)
   shared.ServiceRegistry.register(declaration)
   registerValidationChecks(zenscript)

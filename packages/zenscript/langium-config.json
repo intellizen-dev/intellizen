@@ -3,18 +3,22 @@
   "languages": [
     {
       "id": "zenscript",
-      "grammar": "src/grammar/zs.langium",
-      "fileExtensions": [".zs"],
+      "grammar": "src/grammar/zenscript.langium",
+      "fileExtensions": [
+        ".zs"
+      ],
       "textMate": {
         "out": "../vscode-extension/syntaxes/zenscript.tmLanguage.json"
       }
     },
     {
       "id": "zenscript-declaration",
-      "grammar": "src/grammar/dzs.langium",
-      "fileExtensions": [".dzs"],
+      "grammar": "src/grammar/declaration.langium",
+      "fileExtensions": [
+        ".dzs"
+      ],
       "textMate": {
-        "out": "../vscode-extension/syntaxes/zenscript-declaration.tmLanguage.json"
+        "out": "../vscode-extension/syntaxes/declaration.tmLanguage.json"
       }
     }
   ],
