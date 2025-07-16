@@ -35,7 +35,10 @@ function startLanguageClient(context: ExtensionContext): LanguageClient {
 
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: 'file', language: 'zenscript' }],
+    documentSelector: [
+      { scheme: 'file', language: 'zenscript' },
+      { scheme: 'file', language: 'zenscript-declaration' },
+    ],
   }
 
   // Create the language client and start the client.

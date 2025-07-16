@@ -2,7 +2,7 @@ import type { Module } from 'langium'
 import type { DefaultSharedModuleContext, LangiumServices, LangiumSharedServices, PartialLangiumServices, PartialLangiumSharedServices } from 'langium/lsp'
 import { inject } from 'langium'
 import { createDefaultModule, createDefaultSharedModule } from 'langium/lsp'
-import { ZenScriptGeneratedModule, ZenScriptGeneratedSharedModule } from './generated/module'
+import { ZenScriptDeclarationGeneratedModule, ZenScriptGeneratedModule, ZenScriptGeneratedSharedModule } from './generated/module'
 import { CustomTokenBuilder } from './lexer/token-builder'
 import { CustomValueConverter } from './lexer/value-converter'
 import { ZenScriptCompletionProvider } from './lsp/completion-provider'
@@ -21,6 +21,7 @@ import { ZenScriptTypeFeatures } from './typing/type-features'
 import { registerValidationChecks, ZenScriptValidator } from './validation/validator'
 import { ZenScriptBracketManager } from './workspace/bracket-manager'
 import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
+import { ZenScriptDescriptionCache } from './workspace/description-cache'
 import { ZenScriptDescriptionCreator } from './workspace/description-creator'
 import { ZenScriptDocumentUpdateHandler } from './workspace/document-update-handler'
 import { ZenScriptPackageManager } from './workspace/package-manager'
@@ -42,16 +43,15 @@ export interface ZenScriptAddedServices {
     TypeFeatures: ZenScriptTypeFeatures
     OverloadResolver: ZenScriptOverloadResolver
   }
-  workspace: {
-    PackageManager: ZenScriptPackageManager
-    BracketManager: ZenScriptBracketManager
-  }
 }
 
 export interface ZenScriptAddedSharedServices {
   workspace: {
     WorkspaceManager: ZenScriptWorkspaceManager
     ConfigurationManager: ZenScriptConfigurationManager
+    PackageManager: ZenScriptPackageManager
+    BracketManager: ZenScriptBracketManager
+    DescriptionCache: ZenScriptDescriptionCache
   }
 }
 
@@ -82,8 +82,6 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
   },
   workspace: {
     AstNodeDescriptionProvider: services => new ZenScriptDescriptionCreator(services),
-    PackageManager: services => new ZenScriptPackageManager(services),
-    BracketManager: services => new ZenScriptBracketManager(services),
   },
   parser: {
     TokenBuilder: () => new CustomTokenBuilder(),
@@ -105,6 +103,9 @@ export const ZenScriptSharedModule: Module<ZenScriptSharedServices, PartialLangi
   workspace: {
     WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
     ConfigurationManager: services => new ZenScriptConfigurationManager(services),
+    PackageManager: services => new ZenScriptPackageManager(services),
+    BracketManager: services => new ZenScriptBracketManager(services),
+    DescriptionCache: () => new ZenScriptDescriptionCache(),
   },
   lsp: {
     NodeKindProvider: () => new ZenScriptNodeKindProvider(),
@@ -138,7 +139,13 @@ export function createZenScriptServices(context: DefaultSharedModuleContext): Ze
     ZenScriptGeneratedModule,
     ZenScriptModule,
   )
+  const declaration = inject(
+    createDefaultModule({ shared }),
+    ZenScriptDeclarationGeneratedModule,
+    ZenScriptModule,
+  )
   shared.ServiceRegistry.register(zenscript)
+  shared.ServiceRegistry.register(declaration)
   registerValidationChecks(zenscript)
   if (!context.connection) {
     // We don't run inside a language server

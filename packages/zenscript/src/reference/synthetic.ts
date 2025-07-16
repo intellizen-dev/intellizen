@@ -5,6 +5,16 @@ import { URI } from 'langium'
 export interface ZenScriptSyntheticAstType {
   SyntheticHierarchyNode: HierarchyNode<AstNode>
   SyntheticUnknown: AstNode
+  SyntheticStringLiteral: AstNode
+}
+export function createStringLiteralAstDescription(name: string): AstNodeDescription {
+  return {
+    name,
+    node: createSyntheticStringLiteral(),
+    type: 'SyntheticStringLiteral',
+    documentUri: URI.from({ scheme: 'unknown' }),
+    path: '',
+  }
 }
 
 export function createUnknownAstDescription(name: string): AstNodeDescription {
@@ -20,6 +30,12 @@ export function createUnknownAstDescription(name: string): AstNodeDescription {
 export function createUnknownAst(): AstNode {
   return {
     $type: 'SyntheticUnknown',
+  }
+}
+
+export function createSyntheticStringLiteral(): AstNode {
+  return {
+    $type: 'SyntheticStringLiteral',
   }
 }
 
