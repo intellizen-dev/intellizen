@@ -10,7 +10,7 @@
       ],
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceRoot}/out/**/*.cjs"
+        "${workspaceRoot}/packages/vscode-extension/out/**/*.cjs"
       ],
       "trace": true,
       "autoAttachChildProcesses": true
@@ -25,7 +25,7 @@
       ],
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceRoot}/out/**/*.cjs",
+        "${workspaceRoot}/packages/vscode-extension/out/**/*.cjs",
         "${workspaceRoot}/node_modules/langium"
       ]
     }
