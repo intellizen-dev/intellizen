@@ -9,10 +9,10 @@
   },
   "dependencies": {
     "@intellizen/shared": "workspace:^",
-    "langium": "^3.3.0",
+    "langium": "^3.5.0",
     "vscode-languageserver": "^9.0.1"
   },
   "devDependencies": {
-    "langium-cli": "^3.3.0"
+    "langium-cli": "^3.5.2"
   }
 }
