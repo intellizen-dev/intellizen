@@ -41,9 +41,9 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     processor: (desc: AstNodeDescription) => AstNodeDescription | undefined,
     outside?: Scope,
   ): Scope {
-    const precomputed = AstUtils.getDocument(astNode).precomputedScopes
+    const localSymbols = AstUtils.getDocument(astNode).localSymbols
     return generateStream(astNode, it => it.$container)
-      .map(container => precomputed?.get(container))
+      .map(container => localSymbols?.getStream(container))
       .nonNullable()
       .map(descriptions => stream(descriptions).map(processor).nonNullable())
       .reduceRight((outer, descriptions) => this.createScope(descriptions, outer), outside as Scope)
@@ -140,12 +140,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
       const processor = (desc: AstNodeDescription) => {
         switch (desc.type) {
-          case TypeParameter:
+          case TypeParameter.$type:
             return
-          case ImportDeclaration: {
+          case ImportDeclaration.$type: {
             return
           }
-          case ClassDeclaration: {
+          case ClassDeclaration.$type: {
             const classDecl = desc.node as ClassDeclaration
             const callExpr = source.container.$container
             if (isCallExpression(callExpr) && source.container.$containerProperty === 'receiver') {
@@ -178,16 +178,16 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       }
     },
 
-    NamedTypeReference: (source) => {
+    NamedType: (source) => {
       if (!source.index) {
         let outer = this.packageScope()
         outer = this.classScope(outer)
         const processor = (desc: AstNodeDescription) => {
           switch (desc.type) {
-            case TypeParameter:
-            case ClassDeclaration:
+            case TypeParameter.$type:
+            case ClassDeclaration.$type:
               return desc
-            case ImportDeclaration: {
+            case ImportDeclaration.$type: {
               return this.descriptionCreator.createImportedDescriptions(desc.node as ImportDeclaration)[0]
             }
           }

@@ -1,4 +1,4 @@
-import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes } from 'langium'
+import type { AstNode, AstNodeDescription, LangiumDocument, MultiMap } from 'langium'
 import type { Script } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { DescriptionCache } from '../workspace/description-cache'
@@ -16,7 +16,7 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
     this.cache = services.shared.workspace.DescriptionCache
   }
 
-  protected override exportNode(node: AstNode, exports: AstNodeDescription[], document: LangiumDocument<Script>): void {
+  protected override addExportedSymbol(node: AstNode, exports: AstNodeDescription[], document: LangiumDocument<Script>): void {
     if (isGlobal(node)) {
       const description = this.creator.createDescriptionWithUri(node, document.uri)
       this.cache.astDescriptions.set(node, description)
@@ -24,7 +24,7 @@ export class ZenScriptScopeComputation extends DefaultScopeComputation {
     }
   }
 
-  protected override processNode(node: AstNode, document: LangiumDocument, scopes: PrecomputedScopes): void {
+  protected override addLocalSymbol(node: AstNode, document: LangiumDocument, scopes: MultiMap<AstNode, AstNodeDescription>): void {
     const container = node.$container
     if (!container) {
       return

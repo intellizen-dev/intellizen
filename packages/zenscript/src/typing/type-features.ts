@@ -93,12 +93,12 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
         return false
       }
 
-      if (self.declaration.typeParameters.length !== other.declaration.typeParameters.length) {
+      if (self.declaration.typeParams.length !== other.declaration.typeParams.length) {
         return false
       }
 
-      const selfSubstitutions = self.declaration.typeParameters.map(it => self.substitutions.get(it)).filter(it => !!it)
-      const otherSubstitutions = other.declaration.typeParameters.map(it => other.substitutions.get(it)).filter(it => !!it)
+      const selfSubstitutions = self.declaration.typeParams.map(it => self.substitutions.get(it)).filter(it => !!it)
+      const otherSubstitutions = other.declaration.typeParams.map(it => other.substitutions.get(it)).filter(it => !!it)
       return selfSubstitutions.every((type, index) => this.areTypesEqual(type, otherSubstitutions[index]))
     },
 
@@ -147,7 +147,7 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
       return this.memberProvider.streamMembers(from)
         .filter(isOperatorFunctionDeclaration)
         .filter(it => it.op === 'as')
-        .map(it => this.typeComputer.inferType(it.returnTypeRef))
+        .map(it => this.typeComputer.inferType(it.retType))
         .nonNullable()
         .some(it => this.isSubType(to, it))
     },

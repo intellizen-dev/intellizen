@@ -1,5 +1,5 @@
 import type { AstNode, AstNodeDescription, Stream, URI } from 'langium'
-import type { BracketExpression, ClassDeclaration, ClassMemberDeclaration, FunctionDeclaration, ImportDeclaration, OperatorFunctionDeclaration } from '../generated/ast'
+import type { BracketExpression, ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import { AstUtils, isAstNodeDescription, stream } from 'langium'
 import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
@@ -89,14 +89,14 @@ export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDecla
   })
 }
 
-export function streamDeclaredMembers(classDecl: ClassDeclaration): Stream<ClassMemberDeclaration> {
+export function streamDeclaredMembers(classDecl: ClassDeclaration) {
   return stream(classDecl.members)
 }
 
-export function streamDeclaredFunctions(classDecl: ClassDeclaration): Stream<FunctionDeclaration> {
+export function streamDeclaredFunctions(classDecl: ClassDeclaration) {
   return streamDeclaredMembers(classDecl).filter(isFunctionDeclaration)
 }
 
-export function streamDeclaredOperators(classDecl: ClassDeclaration): Stream<OperatorFunctionDeclaration> {
+export function streamDeclaredOperators(classDecl: ClassDeclaration) {
   return streamDeclaredMembers(classDecl).filter(isOperatorFunctionDeclaration)
 }

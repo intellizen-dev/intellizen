@@ -2,10 +2,11 @@ import type { AstNode, Stream } from 'langium'
 import type { ClassDeclaration, OperatorFunctionDeclaration, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
+import type { Type, ZenScriptType } from '../typing/type-description'
 import type { ZenScriptSyntheticAstType } from './synthetic'
 import { EMPTY_STREAM, stream } from 'langium'
 import { isClassDeclaration, isConstructorDeclaration, isFunctionDeclaration, isMemberAccess, isOperatorFunctionDeclaration, isReferenceExpression, isScript, isVariableDeclaration } from '../generated/ast'
-import { ClassType, isAnyType, isClassType, isFunctionType, type Type, type ZenScriptType } from '../typing/type-description'
+import { ClassType, isAnyType, isClassType, isFunctionType } from '../typing/type-description'
 import { isStatic, streamClassChain, streamDeclaredMembers } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 import { isSyntheticAstNode } from './synthetic'
@@ -112,7 +113,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.streamMembers(type)
     },
 
-    IndexingExpression: (source) => {
+    IndexExpression: (source) => {
       const type = this.typeComputer.inferType(source)
       return this.streamMembers(type)
     },
@@ -134,7 +135,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
         }
 
         if (isFunctionDeclaration(target)) {
-          const returnType = this.typeComputer.inferType(target.returnTypeRef)
+          const returnType = this.typeComputer.inferType(target.retType)
           return this.streamMembers(returnType)
         }
       }
@@ -174,7 +175,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
       return this.streamMembers(type)
     },
 
-    FloatingLiteral: (source) => {
+    FloatLiteral: (source) => {
       const type = this.typeComputer.inferType(source)
       return this.streamMembers(type)
     },
