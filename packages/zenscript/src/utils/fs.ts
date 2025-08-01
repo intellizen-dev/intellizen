@@ -1,5 +1,6 @@
+import type { FileSystemNode, FileSystemProvider, URI } from 'langium'
 import { existsSync, statSync } from 'node:fs'
-import { type FileSystemNode, type FileSystemProvider, type URI, UriUtils } from 'langium'
+import { UriUtils } from 'langium'
 
 export async function traverseInside(
   fsProvider: FileSystemProvider,

@@ -46,9 +46,9 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
           if (isFunctionType(receiverType)) {
             const paramType = receiverType.paramTypes[index]
             if (isClassType(paramType)) {
-              yield * streamDeclaredFunctions(paramType.declaration)
+              yield* streamDeclaredFunctions(paramType.declaration)
                 .filter(isStatic)
-                .filter(it => it.parameters.length === 0)
+                .filter(it => it.params.length === 0)
                 .map(it => this.descriptionCreator.getOrCreateDescription(it))
             }
           }
@@ -63,10 +63,10 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
         if (isClassType(receiverType)) {
           const operatorDecl = streamDeclaredOperators(receiverType.declaration)
             .filter(it => it.op === '.')
-            .filter(it => it.parameters.length === 1)
+            .filter(it => it.params.length === 1)
             .head()
           if (operatorDecl) {
-            yield this.descriptionCreator.createDynamicDescription(operatorDecl.parameters[0], source.target.$refText)
+            yield this.descriptionCreator.createDynamicDescription(operatorDecl.params[0], source.target.$refText)
           }
         }
       }.bind(this))

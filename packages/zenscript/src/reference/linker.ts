@@ -1,7 +1,7 @@
 import type { AstNodeDescription, LinkingError, ReferenceInfo } from 'langium'
 import type { ZenScriptServices } from '../module'
 import { DefaultLinker } from 'langium'
-import { isImportDeclaration, isMapEntry, isNamedTypeReference, isReferenceExpression } from '../generated/ast'
+import { isImportDeclaration, isMapEntry, isNamedType, isReferenceExpression } from '../generated/ast'
 import { createStringLiteralAstDescription, createUnknownAstDescription } from './synthetic'
 
 export class ZenScriptLinker extends DefaultLinker {
@@ -27,7 +27,7 @@ export class ZenScriptLinker extends DefaultLinker {
       return createUnknownAstDescription(refInfo.reference.$refText)
     }
 
-    if (isNamedTypeReference(refInfo.container) && refInfo.container.path.some(it => it.error)) {
+    if (isNamedType(refInfo.container) && refInfo.container.path.some(it => it.error)) {
       return createUnknownAstDescription(refInfo.reference.$refText)
     }
 

@@ -12,6 +12,8 @@ entry ZenScriptDeclaration infers Script:
     )*
 ;
 
+type Declaration = PackageDeclaration | ImportDeclaration | ClassDeclaration | FieldDeclaration | FunctionDeclaration | OperatorFunctionDeclaration | ExpandDeclaration | VariableDeclaration | ValueParameter | TypeParameter
+
 PackageDeclaration:
     'package' path+=ID ('.' path+=ID )* ';'?
 ;
@@ -21,7 +23,7 @@ ImportDeclaration:
 ;
 
 ClassDeclaration:
-    'zenClass' name=ID 
+    'zenClass' name=ID
     ('<' typeParams+=TypeParameter (',' typeParams+=TypeParameter)* '>')?
     ('extends' (superTypes+=NamedType (',' superTypes+=NamedType)*))?
     ('{' members+=(FunctionDeclaration | FieldDeclaration | OperatorFunctionDeclaration)* '}')?

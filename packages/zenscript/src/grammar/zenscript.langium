@@ -11,6 +11,8 @@ entry ZenScript infers Script:
     )*
 ;
 
+type Declaration = ImportDeclaration | ClassDeclaration | FieldDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | ConstructorDeclaration | VariableDeclaration | ValueParameter | LoopParameter
+
 ImportDeclaration:
     'import' path+=[NamedElement:ID] ('.' path+=[NamedElement:ID])* ('as' alias=ID)? ';'
 ;
@@ -29,6 +31,8 @@ FieldDeclaration:
 ValueParameter:
     name=ID ('as' type=Type)? ('=' defaultValue=Expression)?
 ;
+
+type CallableDeclaration = FunctionDeclaration | ExpandFunctionDeclaration | ConstructorDeclaration;
 
 FunctionDeclaration:
     'function' name=ID? '('
@@ -219,7 +223,7 @@ PostfixExpression:
     )*
 ;
 
-fragment PrimaryExpression:
+PrimaryExpression:
     ParenthesizedExpression | FunctionExpression | ReferenceExpression | LiteralExpression | BracketExpression
 ;
 
