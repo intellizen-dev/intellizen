@@ -1,8 +1,8 @@
 grammar ZenScript
 
-import "./common";
+type NamedElement = Script | ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter | VariableDeclaration | LoopParameter | MapEntry | ImportDeclaration | ConstructorDeclaration;
 
-entry ZenScript returns Script:
+entry ZenScript infers Script:
     ( imports+=ImportDeclaration
     | functions+=FunctionDeclaration
     | expands+=ExpandFunctionDeclaration
@@ -11,54 +11,51 @@ entry ZenScript returns Script:
     )*
 ;
 
-ImportDeclaration returns ImportDeclaration:
-    'import' path+=[NamedElement:ID] ('.' path+=[NamedElement:ID])* ('as' alias=ID)? ';'?
+ImportDeclaration:
+    'import' path+=[NamedElement:ID] ('.' path+=[NamedElement:ID])* ('as' alias=ID)? ';'
 ;
 
-ClassDeclaration returns ClassDeclaration:
+ClassDeclaration:
     'zenClass' name=ID
     '{'
-        members+=ClassMemberDeclaration*
+        members+=(FunctionDeclaration | FieldDeclaration | ConstructorDeclaration)*
     '}'
 ;
 
-ClassMemberDeclaration returns ClassMemberDeclaration:
-    FunctionDeclaration | FieldDeclaration | ConstructorDeclaration;
-
-FieldDeclaration returns FieldDeclaration:
-    prefix=('static' | 'var' | 'val') name=ID ('as' typeRef=TypeReference)? ('=' initializer=Expression)? ';'
+FieldDeclaration:
+    prefix=('static' | 'var' | 'val') name=ID ('as' type=Type)? ('=' initializer=Expression)? ';'
 ;
 
-ValueParameter returns ValueParameter:
-    name=ID ('as' typeRef=TypeReference)? ('=' defaultValue=Expression)?
+ValueParameter:
+    name=ID ('as' type=Type)? ('=' defaultValue=Expression)?
 ;
 
-FunctionDeclaration returns FunctionDeclaration:
+FunctionDeclaration:
     'function' name=ID? '('
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' ('as' returnTypeRef=TypeReference)? ('{'
+        (params+=ValueParameter (',' params+=ValueParameter)*)?
+    ')' ('as' retType=Type)? ('{'
         (body+=Statement)*
     '}')
 ;
 
-ExpandFunctionDeclaration returns ExpandFunctionDeclaration:
-    '$expand' typeRef=TypeReference '$' name=ID  '('
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' ('as' returnTypeRef=TypeReference)? '{'
+ExpandFunctionDeclaration:
+    '$expand' type=Type '$' name=ID  '('
+        (params+=ValueParameter (',' params+=ValueParameter)*)?
+    ')' ('as' retType=Type)? '{'
         (body+=Statement)*
     '}'
 ;
 
-ConstructorDeclaration returns ConstructorDeclaration:
+ConstructorDeclaration:
     'zenConstructor' '('
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
+        (params+=ValueParameter (',' params+=ValueParameter)*)?
     ')' ('{'
         (body+=Statement)*
     '}')
 ;
 
 //region Statement
-Statement returns Statement:
+Statement:
     IfStatement
     | WhileStatement
     | ForStatement
@@ -70,44 +67,44 @@ Statement returns Statement:
     | ContinueStatement
 ;
 
-VariableDeclaration returns VariableDeclaration:
-    prefix=('global'|'static'|'var'|'val') name=ID ('as' typeRef=TypeReference)? ('=' initializer=Expression)? ';'
+VariableDeclaration:
+    prefix=('global'|'static'|'var'|'val') name=ID ('as' type=Type)? ('=' initializer=Expression)? ';'
 ;
 
-IfStatement returns IfStatement:
-    'if' condition=Expression ifBody=Statement ('else' elseBody=Statement)?
+IfStatement:
+    'if' cond=Expression ifBody=Statement ('else' elseBody=Statement)?
 ;
 
-WhileStatement returns WhileStatement:
-    'while' condition=Expression body=Statement
+WhileStatement:
+    'while' cond=Expression body=Statement
 ;
 
-ForStatement returns ForStatement:
-    'for' parameters+=LoopParameter (',' parameters+=LoopParameter)* 'in' range=Expression body=Statement
+ForStatement:
+    'for' params+=LoopParameter (',' params+=LoopParameter)* 'in' range=Expression body=Statement
 ;
 
-LoopParameter returns LoopParameter:
+LoopParameter:
     name=ID
 ;
 
-BlockStatement returns BlockStatement:
+BlockStatement:
     '{' (body+=Statement)* '}'
 ;
 
-ReturnStatement returns ReturnStatement:
+ReturnStatement:
     'return' expr=Expression? ';'
 ;
 
-ExpressionStatement returns ExpressionStatement:
+ExpressionStatement:
     expr=ExpressionNoMap ';'
 ;
 
-BreakStatement returns BreakStatement:
-    {BreakStatement} 'break' ';'
+BreakStatement infers BreakStatement:
+    {infer BreakStatement} 'break' ';'
 ;
 
-ContinueStatement returns ContinueStatement:
-    {ContinueStatement} 'continue' ';'
+ContinueStatement infers ContinueStatement:
+    {infer ContinueStatement} 'continue' ';'
 ;
 //endregion Statement
 
@@ -118,171 +115,143 @@ ContinueStatement returns ContinueStatement:
 // We want the `{ }` to be a BlockStatement, not a MapLiteral.
 // So we have these syntaxes.
 
-ExpressionNoMap returns Expression:
+ExpressionNoMap infers Expression:
     AssignmentNoMap
 ;
 
-AssignmentNoMap returns Expression:
-    ConditionalExpressionNoMap ({Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)?
+AssignmentNoMap infers Assignment:
+    ConditionalExpressionNoMap ({infer AssignmentNoMap.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)?
 ;
 
-ConditionalExpressionNoMap returns Expression:
-    OrOrExpressionNoMap ({ConditionalExpression.first=current} '?' second=ConditionalExpression ':' third=ConditionalExpression)?
+ConditionalExpressionNoMap infers ConditionalExpression:
+    LogicalExpressionNoMap ({infer ConditionalExpressionNoMap.cond=current} '?' thenBody=ConditionalExpressionNoMap ':' elseBody=ConditionalExpressionNoMap)?
 ;
 
-OrOrExpressionNoMap returns Expression:
-    AndAndExpressionNoMap ({InfixExpression.left=current} op='||' right=AndAndExpression)*
+LogicalExpressionNoMap infers LogicalExpression:
+    BitwiseExpressionNoMap ({infer InfixExpression.left=current} op=('&&'|'||') right=BitwiseExpressionNoMap)*
 ;
 
-AndAndExpressionNoMap returns Expression:
-    OrExpressionNoMap ({InfixExpression.left=current} op='&&' right=OrExpression)*
+BitwiseExpressionNoMap infers BitwiseExpression:
+    RelationalExpressionNoMap ({infer InfixExpression.left=current} op=('&'|'|'|'^') right=RelationalExpressionNoMap)*
 ;
 
-OrExpressionNoMap returns Expression:
-    XorExpressionNoMap ({InfixExpression.left=current} op='|' right=XorExpression)*
+RelationalExpressionNoMap infers RelationalExpression:
+    AdditiveExpressionNoMap  ({infer InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpressionNoMap)*
 ;
 
-XorExpressionNoMap returns Expression:
-    AndExpressionNoMap ({InfixExpression.left=current} op='^' right=AndExpression)*
+AdditiveExpressionNoMap infers AdditiveExpression:
+    MultiplicativeExpressionNoMap ({infer InfixExpression.left=current} op=('+'|'-'|'~') right=MultiplicativeExpressionNoMap)*
 ;
 
-AndExpressionNoMap returns Expression:
-    RelationalExpressionNoMap ({InfixExpression.left=current} op='&' right=RelationalExpression)*
+MultiplicativeExpressionNoMap infers MultiplicativeExpression:
+    PrefixExpressionNoMap ({infer InfixExpression.left=current} op=('*'|'/'|'%') right=PrefixExpressionNoMap)*
 ;
 
-RelationalExpressionNoMap returns Expression:
-    AdditiveExpressionNoMap  ({InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpression)*
+PrefixExpressionNoMap infers PrefixExpression:
+    ({infer PrefixExpression} op=('!'|'-') expr=PrefixExpressionNoMap) | PostfixExpressionNoMap
 ;
 
-AdditiveExpressionNoMap returns Expression:
-    MultiplicativeExpressionNoMap ({InfixExpression.left=current} op=('+'|'-'|'~') right=MultiplicativeExpression)*
-;
-
-MultiplicativeExpressionNoMap returns Expression:
-    PrefixExpressionNoMap ({InfixExpression.left=current} op=('*'|'/'|'%') right=PrefixExpression)*
-;
-
-PrefixExpressionNoMap returns Expression:
-    ({PrefixExpression} op=('!'|'-') expr=PrefixExpression) | PostfixExpressionNoMap
-;
-
-PostfixExpressionNoMap returns Expression:
+PostfixExpressionNoMap infers PostfixExpression:
     PrimaryExpressionNoMap (
-        ({MemberAccess.receiver=current} '.' target=[NamedElement:MemberAccessName] ) |
-        ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
-        ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
-        ({IndexingExpression.receiver=current} '[' argument=Expression ']') |
-        ({CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
-        ({InstanceofExpression.expr=current} 'instanceof' typeRef=NamedType)
+        ({infer MemberAccess.receiver=current} '.' (target=[NamedElement:ID] | target=[NamedElement:STRING]) ) |
+        ({infer IntRangeExpression.from=current} op=('to'|'..') to=Expression) |
+        ({infer TypeCastExpression.expr=current} 'as' type=Type) |
+        ({infer IndexExpression.receiver=current} '[' index=Expression ']') |
+        ({infer CallExpression.receiver=current} '(' (args+=Expression (',' args+=Expression)* ','?)? ')') |
+        ({infer InstanceofExpression.expr=current} 'instanceof' type=NamedType)
     )*
 ;
 
-fragment PrimaryExpressionNoMap returns Expression:
+fragment PrimaryExpressionNoMap infers PrimaryExpression:
     ParenthesizedExpression | ReferenceExpression | LiteralExpressionNoMap | BracketExpression
 ;
 
-LiteralExpressionNoMap returns LiteralExpression:
-    StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | ArrayLiteral | NullLiteral /* | MapLiteral */
+LiteralExpressionNoMap infers LiteralExpression:
+    StringLiteral | StringTemplate | IntegerLiteral | FloatLiteral | BooleanLiteral | ArrayLiteral /* | MapLiteral */ | NullLiteral
 ;
 //endregion ExpressionNoMap
 
 //region Expression
-Expression returns Expression:
+Expression:
     Assignment
 ;
 
-Assignment returns Expression:
-    ConditionalExpression ({Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)?
+Assignment:
+    ConditionalExpression ({infer Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)?
 ;
 
-ConditionalExpression returns Expression:
-    OrOrExpression ({ConditionalExpression.first=current} '?' second=ConditionalExpression ':' third=ConditionalExpression)?
+ConditionalExpression:
+    LogicalExpression ({infer ConditionalExpression.cond=current} '?' thenBody=ConditionalExpression ':' elseBody=ConditionalExpression)?
 ;
 
-OrOrExpression returns Expression:
-    AndAndExpression ({InfixExpression.left=current} op='||' right=AndAndExpression)*
+LogicalExpression:
+    BitwiseExpression ({infer InfixExpression.left=current} op=('&&'|'||') right=BitwiseExpression)*
 ;
 
-AndAndExpression returns Expression:
-    OrExpression ({InfixExpression.left=current} op='&&' right=OrExpression)*
+BitwiseExpression infers Expression:
+    RelationalExpression ({infer InfixExpression.left=current} op=('&'|'|'|'^') right=RelationalExpression)*
 ;
 
-OrExpression returns Expression:
-    XorExpression ({InfixExpression.left=current} op='|' right=XorExpression)*
+RelationalExpression:
+    AdditiveExpression ({infer InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpression)*
 ;
 
-XorExpression returns Expression:
-    AndExpression ({InfixExpression.left=current} op='^' right=AndExpression)*
+AdditiveExpression:
+    MultiplicativeExpression ({infer InfixExpression.left=current} op=('+'|'-'|'~') right=MultiplicativeExpression)*
 ;
 
-AndExpression returns Expression:
-    RelationalExpression ({InfixExpression.left=current} op='&' right=RelationalExpression)*
+MultiplicativeExpression:
+    PrefixExpression ({infer InfixExpression.left=current} op=('*'|'/'|'%') right=PrefixExpression)*
 ;
 
-RelationalExpression returns Expression:
-    AdditiveExpression ({InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpression)*
+PrefixExpression:
+    ({infer PrefixExpression} op=('!'|'-') expr=PrefixExpression) | PostfixExpression
 ;
 
-AdditiveExpression returns Expression:
-    MultiplicativeExpression ({InfixExpression.left=current} op=('+'|'-'|'~') right=MultiplicativeExpression)*
-;
-
-MultiplicativeExpression returns Expression:
-    PrefixExpression ({InfixExpression.left=current} op=('*'|'/'|'%') right=PrefixExpression)*
-;
-
-PrefixExpression returns Expression:
-    ({PrefixExpression} op=('!'|'-') expr=PrefixExpression) | PostfixExpression
-;
-
-MemberAccessName returns string:
-    ID | STRING
-;
-
-PostfixExpression returns Expression:
+PostfixExpression:
     PrimaryExpression (
-        ({MemberAccess.receiver=current} '.' target=[NamedElement:MemberAccessName] ) |
-        ({InfixExpression.left=current} op=('to'|'..') right=Expression) |
-        ({TypeCastExpression.expr=current} 'as' typeRef=TypeReference) |
-        ({IndexingExpression.receiver=current} '[' argument=Expression ']') |
-        ({CallExpression.receiver=current} '(' (arguments+=Expression (',' arguments+=Expression)* ','?)? ')') |
-        ({InstanceofExpression.expr=current} 'instanceof' typeRef=NamedType)
+        ({infer MemberAccess.receiver=current} '.' (target=[NamedElement:ID] | target=[NamedElement:STRING]) ) |
+        ({infer IntRangeExpression.from=current} op=('to'|'..') to=Expression) |
+        ({infer TypeCastExpression.expr=current} 'as' type=Type) |
+        ({infer IndexExpression.receiver=current} '[' index=Expression ']') |
+        ({infer CallExpression.receiver=current} '(' (args+=Expression (',' args+=Expression)* ','?)? ')') |
+        ({infer InstanceofExpression.expr=current} 'instanceof' type=NamedType)
     )*
 ;
 
-fragment PrimaryExpression returns Expression:
+fragment PrimaryExpression:
     ParenthesizedExpression | FunctionExpression | ReferenceExpression | LiteralExpression | BracketExpression
 ;
 
-ParenthesizedExpression returns ParenthesizedExpression:
+ParenthesizedExpression:
     '(' expr=Expression ')'
 ;
 
-LiteralExpression returns LiteralExpression:
-    StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | ArrayLiteral | MapLiteral | NullLiteral
+LiteralExpression:
+    StringLiteral | StringTemplate | IntegerLiteral | FloatLiteral | BooleanLiteral | ArrayLiteral | MapLiteral | NullLiteral
 ;
 
-FunctionExpression returns FunctionExpression:
+FunctionExpression:
     'function' '('
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' ('as' returnTypeRef=TypeReference)? '{'
+        (params+=ValueParameter (',' params+=ValueParameter)*)?
+    ')' ('as' retType=Type)? '{'
         (body+=Statement)*
     '}'
 ;
 
-ArrayLiteral returns ArrayLiteral:
+ArrayLiteral:
     '[' (values+=Expression (',' values+=Expression)* ','?)? ']'
 ;
 
-MapLiteral returns MapLiteral:
+MapLiteral:
     '{' (entries+=MapEntry (',' entries+=MapEntry)* ','?)? '}'
 ;
 
-MapEntry returns MapEntry:
+MapEntry:
     key=Expression ':' value=Expression
 ;
 
-StringTemplate returns StringTemplate:
+StringTemplate:
     // Either just the full content
     content+=TEMPLATE_LITERAL_FULL |
     // Or template literal parts with expressions in between
@@ -312,13 +281,13 @@ terminal TEMPLATE_LITERAL_END:
 terminal fragment IN_TEMPLATE_LITERAL:
     /[^$`\\]|\\./;
 
-BracketExpression returns BracketExpression:
+BracketExpression:
     '<' path+=BracketLocation (':' path+=BracketLocation+)*
         (':' properties+=BracketProperty (',' properties+=BracketProperty)*)?
     '>'
 ;
 
-BracketLocation returns BracketLocation:
+BracketLocation:
     value=LocationLiteral | ExpressionTemplate
 ;
 
@@ -326,76 +295,82 @@ LocationLiteral returns string:
     (ID | INTEGER | '.' | '-' | '*' | 'for' | 'if')+
 ;
 
-ExpressionTemplate returns ExpressionTemplate:
+ExpressionTemplate:
     '${' expr=Expression '}'
 ;
 
-BracketProperty returns BracketProperty:
+BracketProperty:
     key=UnquotedString '=' value=(UnquotedString | IntegerLiteral | BooleanLiteral)
 ;
 
-ReferenceExpression returns ReferenceExpression:
+ReferenceExpression:
     target=[NamedElement:ID]
 ;
 
-NumberLiteral returns NumberLiteral:
-    IntegerLiteral | FloatingLiteral
-;
-
-IntegerLiteral returns IntegerLiteral:
+IntegerLiteral:
     value=INTEGER
 ;
 
-FloatingLiteral returns FloatingLiteral:
-    value=FLOATING
+FloatLiteral:
+    value=FLOAT
 ;
 
-BooleanLiteral returns BooleanLiteral:
+BooleanLiteral:
     value?='true' | 'false'
 ;
 
-StringLiteral returns StringLiteral:
+StringLiteral:
     value=STRING
 ;
 
-UnquotedString returns UnquotedString:
+UnquotedString:
     value=ID
 ;
 
-NullLiteral returns NullLiteral:
+NullLiteral:
     value='null'
 ;
 //endregion Expression
 
-//region TypeReference
-TypeReference returns TypeReference:
+//region Type
+Type:
     PrimaryType ('['(
-        ({MapTypeReference.value=current} key=TypeReference ']' ('$' orderly?='orderly')?) |
-        ({ArrayTypeReference.value=current} ']')
+        ({infer MapType.value=current} key=Type ']' ('$' orderly?='orderly')?) |
+        ({infer ArrayType.value=current} ']')
     ) )*
 ;
 
-fragment PrimaryType returns TypeReference:
+fragment PrimaryType:
     ListType | FunctionType | NamedType
 ;
 
-ListType returns ListTypeReference:
-    '[' value=TypeReference ']'
+ListType:
+    '[' value=Type ']'
 ;
 
-FunctionType returns FunctionTypeReference:
+FunctionType:
     'function' '('
-        (params+=TypeReference (',' params+=TypeReference)*)?
-    ')' returnType=TypeReference
+        (params+=Type (',' params+=Type)*)?
+    ')' retType=Type
 ;
 
-NamedType returns NamedTypeReference:
-    path+=[NamedElement:ID] ('.' path+=[NamedElement:ID])* ('<' typeArguments+=NamedType (',' typeArguments+=NamedType)* '>')?
+NamedType:
+    path+=[NamedElement:ID] ('.' path+=[NamedElement:ID])*
 ;
-//endregion TypeReference
+//endregion Type
 
 ID returns string:
     IDENTIFIER
     | 'to'
     | 'orderly'  // zenutils
 ;
+
+hidden terminal WHITE_SPACE: /\s+/;
+terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
+terminal FLOAT: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdD]?/;
+terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
+terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
+
+hidden terminal BLOCK_COMMENT: /\/\*[\s\S]*?\*\//;
+hidden terminal LINE_COMMENT: /\/\/[^\n\r]*/;
+hidden terminal PREPROCESSOR: /#[^\n\r]*/;

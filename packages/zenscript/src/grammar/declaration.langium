@@ -1,63 +1,54 @@
 grammar ZenScriptDeclaration
 
-import "./common";
+type NamedElement = Script | ImportDeclaration | VariableDeclaration | ClassDeclaration | FieldDeclaration | FunctionDeclaration | ValueParameter | TypeParameter;
 
-entry ZenScriptDeclaration returns Script:
+entry ZenScriptDeclaration infers Script:
     package=PackageDeclaration?
     ( imports+=ImportDeclaration
     | functions+=FunctionDeclaration
-    | expands+=(ExpandDeclaration | ExpandFunctionDeclaration)
+    | expands+=ExpandDeclaration
     | classes+=ClassDeclaration
     | statements+=VariableDeclaration
     )*
 ;
 
-PackageDeclaration returns PackageDeclaration:
+PackageDeclaration:
     'package' path+=ID ('.' path+=ID )* ';'?
 ;
 
-ImportDeclaration returns ImportDeclaration:
+ImportDeclaration:
     'import' path+=[NamedElement:ID] ('.' path+=[NamedElement:ID])* ('as' alias=ID)? ';'?
 ;
 
-ClassDeclaration returns ClassDeclaration:
+ClassDeclaration:
     'zenClass' name=ID 
-    ('<' typeParameters+=TypeParameter (',' typeParameters+=TypeParameter)* '>')?
+    ('<' typeParams+=TypeParameter (',' typeParams+=TypeParameter)* '>')?
     ('extends' (superTypes+=NamedType (',' superTypes+=NamedType)*))?
-    ('{' members+=ClassMemberDeclaration* '}')?
+    ('{' members+=(FunctionDeclaration | FieldDeclaration | OperatorFunctionDeclaration)* '}')?
 ;
 
-ClassMemberDeclaration returns ClassMemberDeclaration:
-    FunctionDeclaration | FieldDeclaration | ConstructorDeclaration | OperatorFunctionDeclaration;
-
-FieldDeclaration returns FieldDeclaration:
-    prefix=('static' | 'var' |'val') name=ID 'as' typeRef=Type ('=' initializer=LiteralExpression)? ';'?
+FieldDeclaration:
+    prefix=('static' | 'var' | 'val') name=ID 'as' type=Type ('=' initializer=Expression)? ';'?
 ;
 
-ValueParameter returns ValueParameter:
-    (varargs?='...')? name=ID 'as' typeRef=Type ('=' defaultValue=(DefaultExpression | LiteralExpression))?
+ValueParameter:
+    (varargs?='...')? name=ID 'as' type=Type ('=' defaultValue=(DefaultExpression | Expression))?
 ;
 
-TypeParameter returns TypeParameter:
+TypeParameter:
     name=ID
 ;
 
-FunctionDeclaration returns FunctionDeclaration:
+FunctionDeclaration:
     prefix=('static' | 'global' | 'lambda')? 'function' name=ID? '('
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' 'as' returnTypeRef=Type ';'?
+        (params+=ValueParameter (',' params+=ValueParameter)*)?
+    ')' 'as' retType=Type ';'?
 ;
 
-ExpandFunctionDeclaration returns ExpandFunctionDeclaration:
-    '$expand' typeRef=Type '$' name=ID  '('
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' 'as' returnTypeRef=Type ';'?
-;
-
-OperatorFunctionDeclaration returns OperatorFunctionDeclaration:
+OperatorFunctionDeclaration:
     'operator' op=Operator '('
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' 'as' returnTypeRef=CompoundType ';'?
+        (params+=ValueParameter (',' params+=ValueParameter)*)?
+    ')' 'as' retType=CompoundType ';'?
 ;
 
 Operator returns string:
@@ -66,114 +57,91 @@ Operator returns string:
     '!' | '['']'('=')? | '..' | 'has' | '.' ('=')? | 'for' | 'as' | '==' | '!=' | '<' | '<=' | '>' | '>='
 ;
 
-ConstructorDeclaration returns ConstructorDeclaration:
-    'zenConstructor' '('
-        (parameters+=ValueParameter (',' parameters+=ValueParameter)*)?
-    ')' ';'?
-;
-
-ExpandDeclaration returns ExpandDeclaration:
-    'expand' typeRef=TypeReference '{' 
-        members+=ExpandMemberDeclaration*
+ExpandDeclaration:
+    'expand' type=Type '{' 
+        members+=(FieldDeclaration | FunctionDeclaration | OperatorFunctionDeclaration)*
     '}'
 ;
 
-ExpandMemberDeclaration returns ExpandMemberDeclaration:
-    FieldDeclaration | FunctionDeclaration | OperatorFunctionDeclaration
+VariableDeclaration:
+    prefix=('global' | 'static' | 'var' | 'val') name=ID 'as' type=Type ('=' initializer=LiteralExpression)? ';'?
 ;
 
-VariableDeclaration returns VariableDeclaration:
-    prefix=('global' | 'static' | 'var' | 'val') name=ID 'as' typeRef=TypeReference ('=' initializer=LiteralExpression)? ';'?
+Expression:
+    PrefixExpression
 ;
 
-LiteralExpression returns Expression:
-    StringLiteral  | NumberLiteralExpression | BooleanLiteral  | NullLiteral
+PrefixExpression:
+    ({infer PrefixExpression} op=('-') expr=PrefixExpression) | LiteralExpression
 ;
 
-NumberLiteralExpression returns Expression:
-    '-' NumberLiteral | 
-    NumberLiteral
+LiteralExpression:
+    StringLiteral | IntegerLiteral | FloatLiteral | BooleanLiteral | NullLiteral
 ;
 
-NumberLiteral returns NumberLiteral:
-    IntegerLiteral | FloatingLiteral
-;
-
-IntegerLiteral returns IntegerLiteral:
+IntegerLiteral:
     value=INTEGER
 ;
 
-FloatingLiteral returns FloatingLiteral:
-    value=FLOATING
+FloatLiteral:
+    value=FLOAT
 ;
 
-BooleanLiteral returns BooleanLiteral:
+BooleanLiteral:
     value?='true' | 'false'
 ;
 
-StringLiteral returns StringLiteral:
+StringLiteral:
     value=STRING
 ;
 
-NullLiteral returns NullLiteral:
+NullLiteral:
     value='null'
 ;
 
-DefaultExpression returns DefaultExpression:
+DefaultExpression:
     value='default'
 ;
 
-//region TypeReference
-Type returns TypeReference:
-    UnionType
-;
-
-UnionType returns TypeReference:
-    IntersectionType ({UnionTypeReference.values+=current} ('|' values+=IntersectionType)+)?
-;
-
-IntersectionType returns TypeReference:
-    TypeReference ({IntersectionTypeReference.values+=current} ('&' values+=TypeReference)+)?
-;
-
-CompoundType returns TypeReference:
-    TypeReference ({CompoundTypeReference.values+=current} (',' values+=TypeReference)+)?
-;
-
-TypeReference returns TypeReference:
+//region Type
+Type:
     PrimaryType ('['(
-        ({MapTypeReference.value=current} key=TypeReference ']' ('$' orderly?='orderly')?) |
-        ({ArrayTypeReference.value=current} ']')
+        ({infer MapType.value=current} key=Type ']') |
+        ({infer ArrayType.value=current} ']')
     ) )*
 ;
 
-fragment PrimaryType returns TypeReference:
+fragment PrimaryType:
     ListType | FunctionType | ParenthesizedType | NamedType
 ;
 
-ParenthesizedType returns ParenthesizedTypeReference:
-    '(' value=TypeReference ')'
+ParenthesizedType:
+    '(' value=Type ')'
 ;
 
-ListType returns ListTypeReference:
-    '[' value=TypeReference ']'
+ListType:
+    '[' value=Type ']'
 ;
 
-FunctionType returns FunctionTypeReference:
+FunctionType:
     'function' '('
-        (params+=TypeReference (',' params+=TypeReference)*)?
-    ')' returnType=TypeReference
+        (params+=Type (',' params+=Type)*)?
+    ')' retType=Type
 ;
 
-NamedType returns NamedTypeReference:
-    path+=[NamedElement:ID] ('.' path+=[NamedElement:ID])* ('<' typeArguments+=NamedType (',' typeArguments+=NamedType)* '>')?
+NamedType:
+    path+=[NamedElement:ID] ('.' path+=[NamedElement:ID])* ('<' typeArgs+=NamedType (',' typeArgs+=NamedType)* '>')?
 ;
-//endregion TypeReference
+
+CompoundType:
+    Type ({infer CompoundType.values+=current} (',' values+=Type)+)?
+;
+//endregion Type
 
 ID returns string:
     IDENTIFIER
     | 'to'
-    | 'orderly'
+    | 'orderly' // zenutils
     | 'package'
     | 'extends'
     | 'operator'
@@ -181,3 +149,13 @@ ID returns string:
     | 'lambda'
     | 'expand'
 ;
+
+hidden terminal WHITE_SPACE: /\s+/;
+terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
+terminal FLOAT: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdD]?/;
+terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
+terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
+
+hidden terminal BLOCK_COMMENT: /\/\*[\s\S]*?\*\//;
+hidden terminal LINE_COMMENT: /\/\/[^\n\r]*/;
+hidden terminal PREPROCESSOR: /#[^\n\r]*/;
