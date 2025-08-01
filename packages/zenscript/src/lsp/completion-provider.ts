@@ -141,7 +141,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
     const invalidContainerProperty
       = (context.node?.$containerProperty === 'properties')
-      || (context.node?.$containerProperty === 'value')
+        || (context.node?.$containerProperty === 'value')
     if (invalidContainerProperty) {
       return
     }
@@ -169,7 +169,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private completionForBracketPropertyValue(entry: BracketEntry, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     const requiredNextFeature
       = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
-      || (GrammarAST.isKeyword(next.feature) && next.feature.value === '=')
+        || (GrammarAST.isKeyword(next.feature) && next.feature.value === '=')
     if (!requiredNextFeature) {
       return
     }
@@ -244,7 +244,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
         return
       }
 
-      const params = source.parameters.map((param, index) => {
+      const params = source.params.map((param, index) => {
         return `${param.name}: ${funcType.paramTypes[index].toString()}`
       }).join(', ')
 

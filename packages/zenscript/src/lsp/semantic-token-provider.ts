@@ -1,8 +1,9 @@
+import type { AstNode } from 'langium'
 import type { SemanticTokenAcceptor } from 'langium/lsp'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
-import { type AstNode, stream } from 'langium'
+import { stream } from 'langium'
 import { AbstractSemanticTokenProvider } from 'langium/lsp'
 import { SemanticTokenModifiers, SemanticTokenTypes } from 'vscode-languageserver'
 import { isBracketLocation } from '../generated/ast'
@@ -36,7 +37,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
       })
     },
 
-    FloatingLiteral: (source, acceptor) => {
+    FloatLiteral: (source, acceptor) => {
       acceptor({
         node: source,
         property: 'value',
@@ -105,7 +106,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
       })
     },
 
-    NamedTypeReference: (source, acceptor) => {
+    NamedType: (source, acceptor) => {
       acceptor({
         node: source,
         property: 'path',
@@ -113,7 +114,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
       })
       acceptor({
         node: source,
-        property: 'typeArguments',
+        property: 'typeArgs',
         type: SemanticTokenTypes.class,
       })
     },
