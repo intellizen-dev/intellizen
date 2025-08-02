@@ -260,7 +260,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     InfixExpression: (source) => {
       const leftType = this.inferType(source.left)
-      switch (source.op) {
+      switch (source.operator) {
         case '&': // Bitwise
         case '|':
         case '^':
@@ -278,7 +278,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
           const operator = this.memberProvider()
             .streamMembers(leftType)
             .filter(isOperatorFunctionDeclaration)
-            .filter(it => it.op === source.op)
+            .filter(it => it.op === source.operator)
             .filter(it => it.params.length === 1)
             .head()
           return this.inferType(operator?.retType)

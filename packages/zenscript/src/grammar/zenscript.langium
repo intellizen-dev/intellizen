@@ -123,46 +123,43 @@ ExpressionNoMap infers Expression:
     AssignmentNoMap
 ;
 
-AssignmentNoMap infers Assignment:
-    ConditionalExpressionNoMap ({infer AssignmentNoMap.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)?
+AssignmentNoMap infers Expression:
+    ConditionalExpressionNoMap ({infer Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)?
 ;
 
-ConditionalExpressionNoMap infers ConditionalExpression:
-    LogicalExpressionNoMap ({infer ConditionalExpressionNoMap.cond=current} '?' thenBody=ConditionalExpressionNoMap ':' elseBody=ConditionalExpressionNoMap)?
+ConditionalExpressionNoMap infers Expression:
+    InfixExpressionNoMap ({infer ConditionalExpression.cond=current} '?' thenBody=ConditionalExpressionNoMap ':' elseBody=ConditionalExpressionNoMap)?
 ;
 
-LogicalExpressionNoMap infers LogicalExpression:
-    BitwiseExpressionNoMap ({infer InfixExpression.left=current} op=('&&'|'||') right=BitwiseExpressionNoMap)*
+infix InfixExpressionNoMap on PrefixExpressionNoMap infers Expression:
+    // Multiplicative
+    '*'|'/'|'%'
+
+    // Additive
+    > '+'|'-'|'~'
+
+    // Relational
+    > '=='|'!='|'<'|'<='|'>'|'>='|'in'|'has'
+
+    // Bitwise
+    > '&'|'|'|'^'
+
+    // Logical
+    > '&&'|'||'
 ;
 
-BitwiseExpressionNoMap infers BitwiseExpression:
-    RelationalExpressionNoMap ({infer InfixExpression.left=current} op=('&'|'|'|'^') right=RelationalExpressionNoMap)*
-;
-
-RelationalExpressionNoMap infers RelationalExpression:
-    AdditiveExpressionNoMap  ({infer InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpressionNoMap)*
-;
-
-AdditiveExpressionNoMap infers AdditiveExpression:
-    MultiplicativeExpressionNoMap ({infer InfixExpression.left=current} op=('+'|'-'|'~') right=MultiplicativeExpressionNoMap)*
-;
-
-MultiplicativeExpressionNoMap infers MultiplicativeExpression:
-    PrefixExpressionNoMap ({infer InfixExpression.left=current} op=('*'|'/'|'%') right=PrefixExpressionNoMap)*
-;
-
-PrefixExpressionNoMap infers PrefixExpression:
+PrefixExpressionNoMap infers Expression:
     ({infer PrefixExpression} op=('!'|'-') expr=PrefixExpressionNoMap) | PostfixExpressionNoMap
 ;
 
-PostfixExpressionNoMap infers PostfixExpression:
-    PrimaryExpressionNoMap (
-        ({infer MemberAccess.receiver=current} '.' (target=[NamedElement:ID] | target=[NamedElement:STRING]) ) |
-        ({infer IntRangeExpression.from=current} op=('to'|'..') to=Expression) |
-        ({infer TypeCastExpression.expr=current} 'as' type=Type) |
-        ({infer IndexExpression.receiver=current} '[' index=Expression ']') |
-        ({infer CallExpression.receiver=current} '(' (args+=Expression (',' args+=Expression)* ','?)? ')') |
-        ({infer InstanceofExpression.expr=current} 'instanceof' type=NamedType)
+PostfixExpressionNoMap infers Expression:
+    PrimaryExpressionNoMap
+    ( {infer MemberAccess.receiver=current} '.' (target=[NamedElement:ID] | target=[NamedElement:STRING])
+    | {infer IntRangeExpression.from=current} op=('to'|'..') to=Expression
+    | {infer TypeCastExpression.expr=current} 'as' type=Type
+    | {infer IndexExpression.receiver=current} '[' index=Expression ']'
+    | {infer CallExpression.receiver=current} '(' (args+=Expression (',' args+=Expression)*)? ')'
+    | {infer InstanceofExpression.expr=current} 'instanceof' type=NamedType
     )*
 ;
 
@@ -170,56 +167,54 @@ fragment PrimaryExpressionNoMap:
     ParenthesizedExpression | ReferenceExpression | LiteralExpressionNoMap | BracketExpression
 ;
 
-LiteralExpressionNoMap infers LiteralExpression:
+LiteralExpressionNoMap infers Expression:
     StringLiteral | StringTemplate | IntegerLiteral | FloatLiteral | BooleanLiteral | ArrayLiteral /* | MapLiteral */ | NullLiteral
 ;
 //endregion ExpressionNoMap
 
 //region Expression
-Expression:
+Expression infers Expression:
     Assignment
 ;
 
-Assignment:
+Assignment infers Expression:
     ConditionalExpression ({infer Assignment.left=current} op=('='|'+='|'-='|'~='|'*='|'/='|'%='|'|='|'&='|'^=') right=Assignment)?
 ;
 
-ConditionalExpression:
-    LogicalExpression ({infer ConditionalExpression.cond=current} '?' thenBody=ConditionalExpression ':' elseBody=ConditionalExpression)?
+ConditionalExpression infers Expression:
+    InfixExpression ({infer ConditionalExpression.cond=current} '?' thenBody=ConditionalExpression ':' elseBody=ConditionalExpression)?
 ;
 
-LogicalExpression:
-    BitwiseExpression ({infer InfixExpression.left=current} op=('&&'|'||') right=BitwiseExpression)*
+infix InfixExpression on PrefixExpression:
+    // Multiplicative
+    '*'|'/'|'%'
+
+    // Additive
+    > '+'|'-'|'~'
+
+    // Relational
+    > '=='|'!='|'<'|'<='|'>'|'>='|'in'|'has'
+
+    // Bitwise
+    > '&'|'|'|'^'
+
+    // Logical
+    > '&&'|'||'
 ;
 
-BitwiseExpression:
-    RelationalExpression ({infer InfixExpression.left=current} op=('&'|'|'|'^') right=RelationalExpression)*
+PrefixExpression infers Expression:
+    PostfixExpression 
+    | {infer PrefixExpression} op=('!'|'-') expr=PrefixExpression
 ;
 
-RelationalExpression:
-    AdditiveExpression ({infer InfixExpression.left=current} op=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpression)*
-;
-
-AdditiveExpression:
-    MultiplicativeExpression ({infer InfixExpression.left=current} op=('+'|'-'|'~') right=MultiplicativeExpression)*
-;
-
-MultiplicativeExpression:
-    PrefixExpression ({infer InfixExpression.left=current} op=('*'|'/'|'%') right=PrefixExpression)*
-;
-
-PrefixExpression:
-    ({infer PrefixExpression} op=('!'|'-') expr=PrefixExpression) | PostfixExpression
-;
-
-PostfixExpression:
-    PrimaryExpression (
-        ({infer MemberAccess.receiver=current} '.' (target=[NamedElement:ID] | target=[NamedElement:STRING]) ) |
-        ({infer IntRangeExpression.from=current} op=('to'|'..') to=Expression) |
-        ({infer TypeCastExpression.expr=current} 'as' type=Type) |
-        ({infer IndexExpression.receiver=current} '[' index=Expression ']') |
-        ({infer CallExpression.receiver=current} '(' (args+=Expression (',' args+=Expression)* ','?)? ')') |
-        ({infer InstanceofExpression.expr=current} 'instanceof' type=NamedType)
+PostfixExpression infers Expression:
+    PrimaryExpression
+    ( {infer MemberAccess.receiver=current} '.' (target=[NamedElement:ID] | target=[NamedElement:STRING])
+    | {infer IntRangeExpression.from=current} op=('to'|'..') to=Expression
+    | {infer TypeCastExpression.expr=current} 'as' type=Type
+    | {infer IndexExpression.receiver=current} '[' index=Expression ']'
+    | {infer CallExpression.receiver=current} '(' (args+=Expression (',' args+=Expression)*)? ')'
+    | {infer InstanceofExpression.expr=current} 'instanceof' type=NamedType
     )*
 ;
 
