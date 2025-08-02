@@ -1,11 +1,11 @@
 import type { AstNode, Stream } from 'langium'
-import type { ClassDeclaration, OperatorFunctionDeclaration, ZenScriptAstType } from '../generated/ast'
+import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
 import type { Type, ZenScriptType } from '../typing/type-description'
 import type { ZenScriptSyntheticAstType } from './synthetic'
-import { EMPTY_STREAM, stream } from 'langium'
-import { isClassDeclaration, isConstructorDeclaration, isFunctionDeclaration, isMemberAccess, isOperatorFunctionDeclaration, isReferenceExpression, isScript, isVariableDeclaration } from '../generated/ast'
+import { AstUtils, EMPTY_STREAM, stream } from 'langium'
+import { isClassDeclaration, isConstructorDeclaration, isFunctionDeclaration, isMemberAccess, isReferenceExpression, isScript, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType } from '../typing/type-description'
 import { isStatic, streamClassChain, streamDeclaredMembers } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -13,7 +13,6 @@ import { isSyntheticAstNode } from './synthetic'
 
 export interface MemberProvider {
   streamMembers: (source: AstNode | Type | undefined) => Stream<AstNode>
-  streamOperators: (source: AstNode | Type | undefined) => Stream<OperatorFunctionDeclaration>
 }
 
 type SourceMap = ZenScriptAstType & ZenScriptType & ZenScriptSyntheticAstType
@@ -28,10 +27,6 @@ export class ZenScriptMemberProvider implements MemberProvider {
 
   public streamMembers(source: AstNode | Type | undefined): Stream<AstNode> {
     return this.rules(source?.$type)?.call(this, source) ?? EMPTY_STREAM
-  }
-
-  public streamOperators(source: AstNode | Type | undefined): Stream<OperatorFunctionDeclaration> {
-    return this.streamMembers(source).filter(isOperatorFunctionDeclaration)
   }
 
   private readonly rules = defineRules<RuleMap>({
@@ -130,7 +125,9 @@ export class ZenScriptMemberProvider implements MemberProvider {
       if (isReferenceExpression(receiver) || isMemberAccess(receiver)) {
         const target = receiver.target.ref
         if (isConstructorDeclaration(target)) {
-          const owner = target.$container as ClassDeclaration
+          const owner = AstUtils.getContainerOfType(target, isClassDeclaration)
+          if (!owner)
+            return EMPTY_STREAM
           return this.streamMembers(new ClassType(owner, new Map()))
         }
 

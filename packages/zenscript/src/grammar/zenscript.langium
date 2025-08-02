@@ -166,7 +166,7 @@ PostfixExpressionNoMap infers PostfixExpression:
     )*
 ;
 
-fragment PrimaryExpressionNoMap infers PrimaryExpression:
+fragment PrimaryExpressionNoMap:
     ParenthesizedExpression | ReferenceExpression | LiteralExpressionNoMap | BracketExpression
 ;
 
@@ -192,7 +192,7 @@ LogicalExpression:
     BitwiseExpression ({infer InfixExpression.left=current} op=('&&'|'||') right=BitwiseExpression)*
 ;
 
-BitwiseExpression infers Expression:
+BitwiseExpression:
     RelationalExpression ({infer InfixExpression.left=current} op=('&'|'|'|'^') right=RelationalExpression)*
 ;
 
@@ -223,7 +223,7 @@ PostfixExpression:
     )*
 ;
 
-PrimaryExpression:
+fragment PrimaryExpression:
     ParenthesizedExpression | FunctionExpression | ReferenceExpression | LiteralExpression | BracketExpression
 ;
 
