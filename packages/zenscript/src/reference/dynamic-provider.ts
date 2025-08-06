@@ -62,11 +62,11 @@ export class ZenScriptDynamicProvider implements DynamicProvider {
         const receiverType = this.typeComputer.inferType(source.receiver)
         if (isClassType(receiverType)) {
           const operatorDecl = streamDeclaredOperators(receiverType.declaration)
-            .filter(it => it.op === '.')
+            .filter(it => it.operator === '.')
             .filter(it => it.params.length === 1)
             .head()
           if (operatorDecl) {
-            yield this.descriptionCreator.createDynamicDescription(operatorDecl.params[0], source.target.$refText)
+            yield this.descriptionCreator.createDynamicDescription(operatorDecl.params[0], source.entity.$refText)
           }
         }
       }.bind(this))

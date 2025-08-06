@@ -146,7 +146,7 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
 
       return this.memberProvider.streamMembers(from)
         .filter(isOperatorFunctionDeclaration)
-        .filter(it => it.op === 'as')
+        .filter(it => it.operator === 'as')
         .map(it => this.typeComputer.inferType(it.retType))
         .nonNullable()
         .some(it => this.isSubType(to, it))

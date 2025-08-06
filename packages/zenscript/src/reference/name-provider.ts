@@ -47,7 +47,7 @@ export class ZenScriptNameProvider extends DefaultNameProvider {
     ImportDeclaration: source => source.alias || source.path.at(-1)?.$refText,
     FunctionDeclaration: source => source.name || 'lambda function',
     ConstructorDeclaration: source => source.$container.name,
-    OperatorFunctionDeclaration: source => source.op,
+    OperatorFunctionDeclaration: source => source.operator,
   })
 
   private readonly nameNodeRules = defineRules<NameNodeRuleMap>({

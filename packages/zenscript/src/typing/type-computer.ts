@@ -140,7 +140,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
       const operator = this.memberProvider()
         .streamMembers(rangeType).filter(isOperatorFunctionDeclaration)
-        .filter(it => it.op === 'for')
+        .filter(it => it.operator === 'for')
         .filter(it => it.params.length === length)
         .head()
 
@@ -165,7 +165,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         const index = source.$containerIndex!
 
         let expected: Type | undefined
-        if (isAssignment(funcExpr.$container) && funcExpr.$container.op === '=') {
+        if (isAssignment(funcExpr.$container) && funcExpr.$container.operator === '=') {
           expected = this.inferType(funcExpr.$container.left)
         }
         else if (isVariableDeclaration(funcExpr.$container)) {
@@ -197,7 +197,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     // region Expression
     Assignment: (source) => {
-      switch (source.op) {
+      switch (source.operator) {
         case '&=':
         case '|=':
         case '^=':
@@ -211,7 +211,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
           const operator = this.memberProvider()
             .streamMembers(leftType)
             .filter(isOperatorFunctionDeclaration)
-            .filter(it => it.op === source.op)
+            .filter(it => it.operator === source.operator)
             .filter(it => it.params.length === 1)
             .head()
           let returnType = this.inferType(operator?.retType)
@@ -226,7 +226,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
             const operator = this.memberProvider()
               .streamMembers(source.left)
               .filter(isOperatorFunctionDeclaration)
-              .filter(it => it.op === '[]=')
+              .filter(it => it.operator === '[]=')
               .filter(it => it.params.length === 2)
               .head()
             return this.inferType(operator?.retType)
@@ -244,13 +244,13 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     PrefixExpression: (source) => {
       const exprType = this.inferType(source.expr)
-      switch (source.op) {
+      switch (source.operator) {
         case '-':
         case '!': {
           const operator = this.memberProvider()
             .streamMembers(exprType)
             .filter(isOperatorFunctionDeclaration)
-            .filter(it => it.op === source.op)
+            .filter(it => it.operator === source.operator)
             .filter(it => it.params.length === 0)
             .head()
           return this.inferType(operator?.retType)
@@ -278,7 +278,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
           const operator = this.memberProvider()
             .streamMembers(leftType)
             .filter(isOperatorFunctionDeclaration)
-            .filter(it => it.op === source.operator)
+            .filter(it => it.operator === source.operator)
             .filter(it => it.params.length === 1)
             .head()
           return this.inferType(operator?.retType)
@@ -288,7 +288,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
           const operator = this.memberProvider()
             .streamMembers(leftType)
             .filter(isOperatorFunctionDeclaration)
-            .filter(it => it.op === 'has')
+            .filter(it => it.operator === 'has')
             .filter(it => it.params.length === 1)
             .head()
           return this.inferType(operator?.retType)
@@ -308,7 +308,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
       const operator = this.memberProvider()
         .streamMembers(leftType)
         .filter(isOperatorFunctionDeclaration)
-        .filter(it => it.op === '..')
+        .filter(it => it.operator === '..')
         .filter(it => it.params.length === 1)
         .head()
       return this.inferType(operator?.retType)
@@ -351,29 +351,29 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     ReferenceExpression: (source) => {
       // dynamic this
-      if (source.target.$refText === 'this' && isClassDeclaration(source.target.ref)) {
-        return new ClassType(source.target.ref, new Map())
+      if (source.entity.$refText === 'this' && isClassDeclaration(source.entity.ref)) {
+        return new ClassType(source.entity.ref, new Map())
       }
 
       // dynamic arguments
-      if (isCallExpression(source.$container) && source.$containerProperty === 'arguments' && isFunctionDeclaration(source.target.ref)) {
-        return this.inferType(source.target.ref.retType)
+      if (isCallExpression(source.$container) && source.$containerProperty === 'arguments' && isFunctionDeclaration(source.entity.ref)) {
+        return this.inferType(source.entity.ref.retType)
       }
 
-      return this.inferType(source.target.ref) ?? this.classTypeOf('any')
+      return this.inferType(source.entity.ref) ?? this.classTypeOf('any')
     },
 
     MemberAccess: (source) => {
       const receiverType = this.inferType(source.receiver)
 
       // Recursive Guard
-      const _ref = (source.target as any)._ref
+      const _ref = (source.entity as any)._ref
       if (typeof _ref === 'symbol' && _ref.description === 'ref_resolving') {
         return this.classTypeOf('any')
       }
 
-      const targetContainer = source.target.ref?.$container
-      if (isOperatorFunctionDeclaration(targetContainer) && targetContainer.op === '.') {
+      const targetContainer = source.entity.ref?.$container
+      if (isOperatorFunctionDeclaration(targetContainer) && targetContainer.operator === '.') {
         let dynamicTargetType = this.inferType(targetContainer.retType)
         if (dynamicTargetType && isClassType(receiverType)) {
           dynamicTargetType = dynamicTargetType.substituteTypeParameters(receiverType.substitutions)
@@ -381,7 +381,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return dynamicTargetType
       }
 
-      let targetType = this.inferType(source.target.ref)
+      let targetType = this.inferType(source.entity.ref)
       if (targetType && isClassType(receiverType)) {
         targetType = targetType.substituteTypeParameters(receiverType.substitutions)
       }
@@ -397,7 +397,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
       const operator = this.memberProvider()
         .streamMembers(source.receiver)
         .filter(isOperatorFunctionDeclaration)
-        .filter(it => it.op === '[]')
+        .filter(it => it.operator === '[]')
         .filter(it => it.params.length === 1)
         .head()
       let returnType = this.inferType(operator?.retType)
@@ -409,7 +409,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     CallExpression: (source) => {
       if (isReferenceExpression(source.receiver) || isMemberAccess(source.receiver)) {
-        const receiver = source.receiver.target.ref
+        const receiver = source.receiver.entity.ref
         if (!receiver) {
           return
         }

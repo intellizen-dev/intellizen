@@ -120,12 +120,12 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
     },
 
     ReferenceExpression: (source, acceptor) => {
-      switch (source.target?.ref?.$type) {
+      switch (source.entity?.ref?.$type) {
         // @ts-expect-error SyntheticHierarchyNode
         case 'SyntheticHierarchyNode':
           acceptor({
             node: source,
-            property: 'target',
+            property: 'entity',
             type: SemanticTokenTypes.namespace,
           })
           break
@@ -133,7 +133,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         case 'ClassDeclaration':
           acceptor({
             node: source,
-            property: 'target',
+            property: 'entity',
             type: SemanticTokenTypes.class,
           })
           break
@@ -141,16 +141,16 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         case 'VariableDeclaration':
           acceptor({
             node: source,
-            property: 'target',
+            property: 'entity',
             type: SemanticTokenTypes.variable,
-            modifier: READONLY_PREFIX.includes(source.target.ref.prefix) ? SemanticTokenModifiers.readonly : undefined,
+            modifier: READONLY_PREFIX.includes(source.entity.ref.prefix) ? SemanticTokenModifiers.readonly : undefined,
           })
           break
 
         case 'FunctionDeclaration':
           acceptor({
             node: source,
-            property: 'target',
+            property: 'entity',
             type: SemanticTokenTypes.function,
           })
           break
@@ -158,7 +158,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         case 'LoopParameter':
           acceptor({
             node: source,
-            property: 'target',
+            property: 'entity',
             type: SemanticTokenTypes.parameter,
             modifier: SemanticTokenModifiers.readonly,
           })
@@ -167,7 +167,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         case 'ValueParameter':
           acceptor({
             node: source,
-            property: 'target',
+            property: 'entity',
             type: SemanticTokenTypes.parameter,
             modifier: SemanticTokenModifiers.readonly,
           })
@@ -177,7 +177,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         case 'SyntheticStringLiteral':
           acceptor({
             node: source,
-            property: 'target',
+            property: 'entity',
             type: SemanticTokenTypes.string,
           })
           break
@@ -185,11 +185,11 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
     },
 
     MemberAccess: (source, acceptor) => {
-      switch (source.target?.ref?.$type) {
+      switch (source.entity?.ref?.$type) {
         case 'Script':
           acceptor({
             node: source,
-            property: 'target',
+            property: 'entity',
             type: SemanticTokenTypes.namespace,
           })
           break
@@ -197,7 +197,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         case 'FunctionDeclaration':
           acceptor({
             node: source,
-            property: 'target',
+            property: 'entity',
             type: SemanticTokenTypes.function,
           })
           break
@@ -205,7 +205,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         case 'ClassDeclaration':
           acceptor({
             node: source,
-            property: 'target',
+            property: 'entity',
             type: SemanticTokenTypes.class,
           })
           break
@@ -213,7 +213,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         case 'FieldDeclaration':
           acceptor({
             node: source,
-            property: 'target',
+            property: 'entity',
             type: SemanticTokenTypes.property,
           })
           break
@@ -222,7 +222,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         case 'SyntheticHierarchyNode':
           acceptor({
             node: source,
-            property: 'target',
+            property: 'entity',
             type: SemanticTokenTypes.namespace,
           })
           break
@@ -231,8 +231,8 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
           // dynamic member
           acceptor({
             node: source,
-            property: 'target',
-            type: isStringType(this.typeComputer.inferType(source.target.ref)) ? SemanticTokenTypes.string : SemanticTokenTypes.variable,
+            property: 'entity',
+            type: isStringType(this.typeComputer.inferType(source.entity.ref)) ? SemanticTokenTypes.string : SemanticTokenTypes.variable,
           })
           break
       }

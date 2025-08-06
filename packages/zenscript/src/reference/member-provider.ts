@@ -71,7 +71,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     MemberAccess: (source) => {
-      const target = source.target.ref
+      const target = source.entity.ref
       if (!target) {
         return EMPTY_STREAM
       }
@@ -114,25 +114,25 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     ReferenceExpression: (source) => {
-      if (source.target.$refText === 'this' && isClassDeclaration(source.target.ref)) {
-        return this.streamMembers(new ClassType(source.target.ref, new Map()))
+      if (source.entity.$refText === 'this' && isClassDeclaration(source.entity.ref)) {
+        return this.streamMembers(new ClassType(source.entity.ref, new Map()))
       }
-      return this.streamMembers(source.target.ref)
+      return this.streamMembers(source.entity.ref)
     },
 
     CallExpression: (source) => {
       const receiver = source.receiver
       if (isReferenceExpression(receiver) || isMemberAccess(receiver)) {
-        const target = receiver.target.ref
-        if (isConstructorDeclaration(target)) {
-          const owner = AstUtils.getContainerOfType(target, isClassDeclaration)
+        const entity = receiver.entity.ref
+        if (isConstructorDeclaration(entity)) {
+          const owner = AstUtils.getContainerOfType(entity, isClassDeclaration)
           if (!owner)
             return EMPTY_STREAM
           return this.streamMembers(new ClassType(owner, new Map()))
         }
 
-        if (isFunctionDeclaration(target)) {
-          const returnType = this.typeComputer.inferType(target.retType)
+        if (isFunctionDeclaration(entity)) {
+          const returnType = this.typeComputer.inferType(entity.retType)
           return this.streamMembers(returnType)
         }
       }

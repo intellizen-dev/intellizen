@@ -1,168 +1,251 @@
+type Entity = Script
+    | Declaration
+    | MapEntry
+
 interface Script {
-    package?: PackageDeclaration;
-    imports: ImportDeclaration[];
-    functions: FunctionDeclaration[];
-    classes: ClassDeclaration[];
-    expands: (ExpandDeclaration | ExpandFunctionDeclaration)[];
-    statements: Statement[];
+    package?: PackageDeclaration
+    imports: ImportDeclaration[]
+    functions: FunctionDeclaration[]
+    classes: ClassDeclaration[]
+    expands: (ExpandDeclaration | ExpandFunctionDeclaration)[]
+    statements: Statement[]
 }
 
-interface Declaration {}
+//region Declaration
+type Declaration = PackageDeclaration
+    | ImportDeclaration
+    | ClassDeclaration
+    | FieldDeclaration
+    | FunctionDeclaration
+    | ExpandFunctionDeclaration
+    | ConstructorDeclaration
+    | VariableDeclaration
+    | ValueParameter
+    | LoopParameter
+    | TypeParameter
 
-interface PackageDeclaration extends Declaration {
-    path: string[];
+interface PackageDeclaration {
+    path: string[]
 }
 
-interface ImportDeclaration extends Declaration {
-    path: @NamedElement[];
-    alias?: string;
+interface ImportDeclaration {
+    path: @Entity[]
+    alias?: string
 }
 
-interface ClassDeclaration extends Declaration {
-    name: string;
-    typeParameters: TypeParameter[]
-    superTypes: NamedTypeReference[];
-    members: ClassMemberDeclaration[];
+interface ClassDeclaration {
+    name: string
+    typeParams: TypeParameter[]
+    superTypes: NamedType[]
+    members: ClassMemberDeclaration[]
 }
 
-type NamedElement = Script | ClassDeclaration | FunctionDeclaration | ExpandFunctionDeclaration | FieldDeclaration | ValueParameter| VariableDeclaration | LoopParameter | MapEntry | ImportDeclaration | ConstructorDeclaration;
-
-type ClassMemberDeclaration = FunctionDeclaration | FieldDeclaration | ConstructorDeclaration | OperatorFunctionDeclaration;
-
-type CallableDeclaration = FunctionDeclaration | ExpandFunctionDeclaration | ConstructorDeclaration;
-
-type ExpandMemberDeclaration = FunctionDeclaration | OperatorFunctionDeclaration | FieldDeclaration;
-
-interface FieldDeclaration extends Declaration {
-    prefix: 'static' | 'var' | 'val';
-    name: string;
-    typeRef?: TypeReference;
-    initializer?: Expression;
+interface TypeParameter {
+    name: string
 }
 
-interface ValueParameter extends Declaration {
-    varargs?: boolean;
-    name: string;
-    typeRef?: TypeReference;
-    defaultValue?: Expression;
+type ClassMemberDeclaration = FieldDeclaration
+    | ConstructorDeclaration
+    | FunctionDeclaration
+    | OperatorFunctionDeclaration
+
+interface FieldDeclaration {
+    prefix: 'static' | 'var' | 'val'
+    name: string
+    type?: Type
+    initializer?: Expression
 }
 
-interface TypeParameter extends Declaration {
-    name: string;
+type CallableDeclaration = FunctionDeclaration
+    | ExpandFunctionDeclaration
+    | ConstructorDeclaration
+
+interface ConstructorDeclaration {
+    params: ValueParameter[]
+    body: Statement[]
 }
 
-interface FunctionDeclaration extends Declaration {
-    prefix?: 'static' | 'global' | 'lambda';
-    name: string;
-    parameters: ValueParameter[];
-    returnTypeRef?: TypeReference;
-    body: Statement[];
+interface FunctionDeclaration {
+    prefix?: 'static' | 'global' | 'lambda'
+    name: string
+    params: ValueParameter[]
+    retType?: Type
+    body: Statement[]
 }
 
-interface ExpandDeclaration extends Declaration {
-    typeRef: TypeReference;
-    members: ExpandMemberDeclaration[];
+interface ExpandFunctionDeclaration {
+    type: Type
+    name: string
+    params: ValueParameter[]
+    retType?: Type
+    body: Statement[]
 }
 
-interface ExpandFunctionDeclaration extends Declaration {
-    typeRef: TypeReference;
-    name: string;
-    parameters: ValueParameter[];
-    returnTypeRef?: TypeReference;
-    body: Statement[];
+interface OperatorFunctionDeclaration {
+    operator: string
+    params: ValueParameter[]
+    retType?: Type
 }
 
-interface OperatorFunctionDeclaration extends Declaration {
-    op: string
-    parameters: ValueParameter[];
-    returnTypeRef?: TypeReference;
+interface ValueParameter {
+    varargs?: boolean
+    name: string
+    type?: Type
+    defaultValue?: Expression
 }
 
-interface ConstructorDeclaration extends Declaration {
-    parameters: ValueParameter[];
-    body: Statement[];
+interface ExpandDeclaration {
+    type: Type
+    members: ExpandMemberDeclaration[]
 }
+
+type ExpandMemberDeclaration = FunctionDeclaration | OperatorFunctionDeclaration | FieldDeclaration
+//endregion Declaration
 
 //region Statement
-interface Statement {}
+// interface Statement {}
+type Statement = IfStatement
+    | WhileStatement
+    | ForStatement
+    | BlockStatement
+    | ReturnStatement
+    | VariableDeclaration
+    | ExpressionStatement
+    | BreakStatement
+    | ContinueStatement
 
-interface IfStatement extends Statement {
-    condition: Expression;
-    ifBody: Statement;
-    elseBody?: Statement;
+interface IfStatement {
+    cond: Expression
+    thenBody: Statement
+    elseBody?: Statement
 }
 
-interface WhileStatement extends Statement {
-    condition: Expression;
-    body: Statement;
+interface WhileStatement {
+    cond: Expression
+    body: Statement
 }
 
-interface ForStatement extends Statement {
-    parameters: LoopParameter[];
-    range: Expression;
-    body: Statement;
+interface ForStatement {
+    params: LoopParameter[]
+    range: Expression
+    body: Statement
 }
 
-interface LoopParameter extends Declaration {
-    name: string;
+interface LoopParameter {
+    name: string
 }
 
-interface BlockStatement extends Statement {
-    body: Statement[];
+interface BlockStatement {
+    body: Statement[]
 }
 
-interface ReturnStatement extends Statement {
-    expr?: Expression;
+interface ReturnStatement {
+    expr?: Expression
 }
 
-interface ExpressionStatement extends Statement {
-    expr: Expression;
+interface ExpressionStatement {
+    expr: Expression
 }
 
-interface BreakStatement extends Statement {}
+interface BreakStatement {
+}
 
-interface ContinueStatement extends Statement {}
+interface ContinueStatement {
+}
 
-interface VariableDeclaration extends Declaration, Statement {
-    prefix: 'global' | 'static' | 'var' | 'val';
-    name: string;
-    typeRef?: TypeReference;
-    initializer?: Expression;
+interface VariableDeclaration {
+    prefix: 'global' | 'static' | 'var' | 'val'
+    name: string
+    type?: Type
+    initializer?: Expression
 }
 //endregion Statement
 
 //region Expression
-interface Expression {}
+type Expression = Assignment
+    | ConditionalExpression
+    | InfixExpression
+    | PrefixExpression
+    | PostfixExpression
+    | LiteralExpression
+    | DefaultExpression
 
-interface PrefixExpression extends Expression {
-    op: '!' | '-';
-    expr: Expression;
+interface Assignment {
+    left: Expression
+    operator: '=' | '+=' | '-=' | '~=' | '*=' | '/=' | '%=' | '|=' | '&=' | '^='
+    right: Expression
 }
 
-interface InfixExpression extends Expression {
-    left: Expression;
-    op: '!=' | '%' | '&&' | '&' | '*' | '+' | '-' | '/' | '<' | '<=' | '==' | '>' | '>=' | '^' | 'has' | 'in' | '|' | '||' | '~' | '..' | 'to';
-    right: Expression;
+interface ConditionalExpression {
+    cond: Expression
+    thenBody: Expression
+    elseBody: Expression
 }
 
-interface Assignment extends Expression {
-    left: Expression;
-    op: '=' | '+=' | '-=' | '~=' | '*=' | '/=' | '%=' | '|=' | '&=' | '^=';
-    right: Expression;
+interface InfixExpression {
+    left: Expression
+    operator: '*' | '/' | '%' | '+' | '-' | '~' | '==' | '!=' | '<' | '<=' | '>' | '>=' | 'in' | 'has' | '&' | '|' | '^' | '&&' | '||'
+    right: Expression
 }
 
-type LiteralExpression = StringLiteral | StringTemplate | NumberLiteral | BooleanLiteral | NullLiteral | ArrayLiteral | MapLiteral;
-
-interface ConditionalExpression extends Expression {
-    first: Expression;
-    second: Expression;
-    third: Expression;
+interface PrefixExpression {
+    operator: '!' | '-'
+    expr: Expression
 }
 
-interface FunctionExpression extends Expression {
-    body: Statement[];
-    parameters: ValueParameter[];
-    returnTypeRef?: TypeReference;
+type PostfixExpression = MemberAccess
+    | IntRangeExpression
+    | TypeCastExpression
+    | IndexExpression
+    | CallExpression
+    | InstanceofExpression
+
+interface MemberAccess {
+    receiver: Expression
+    entity: @Entity
+}
+
+interface IntRangeExpression {
+    from: Expression
+    operator: '..' | 'to'
+    to: Expression
+}
+
+interface TypeCastExpression {
+    expr: Expression
+    type: Type
+}
+
+interface IndexExpression {
+    receiver: Expression
+    index: Expression
+}
+
+interface CallExpression {
+    receiver: Expression
+    args: Expression[]
+}
+
+interface InstanceofExpression {
+    expr: Expression
+    type: NamedType
+}
+
+interface ParenthesizedExpression {
+    expr: Expression
+}
+
+type LiteralExpression = StringLiteral
+    | NumberLiteral
+    | BooleanLiteral
+    | NullLiteral
+    | ArrayLiteral
+    | MapLiteral
+
+interface FunctionExpression {
+    body: Statement[]
+    params: ValueParameter[]
+    retType?: Type
 }
 
 interface BracketProperty {
@@ -170,145 +253,117 @@ interface BracketProperty {
     value: UnquotedString | IntegerLiteral | BooleanLiteral
 }
 
-interface BracketExpression extends Expression {
-    path: (BracketLocation | ExpressionTemplate)[];
-    properties?: BracketProperty[];
+interface BracketExpression {
+    path: (BracketLocation | ExpressionTemplate)[]
+    properties?: BracketProperty[]
 }
 
 interface BracketLocation {
-    value: string | ExpressionTemplate;
+    value: string | ExpressionTemplate
 }
 
 interface ExpressionTemplate {
-    expr: Expression;
+    expr: Expression
 }
 
-interface ParenthesizedExpression extends Expression {
-    expr: Expression;
+interface ReferenceExpression {
+    entity: @Entity
 }
 
-interface MemberAccess extends Expression {
-    receiver: Expression;
-    target: @NamedElement;
+type NumberLiteral = IntegerLiteral
+    | FloatLiteral
+
+interface IntegerLiteral {
+    value: string
 }
 
-interface TypeCastExpression extends Expression {
-    expr: Expression;
-    typeRef: TypeReference;
+interface FloatLiteral {
+    value: string
 }
 
-interface IndexingExpression extends Expression {
-    receiver: Expression;
-    argument: Expression;
+interface BooleanLiteral {
+    value: boolean
 }
 
-interface CallExpression extends Expression {
-    receiver: Expression;
-    arguments: Expression[];
+interface StringLiteral {
+    value: string
 }
 
-interface InstanceofExpression extends Expression {
-    expr: Expression;
-    typeRef: NamedTypeReference;
+interface UnquotedString {
+    value: string
 }
 
-interface ReferenceExpression extends Expression {
-    target: @NamedElement;
+interface NullLiteral {
+    value: 'null'
 }
 
-interface NumberLiteral extends Expression {
-    value: string;
+interface StringTemplate {
+    content: (string | Expression)[]
 }
 
-interface IntegerLiteral extends NumberLiteral {}
-
-interface FloatingLiteral extends NumberLiteral {}
-
-interface BooleanLiteral extends Expression {
-    value: boolean;
+interface ArrayLiteral {
+    values: Expression[]
 }
 
-interface StringLiteral extends Expression {
-    value: string;
-}
-
-interface UnquotedString extends Expression {
-    value: string;
-}
-
-interface NullLiteral extends Expression {
-    value: 'null';
-}
-
-interface StringTemplate extends Expression {
-    content: (string | Expression)[];
-}
-
-interface ArrayLiteral extends Expression {
-    values: Expression[];
-}
-
-interface MapLiteral extends Expression {
-    entries: MapEntry[];
+interface MapLiteral {
+    entries: MapEntry[]
 }
 
 interface MapEntry {
-    key: Expression;
-    value: Expression;
+    key: Expression
+    value: Expression
 }
 
-interface DefaultExpression extends Expression {
+interface DefaultExpression {
     value: 'default'
 }
 //endregion Expression
 
-//region TypeReference
-interface TypeReference {}
+//region Type
+type Type = NamedType 
+    | ArrayType 
+    | ListType
+    | MapType
+    | FunctionType
+    | ParenthesizedType
+    | CompoundType
 
-interface UnionTypeReference extends TypeReference {
-    values: TypeReference[];
+interface NamedType {
+    path: @Entity[]
+    typeArgs: NamedType[]
 }
 
-interface IntersectionTypeReference extends TypeReference {
-    values: TypeReference[];
+interface ArrayType {
+    value: Type
 }
 
-interface CompoundTypeReference extends TypeReference {
-    values: TypeReference[];
+interface ListType {
+    value: Type
 }
 
-interface ListTypeReference extends TypeReference {
-    value: TypeReference;
+interface MapType {
+    key: Type
+    value: Type
+    orderly?: boolean
 }
 
-interface FunctionTypeReference extends TypeReference {
-    params: TypeReference[];
-    returnType: TypeReference;
+interface FunctionType {
+    params: Type[]
+    retType: Type
 }
 
-interface NamedTypeReference extends TypeReference {
-    path: @NamedElement[];
-    typeArguments: NamedTypeReference[];
+interface ParenthesizedType {
+    value: Type
 }
 
-interface ParenthesizedTypeReference extends TypeReference {
-    value: TypeReference;
+interface CompoundType {
+    values: Type[]
 }
-
-interface ArrayTypeReference extends TypeReference {
-    value: TypeReference;
-}
-
-interface MapTypeReference extends TypeReference {
-    key: TypeReference;
-    value: TypeReference;
-    orderly: boolean;
-}
-//endregion TypeReference
+//endregion Type
 
 hidden terminal WHITE_SPACE: /\s+/;
 terminal IDENTIFIER: /[_a-zA-Z][\w_]*/;
-terminal FLOATING: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdD]?/;
+terminal FLOAT: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdD]?/;
 terminal INTEGER: /(0[xX][0-9a-fA-F]+|[0-9]+)[lL]?/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
 
