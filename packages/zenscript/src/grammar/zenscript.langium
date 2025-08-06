@@ -21,7 +21,7 @@ ClassDeclaration returns ClassDeclaration:
 ;
 
 FieldDeclaration returns FieldDeclaration:
-    prefix=('static' | 'var' | 'val') name=ID ('as' type=Type)? ('=' initializer=Expression)? ';'
+    variance=('static' | 'var' | 'val') name=ID ('as' type=Type)? ('=' initializer=Expression)? ';'
 ;
 
 ValueParameter returns ValueParameter:
@@ -57,7 +57,7 @@ Statement returns Statement:
 ;
 
 VariableDeclaration returns VariableDeclaration:
-    prefix=('global'|'static'|'var'|'val') name=ID ('as' type=Type)? ('=' initializer=Expression)? ';'
+    variance=('global'|'static'|'var'|'val') name=ID ('as' type=Type)? ('=' initializer=Expression)? ';'
 ;
 
 IfStatement returns IfStatement:

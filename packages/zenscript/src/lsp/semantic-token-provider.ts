@@ -143,7 +143,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
             node: source,
             property: 'entity',
             type: SemanticTokenTypes.variable,
-            modifier: READONLY_PREFIX.includes(source.entity.ref.prefix) ? SemanticTokenModifiers.readonly : undefined,
+            modifier: READONLY_PREFIX.includes(source.entity.ref.variance) ? SemanticTokenModifiers.readonly : undefined,
           })
           break
 
@@ -275,7 +275,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         node: source,
         property: 'name',
         type: SemanticTokenTypes.variable,
-        modifier: READONLY_PREFIX.includes(source.prefix) ? SemanticTokenModifiers.readonly : undefined,
+        modifier: READONLY_PREFIX.includes(source.variance) ? SemanticTokenModifiers.readonly : undefined,
       })
     },
   })

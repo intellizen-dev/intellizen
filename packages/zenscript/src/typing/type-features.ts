@@ -164,7 +164,7 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
       else if (isClassType(to)) {
         const lambdaDecl = this.memberProvider.streamMembers(to)
           .filter(isFunctionDeclaration)
-          .filter(it => it.prefix === 'lambda')
+          .filter(it => it.variance === 'lambda')
           .head()
         toFuncType = this.typeComputer.inferType(lambdaDecl)
       }

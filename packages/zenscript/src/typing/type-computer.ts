@@ -187,7 +187,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
           const lambdaDecl = this.memberProvider()
             .streamMembers(expected)
             .filter(isFunctionDeclaration)
-            .filter(it => it.prefix === 'lambda')
+            .filter(it => it.variance === 'lambda')
             .head()
           return this.inferType(lambdaDecl?.params.at(index))
         }

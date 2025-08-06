@@ -50,7 +50,7 @@ type ClassMemberDeclaration = FieldDeclaration
     | OperatorFunctionDeclaration
 
 interface FieldDeclaration {
-    prefix: 'static' | 'var' | 'val'
+    variance: 'static' | 'var' | 'val'
     name: string
     type?: Type
     initializer?: Expression
@@ -66,7 +66,7 @@ interface ConstructorDeclaration {
 }
 
 interface FunctionDeclaration {
-    prefix?: 'static' | 'global' | 'lambda'
+    variance?: 'static' | 'global' | 'lambda'
     name: string
     params: ValueParameter[]
     retType?: Type
@@ -154,7 +154,7 @@ interface ContinueStatement {
 }
 
 interface VariableDeclaration {
-    prefix: 'global' | 'static' | 'var' | 'val'
+    variance: 'global' | 'static' | 'var' | 'val'
     name: string
     type?: Type
     initializer?: Expression

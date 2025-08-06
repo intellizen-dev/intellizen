@@ -28,7 +28,7 @@ ClassDeclaration returns ClassDeclaration:
 ;
 
 FieldDeclaration returns FieldDeclaration:
-    prefix=('static' | 'var' | 'val') name=ID 'as' type=Type ('=' initializer=Expression)? ';'?
+    variance=('static' | 'var' | 'val') name=ID 'as' type=Type ('=' initializer=Expression)? ';'?
 ;
 
 ValueParameter returns ValueParameter:
@@ -40,7 +40,7 @@ TypeParameter returns TypeParameter:
 ;
 
 FunctionDeclaration returns FunctionDeclaration:
-    prefix=('static' | 'global' | 'lambda')? 
+    variance=('static' | 'global' | 'lambda')? 
     'function' name=ID? '(' (params+=ValueParameter (',' params+=ValueParameter)*)? ')' 'as' retType=Type ';'?
 ;
 
@@ -61,7 +61,7 @@ ExpandDeclaration returns ExpandDeclaration:
 ;
 
 VariableDeclaration returns VariableDeclaration:
-    prefix=('global' | 'static' | 'var' | 'val') name=ID 'as' type=Type ('=' initializer=LiteralExpression)? ';'?
+    variance=('global' | 'static' | 'var' | 'val') name=ID 'as' type=Type ('=' initializer=LiteralExpression)? ';'?
 ;
 
 Expression returns Expression:
