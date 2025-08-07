@@ -27,7 +27,7 @@ export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
     OperatorFunctionDeclaration: () => SymbolKind.Operator,
     TypeParameter: () => SymbolKind.TypeParameter,
     ValueParameter: () => SymbolKind.Variable,
-    SyntheticHierarchyNode: () => SymbolKind.Module,
+    SyntheticNamespaceNode: () => SymbolKind.Module,
     VariableDeclaration: () => SymbolKind.Variable,
   })
 
@@ -48,7 +48,7 @@ export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
     OperatorFunctionDeclaration: () => CompletionItemKind.Operator,
     TypeParameter: () => CompletionItemKind.TypeParameter,
     ValueParameter: () => CompletionItemKind.Variable,
-    SyntheticHierarchyNode: () => CompletionItemKind.Module,
+    SyntheticNamespaceNode: () => CompletionItemKind.Module,
     VariableDeclaration: () => CompletionItemKind.Variable,
   })
 }

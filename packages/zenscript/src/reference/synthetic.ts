@@ -1,12 +1,13 @@
 import type { AstNode, AstNodeDescription } from 'langium'
-import type { HierarchyNode } from '../utils/hierarchy-tree'
+import type { NamespaceNode } from '../utils/namespace-tree'
 import { URI } from 'langium'
 
 export interface ZenScriptSyntheticAstType {
-  SyntheticHierarchyNode: HierarchyNode<AstNode>
+  SyntheticNamespaceNode: NamespaceNode<AstNode>
   SyntheticUnknown: AstNode
   SyntheticStringLiteral: AstNode
 }
+
 export function createStringLiteralAstDescription(name: string): AstNodeDescription {
   return {
     name,

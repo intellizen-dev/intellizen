@@ -121,8 +121,8 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
 
     ReferenceExpression: (element, acceptor) => {
       switch (element.entity?.ref?.$type) {
-        // @ts-expect-error SyntheticHierarchyNode
-        case 'SyntheticHierarchyNode':
+        // @ts-expect-error SyntheticNamespaceNode
+        case 'SyntheticNamespaceNode':
           acceptor({
             node: element,
             property: 'entity',
@@ -218,8 +218,8 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
           })
           break
 
-        // @ts-expect-error SyntheticHierarchyNode
-        case 'SyntheticHierarchyNode':
+        // @ts-expect-error SyntheticNamespaceNode
+        case 'SyntheticNamespaceNode':
           acceptor({
             node: element,
             property: 'entity',

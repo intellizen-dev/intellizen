@@ -30,7 +30,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
   }
 
   private readonly memberRules = defineRules<RuleMap>({
-    SyntheticHierarchyNode: (element) => {
+    SyntheticNamespaceNode: (element) => {
       const declarations = stream(element.children.values())
         .filter(it => it.isDataNode())
         .flatMap(it => it.data)

@@ -6,7 +6,7 @@ import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { BracketEntry } from '../resource'
 import type { TypeComputer } from '../typing/type-computer'
-import type { HierarchyNode } from '../utils/hierarchy-tree'
+import type { NamespaceNode } from '../utils/namespace-tree'
 import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
 import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, CstUtils, GrammarAST, stream } from 'langium'
@@ -71,7 +71,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     this.completionForBracketProperty(tree, context, next, acceptor)
   }
 
-  private completionForBracketLocation(tree: HierarchyNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+  private completionForBracketLocation(tree: NamespaceNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     const requiredNextFeature
       = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
     if (!requiredNextFeature) {
@@ -122,7 +122,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
   }
 
-  private completionForBracketProperty(tree: HierarchyNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+  private completionForBracketProperty(tree: NamespaceNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     const entry = tree.data.values().next().value
     if (!entry) {
       return

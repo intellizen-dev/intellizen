@@ -1,11 +1,11 @@
 import type { AstNode } from 'langium'
 
-export class HierarchyTree<V> {
-  readonly root: HierarchyNode<V>
+export class NamespaceTree<V> {
+  readonly root: NamespaceNode<V>
   readonly separator: string
 
-  constructor(separator: string = '.') {
-    this.root = new HierarchyNode('')
+  constructor(separator: string) {
+    this.root = new NamespaceNode('')
     this.separator = separator
   }
 
@@ -22,23 +22,23 @@ export class HierarchyTree<V> {
     return this.find(path)?.data ?? new Set()
   }
 
-  find(path: string): HierarchyNode<V> | undefined {
+  find(path: string): NamespaceNode<V> | undefined {
     if (path === this.root.name) {
       return this.root
     }
     const names = path.split(this.separator)
-    return names.reduce<HierarchyNode<V> | undefined>((node, name) => node?.children.get(name), this.root)
+    return names.reduce<NamespaceNode<V> | undefined>((node, name) => node?.children.get(name), this.root)
   }
 }
 
-export class HierarchyNode<V> implements AstNode {
-  readonly $type = 'SyntheticHierarchyNode'
+export class NamespaceNode<V> implements AstNode {
+  readonly $type = 'SyntheticNamespaceNode'
   readonly name: string
-  readonly parent?: HierarchyNode<V>
-  readonly children: Map<string, HierarchyNode<V>>
+  readonly parent?: NamespaceNode<V>
+  readonly children: Map<string, NamespaceNode<V>>
   readonly data: Set<V>
 
-  constructor(name: string, parent?: HierarchyNode<V>) {
+  constructor(name: string, parent?: NamespaceNode<V>) {
     this.name = name
     this.parent = parent
     this.children = new Map()
@@ -53,8 +53,8 @@ export class HierarchyNode<V> implements AstNode {
     return this.data.size === 0
   }
 
-  createChild(name: string): HierarchyNode<V> {
-    const child = new HierarchyNode(name, this)
+  createChild(name: string): NamespaceNode<V> {
+    const child = new NamespaceNode(name, this)
     this.children.set(name, child)
     return child
   }
@@ -78,6 +78,6 @@ export class HierarchyNode<V> implements AstNode {
   }
 }
 
-export function isHierarchyNode(node: unknown): node is HierarchyNode<unknown> {
-  return node instanceof HierarchyNode
+export function isNamespaceNode(node: unknown): node is NamespaceNode<unknown> {
+  return node instanceof NamespaceNode
 }

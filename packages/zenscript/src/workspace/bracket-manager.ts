@@ -4,7 +4,7 @@ import type { ZenScriptSharedServices } from '../module'
 import type { BracketEntry, BracketMirror } from '../resource'
 import { BracketsJsonSchema } from '../resource'
 import { existsFileUri } from '../utils/fs'
-import { HierarchyTree } from '../utils/hierarchy-tree'
+import { NamespaceTree } from '../utils/namespace-tree'
 
 export interface BracketManager {
   resolve: (id: string) => BracketEntry | undefined
@@ -22,12 +22,12 @@ export function appendItemPrefix(id: string): string {
 export class ZenScriptBracketManager implements BracketManager {
   private readonly fileSystemProvider: FileSystemProvider
   readonly mirrors: BracketMirror[]
-  readonly entryTree: HierarchyTree<BracketEntry>
+  readonly entryTree: NamespaceTree<BracketEntry>
 
   constructor(services: ZenScriptSharedServices) {
     this.fileSystemProvider = services.workspace.FileSystemProvider
     this.mirrors = []
-    this.entryTree = new HierarchyTree<BracketEntry>(':')
+    this.entryTree = new NamespaceTree(':')
     services.workspace.ConfigurationManager.onLoaded(async (folders) => {
       await this.initializeMirrors(folders)
       await this.initializeEntryTree()
