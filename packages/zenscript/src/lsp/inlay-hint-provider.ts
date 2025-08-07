@@ -12,8 +12,8 @@ import { isClassType } from '../typing/type-description'
 import { getPathAsString } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 
-type SourceMap = ZenScriptAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], acceptor: InlayHintAcceptor) => void }
+type RuleSpec = ZenScriptAstType
+type RuleMap = { [K in keyof RuleSpec]?: (element: RuleSpec[K], acceptor: InlayHintAcceptor) => void }
 
 export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
   private readonly typeComputer: TypeComputer
@@ -28,34 +28,34 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
   }
 
   computeInlayHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
-    this.rules(astNode.$type)?.call(this, astNode, acceptor)
+    this.inlayHintRules(astNode.$type)?.call(this, astNode, acceptor)
   }
 
-  private readonly rules = defineRules<RuleMap>({
-    VariableDeclaration: (source, acceptor) => {
-      if (!source.type && source.name) {
-        this.acceptTypeHint(source, acceptor)
+  private readonly inlayHintRules = defineRules<RuleMap>({
+    VariableDeclaration: (element, acceptor) => {
+      if (!element.type && element.name) {
+        this.acceptTypeHint(element, acceptor)
       }
     },
 
-    LoopParameter: (source, acceptor) => {
-      if (source.name) {
-        this.acceptTypeHint(source, acceptor)
+    LoopParameter: (element, acceptor) => {
+      if (element.name) {
+        this.acceptTypeHint(element, acceptor)
       }
     },
 
-    ValueParameter: (source, acceptor) => {
-      if (!source.type && source.name) {
-        this.acceptTypeHint(source, acceptor)
+    ValueParameter: (element, acceptor) => {
+      if (!element.type && element.name) {
+        this.acceptTypeHint(element, acceptor)
       }
     },
 
-    BracketExpression: (source, acceptor) => {
-      const id = getPathAsString(source)
+    BracketExpression: (element, acceptor) => {
+      const id = getPathAsString(element)
       const name = this.bracketManager.resolve(id)?.name
       if (name) {
         acceptor({
-          position: source.$cstNode!.range.end,
+          position: element.$cstNode!.range.end,
           label: name,
           paddingLeft: true,
         })

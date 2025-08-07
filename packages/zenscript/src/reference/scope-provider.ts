@@ -13,8 +13,8 @@ import { getPathAsString } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 import { generateStream } from '../utils/stream'
 
-type SourceMap = ZenScriptAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: ReferenceInfo & { container: SourceMap[K] }) => Scope }
+type RuleSpec = ZenScriptAstType
+type RuleMap = { [K in keyof RuleSpec]?: (element: ReferenceInfo & { container: RuleSpec[K] }) => Scope }
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
@@ -33,7 +33,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
   }
 
   override getScope(context: ReferenceInfo): Scope {
-    return this.rules(context.container.$type)?.call(this, context) ?? EMPTY_SCOPE
+    return this.scopeRules(context.container.$type)?.call(this, context) ?? EMPTY_SCOPE
   }
 
   private lexicalScope(
@@ -71,17 +71,17 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return this.createScopeForNodes(classes, outside)
   }
 
-  private importedScope(source: ReferenceInfo, outside?: Scope) {
-    const script = AstUtils.findRootNode(source.container)
+  private importedScope(element: ReferenceInfo, outside?: Scope) {
+    const script = AstUtils.findRootNode(element.container)
     if (!isScript(script)) {
       return EMPTY_SCOPE
     }
 
-    const refText = source.reference.$refText
+    const refText = element.reference.$refText
     const imports = stream(script.imports)
       .flatMap(it => this.descriptionCreator.createImportedDescriptions(it))
 
-    if (refText === '' || !isCallExpression(source.container.$container) || source.container.$containerProperty !== 'receiver') {
+    if (refText === '' || !isCallExpression(element.container.$container) || element.container.$containerProperty !== 'receiver') {
       return this.createScope(imports, outside)
     }
 
@@ -92,7 +92,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       .nonNullable()
       .toArray()
 
-    const overloads = this.overloadResolver.resolveOverloads(source.container.$container, maybeCandidates)
+    const overloads = this.overloadResolver.resolveOverloads(element.container.$container, maybeCandidates)
     const descriptions = overloads.map(it => this.descriptionCreator.createDynamicDescription(it, refText))
     return this.createScope(descriptions, outside)
   }
@@ -101,13 +101,13 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     return new StreamScope(stream(nodes).map(it => this.descriptionCreator.getOrCreateDescription(it)), outerScope, options)
   }
 
-  private readonly rules = defineRules<RuleMap>({
-    ImportDeclaration: (source) => {
-      const fullPath = getPathAsString(source.container, source.index)
+  private readonly scopeRules = defineRules<RuleMap>({
+    ImportDeclaration: (element) => {
+      const fullPath = getPathAsString(element.container, element.index)
 
       let subPath: string
-      const endsWithDot = source.container.$cstNode?.text.endsWith('.') ?? false
-      if (source.index === undefined && endsWithDot) {
+      const endsWithDot = element.container.$cstNode?.text.endsWith('.') ?? false
+      if (element.index === undefined && endsWithDot) {
         subPath = fullPath
       }
       else {
@@ -131,12 +131,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       return new StreamScope(elements)
     },
 
-    ReferenceExpression: (source) => {
+    ReferenceExpression: (element) => {
       let outer: Scope
       outer = this.packageScope()
       outer = this.globalScope(outer)
-      outer = this.importedScope(source, outer)
-      outer = this.dynamicScope(source.container, outer)
+      outer = this.importedScope(element, outer)
+      outer = this.dynamicScope(element.container, outer)
 
       const processor = (desc: AstNodeDescription) => {
         switch (desc.type) {
@@ -147,8 +147,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
           }
           case ClassDeclaration.$type: {
             const classDecl = desc.node as ClassDeclaration
-            const callExpr = source.container.$container
-            if (isCallExpression(callExpr) && source.container.$containerProperty === 'receiver') {
+            const callExpr = element.container.$container
+            if (isCallExpression(callExpr) && element.container.$containerProperty === 'receiver') {
               const constructors = classDecl.members.filter(isConstructorDeclaration)
               const overloads = this.overloadResolver.resolveOverloads(callExpr, constructors)
               if (overloads[0]) {
@@ -161,16 +161,16 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             return desc
         }
       }
-      return this.lexicalScope(source.container, processor, outer)
+      return this.lexicalScope(element.container, processor, outer)
     },
 
-    MemberAccess: (source) => {
-      const outer = this.dynamicScope(source.container)
-      const members = this.memberProvider.streamMembers(source.container.receiver)
+    MemberAccess: (element) => {
+      const outer = this.dynamicScope(element.container)
+      const members = this.memberProvider.streamMembers(element.container.receiver)
 
-      if (source.reference.$refText && isCallExpression(source.container.$container) && source.container.$containerProperty === 'receiver') {
-        const maybeCandidates = members.filter(it => this.nameProvider.getName(it) === source.reference.$refText).toArray()
-        const overloads = this.overloadResolver.resolveOverloads(source.container.$container, maybeCandidates)
+      if (element.reference.$refText && isCallExpression(element.container.$container) && element.container.$containerProperty === 'receiver') {
+        const maybeCandidates = members.filter(it => this.nameProvider.getName(it) === element.reference.$refText).toArray()
+        const overloads = this.overloadResolver.resolveOverloads(element.container.$container, maybeCandidates)
         return this.createScopeForNodes(overloads, outer)
       }
       else {
@@ -178,8 +178,8 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       }
     },
 
-    NamedType: (source) => {
-      if (!source.index) {
+    NamedType: (element) => {
+      if (!element.index) {
         let outer = this.packageScope()
         outer = this.classScope(outer)
         const processor = (desc: AstNodeDescription) => {
@@ -192,10 +192,10 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
             }
           }
         }
-        return this.lexicalScope(source.container, processor, outer)
+        return this.lexicalScope(element.container, processor, outer)
       }
       else {
-        const prev = source.container.path[source.index - 1].ref
+        const prev = element.container.path[element.index - 1].ref
         const members = this.memberProvider.streamMembers(prev)
         return this.createScopeForNodes(members)
       }

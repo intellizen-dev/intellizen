@@ -6,13 +6,13 @@ import { CompletionItemKind, SymbolKind } from 'vscode-languageserver'
 import { toAstNode } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 
-type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
-type RuleMap<R> = { [K in keyof SourceMap]?: (source: SourceMap[K]) => R }
+type RuleSpec = ZenScriptAstType & ZenScriptSyntheticAstType
+type RuleMap<R> = { [K in keyof RuleSpec]?: (element: RuleSpec[K]) => R }
 
 export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
   override getSymbolKind(node: AstNode | AstNodeDescription): SymbolKind {
-    const source = toAstNode(node)
-    return this.symbolKindRules(source?.$type)?.call(this, source) ?? super.getSymbolKind(node)
+    const element = toAstNode(node)
+    return this.symbolKindRules(element?.$type)?.call(this, element) ?? super.getSymbolKind(node)
   }
 
   private readonly symbolKindRules = defineRules<RuleMap<SymbolKind>>({
@@ -32,8 +32,8 @@ export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
   })
 
   override getCompletionItemKind(node: AstNode | AstNodeDescription): CompletionItemKind {
-    const source = toAstNode(node)
-    return this.completionItemRules(source?.$type)?.call(this, source) ?? super.getCompletionItemKind(node)
+    const element = toAstNode(node)
+    return this.completionItemRules(element?.$type)?.call(this, element) ?? super.getCompletionItemKind(node)
   }
 
   private readonly completionItemRules = defineRules<RuleMap<CompletionItemKind>>({

@@ -26,8 +26,8 @@ export interface SubType {
 
 export type TypeFeatures = TypeAssignability & TypeEquality & TypeConversion & SubType
 
-type SourceMap = ZenScriptType
-type RuleMap = { [K in keyof SourceMap]?: (self: SourceMap[K], other: Type) => boolean }
+type RuleSpec = ZenScriptType
+type RuleMap = { [K in keyof RuleSpec]?: (self: RuleSpec[K], other: Type) => boolean }
 
 export class ZenScriptTypeFeatures implements TypeFeatures {
   private readonly typeComputer: TypeComputer

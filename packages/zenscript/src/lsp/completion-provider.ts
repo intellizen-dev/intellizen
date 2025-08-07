@@ -18,8 +18,8 @@ import { getPathAsString, toAstNode } from '../utils/ast'
 import { isZs } from '../utils/document'
 import { defineRules } from '../utils/rule'
 
-type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CompletionItemLabelDetails | undefined }
+type RuleSpec = ZenScriptAstType & ZenScriptSyntheticAstType
+type RuleMap = { [K in keyof RuleSpec]?: (element: RuleSpec[K]) => CompletionItemLabelDetails | undefined }
 
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private readonly typeComputer: TypeComputer
@@ -216,9 +216,9 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
-    const source = toAstNode(nodeDescription)
+    const element = toAstNode(nodeDescription)
     const kind = this.nodeKindProvider.getCompletionItemKind(nodeDescription)
-    const labelDetails = this.labelDetailRules(source?.$type)?.call(this, source)
+    const labelDetails = this.labelDetailRules(element?.$type)?.call(this, element)
 
     return {
       nodeDescription,
@@ -229,8 +229,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   private readonly labelDetailRules = defineRules<RuleMap>({
-    ClassDeclaration: (source) => {
-      const qualifiedName = this.nameProvider.getQualifiedName(source)
+    ClassDeclaration: (element) => {
+      const qualifiedName = this.nameProvider.getQualifiedName(element)
       if (qualifiedName) {
         return {
           description: substringBeforeLast(qualifiedName, '.'),
@@ -238,13 +238,13 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       }
     },
 
-    FunctionDeclaration: (source) => {
-      const funcType = this.typeComputer.inferType(source)
+    FunctionDeclaration: (element) => {
+      const funcType = this.typeComputer.inferType(element)
       if (!isFunctionType(funcType)) {
         return
       }
 
-      const params = source.params.map((param, index) => {
+      const params = element.params.map((param, index) => {
         return `${param.name}: ${funcType.paramTypes[index].toString()}`
       }).join(', ')
 
@@ -254,27 +254,27 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       }
     },
 
-    ImportDeclaration: (source) => {
+    ImportDeclaration: (element) => {
       return {
-        description: getPathAsString(source),
+        description: getPathAsString(element),
       }
     },
 
-    VariableDeclaration: (source) => {
+    VariableDeclaration: (element) => {
       return {
-        description: this.typeComputer.inferType(source)?.toString(),
+        description: this.typeComputer.inferType(element)?.toString(),
       }
     },
 
-    ValueParameter: (source) => {
+    ValueParameter: (element) => {
       return {
-        description: this.typeComputer.inferType(source)?.toString(),
+        description: this.typeComputer.inferType(element)?.toString(),
       }
     },
 
-    FieldDeclaration: (source) => {
+    FieldDeclaration: (element) => {
       return {
-        description: this.typeComputer.inferType(source)?.toString(),
+        description: this.typeComputer.inferType(element)?.toString(),
       }
     },
   })

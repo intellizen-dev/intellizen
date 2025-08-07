@@ -11,8 +11,8 @@ import { isStringType } from '../typing/type-description'
 import { firstTokenTypeName } from '../utils/cst'
 import { defineRules } from '../utils/rule'
 
-type SourceMap = ZenScriptAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], acceptor: SemanticTokenAcceptor) => void }
+type RuleSpec = ZenScriptAstType
+type RuleMap = { [K in keyof RuleSpec]?: (element: RuleSpec[K], acceptor: SemanticTokenAcceptor) => void }
 
 const READONLY_PREFIX = ['global', 'static', 'val']
 
@@ -24,37 +24,37 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
     this.typeComputer = services.typing.TypeComputer
   }
 
-  override highlightElement(node: AstNode, acceptor: SemanticTokenAcceptor): void {
-    this.rules(node.$type)?.call(this, node, acceptor)
+  override highlightElement(element: AstNode, acceptor: SemanticTokenAcceptor): void {
+    this.highlightRules(element.$type)?.call(this, element, acceptor)
   }
 
-  private readonly rules = defineRules<RuleMap>({
-    IntegerLiteral: (source, acceptor) => {
+  private readonly highlightRules = defineRules<RuleMap>({
+    IntegerLiteral: (element, acceptor) => {
       acceptor({
-        node: source,
+        node: element,
         property: 'value',
         type: SemanticTokenTypes.number,
       })
     },
 
-    FloatLiteral: (source, acceptor) => {
+    FloatLiteral: (element, acceptor) => {
       acceptor({
-        node: source,
+        node: element,
         property: 'value',
         type: SemanticTokenTypes.number,
       })
     },
 
-    UnquotedString: (source, acceptor) => {
+    UnquotedString: (element, acceptor) => {
       acceptor({
-        node: source,
+        node: element,
         property: 'value',
         type: SemanticTokenTypes.string,
       })
     },
 
-    BracketExpression: (source, acceptor) => {
-      const locations = stream(source.path).filter(isBracketLocation)
+    BracketExpression: (element, acceptor) => {
+      const locations = stream(element.path).filter(isBracketLocation)
       const [first, ...rest] = locations
 
       switch (firstTokenTypeName(first)) {
@@ -88,43 +88,43 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
       })
     },
 
-    ValueParameter: (source, acceptor) => {
+    ValueParameter: (element, acceptor) => {
       acceptor({
-        node: source,
+        node: element,
         property: 'name',
         type: SemanticTokenTypes.parameter,
         modifier: SemanticTokenModifiers.readonly,
       })
     },
 
-    LoopParameter: (source, acceptor) => {
+    LoopParameter: (element, acceptor) => {
       acceptor({
-        node: source,
+        node: element,
         property: 'name',
         type: SemanticTokenTypes.parameter,
         modifier: SemanticTokenModifiers.readonly,
       })
     },
 
-    NamedType: (source, acceptor) => {
+    NamedType: (element, acceptor) => {
       acceptor({
-        node: source,
+        node: element,
         property: 'path',
         type: SemanticTokenTypes.class,
       })
       acceptor({
-        node: source,
+        node: element,
         property: 'typeArgs',
         type: SemanticTokenTypes.class,
       })
     },
 
-    ReferenceExpression: (source, acceptor) => {
-      switch (source.entity?.ref?.$type) {
+    ReferenceExpression: (element, acceptor) => {
+      switch (element.entity?.ref?.$type) {
         // @ts-expect-error SyntheticHierarchyNode
         case 'SyntheticHierarchyNode':
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
             type: SemanticTokenTypes.namespace,
           })
@@ -132,7 +132,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
 
         case 'ClassDeclaration':
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
             type: SemanticTokenTypes.class,
           })
@@ -140,16 +140,16 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
 
         case 'VariableDeclaration':
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
             type: SemanticTokenTypes.variable,
-            modifier: READONLY_PREFIX.includes(source.entity.ref.variance) ? SemanticTokenModifiers.readonly : undefined,
+            modifier: READONLY_PREFIX.includes(element.entity.ref.variance) ? SemanticTokenModifiers.readonly : undefined,
           })
           break
 
         case 'FunctionDeclaration':
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
             type: SemanticTokenTypes.function,
           })
@@ -157,7 +157,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
 
         case 'LoopParameter':
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
             type: SemanticTokenTypes.parameter,
             modifier: SemanticTokenModifiers.readonly,
@@ -166,7 +166,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
 
         case 'ValueParameter':
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
             type: SemanticTokenTypes.parameter,
             modifier: SemanticTokenModifiers.readonly,
@@ -176,7 +176,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         // @ts-expect-error SyntheticStringLiteral
         case 'SyntheticStringLiteral':
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
             type: SemanticTokenTypes.string,
           })
@@ -184,11 +184,11 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
       }
     },
 
-    MemberAccess: (source, acceptor) => {
-      switch (source.entity?.ref?.$type) {
+    MemberAccess: (element, acceptor) => {
+      switch (element.entity?.ref?.$type) {
         case 'Script':
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
             type: SemanticTokenTypes.namespace,
           })
@@ -196,7 +196,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
 
         case 'FunctionDeclaration':
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
             type: SemanticTokenTypes.function,
           })
@@ -204,7 +204,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
 
         case 'ClassDeclaration':
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
             type: SemanticTokenTypes.class,
           })
@@ -212,7 +212,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
 
         case 'FieldDeclaration':
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
             type: SemanticTokenTypes.property,
           })
@@ -221,7 +221,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         // @ts-expect-error SyntheticHierarchyNode
         case 'SyntheticHierarchyNode':
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
             type: SemanticTokenTypes.namespace,
           })
@@ -230,52 +230,52 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
         case 'ValueParameter':
           // dynamic member
           acceptor({
-            node: source,
+            node: element,
             property: 'entity',
-            type: isStringType(this.typeComputer.inferType(source.entity.ref)) ? SemanticTokenTypes.string : SemanticTokenTypes.variable,
+            type: isStringType(this.typeComputer.inferType(element.entity.ref)) ? SemanticTokenTypes.string : SemanticTokenTypes.variable,
           })
           break
       }
     },
 
-    FunctionDeclaration: (source, acceptor) => {
+    FunctionDeclaration: (element, acceptor) => {
       acceptor({
-        node: source,
+        node: element,
         property: 'name',
         type: SemanticTokenTypes.function,
       })
     },
 
-    ClassDeclaration: (source, acceptor) => {
+    ClassDeclaration: (element, acceptor) => {
       acceptor({
-        node: source,
+        node: element,
         property: 'name',
         type: SemanticTokenTypes.class,
       })
     },
 
-    TypeParameter: (source, acceptor) => {
+    TypeParameter: (element, acceptor) => {
       acceptor({
-        node: source,
+        node: element,
         property: 'name',
         type: SemanticTokenTypes.typeParameter,
       })
     },
 
-    FieldDeclaration: (source, acceptor) => {
+    FieldDeclaration: (element, acceptor) => {
       acceptor({
-        node: source,
+        node: element,
         property: 'name',
         type: SemanticTokenTypes.property,
       })
     },
 
-    VariableDeclaration: (source, acceptor) => {
+    VariableDeclaration: (element, acceptor) => {
       acceptor({
-        node: source,
+        node: element,
         property: 'name',
         type: SemanticTokenTypes.variable,
-        modifier: READONLY_PREFIX.includes(source.variance) ? SemanticTokenModifiers.readonly : undefined,
+        modifier: READONLY_PREFIX.includes(element.variance) ? SemanticTokenModifiers.readonly : undefined,
       })
     },
   })
