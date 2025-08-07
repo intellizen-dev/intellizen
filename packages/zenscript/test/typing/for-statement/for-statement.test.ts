@@ -16,14 +16,14 @@ describe('check inferring for-array', async () => {
   })
 
   it('check "for value in array"', () => {
-    const parameter_value = statement_for_value_in_array.parameters[0]
+    const parameter_value = statement_for_value_in_array.params[0]
     const type_value = services.typing.TypeComputer.inferType(parameter_value)
     expect(type_value?.toString()).toBe('string')
   })
 
   it('check "for index, value in array"', () => {
-    const parameter_index = statement_for_index_value_in_array.parameters[0]
-    const parameter_value = statement_for_index_value_in_array.parameters[1]
+    const parameter_index = statement_for_index_value_in_array.params[0]
+    const parameter_value = statement_for_index_value_in_array.params[1]
     const type_index = services.typing.TypeComputer.inferType(parameter_index)
     const type_value = services.typing.TypeComputer.inferType(parameter_value)
     expect(type_index?.toString()).toBe('int')
@@ -42,14 +42,14 @@ describe('check inferring for-list', async () => {
   })
 
   it('check "for value in list"', () => {
-    const parameter_value = statement_for_value_in_list.parameters[0]
+    const parameter_value = statement_for_value_in_list.params[0]
     const type_value = services.typing.TypeComputer.inferType(parameter_value)
     expect(type_value?.toString()).toBe('string')
   })
 
   it('check "for index, value in list"', () => {
-    const parameter_index = statement_for_index_value_in_list.parameters[0]
-    const parameter_value = statement_for_index_value_in_list.parameters[1]
+    const parameter_index = statement_for_index_value_in_list.params[0]
+    const parameter_value = statement_for_index_value_in_list.params[1]
     const type_index = services.typing.TypeComputer.inferType(parameter_index)
     const type_value = services.typing.TypeComputer.inferType(parameter_value)
     expect(type_index?.toString()).toBe('int')
@@ -68,14 +68,14 @@ describe('check inferring for-map', async () => {
   })
 
   it('check "for key in map" ', () => {
-    const parameter_key = statement_for_key_in_map.parameters[0]
+    const parameter_key = statement_for_key_in_map.params[0]
     const type_key = services.typing.TypeComputer.inferType(parameter_key)
     expect(type_key?.toString()).toBe('string')
   })
 
   it('check "for key, value in map" ', () => {
-    const parameter_key = statement_for_key_value_in_map.parameters[0]
-    const parameter_value = statement_for_key_value_in_map.parameters[1]
+    const parameter_key = statement_for_key_value_in_map.params[0]
+    const parameter_value = statement_for_key_value_in_map.params[1]
     const type_key = services.typing.TypeComputer.inferType(parameter_key)
     const type_value = services.typing.TypeComputer.inferType(parameter_value)
     expect(type_key?.toString()).toBe('string')

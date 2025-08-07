@@ -149,11 +149,11 @@ PostfixExpressionNoMap returns PostfixExpression:
     )*
 ;
 
-fragment PrimaryExpressionNoMap:
+fragment PrimaryExpressionNoMap returns PrimaryExpression:
     LiteralExpressionNoMap | ReferenceExpression | ParenthesizedExpression | FunctionExpression | BracketExpression | StringTemplate
 ;
 
-fragment LiteralExpressionNoMap:
+fragment LiteralExpressionNoMap returns LiteralExpression:
     StringLiteral | IntegerLiteral | FloatLiteral | BooleanLiteral | NullLiteral | ArrayLiteral /* | MapLiteral */
 ;
 //endregion ExpressionNoMap
@@ -204,7 +204,7 @@ PostfixExpression returns PostfixExpression:
     )*
 ;
 
-fragment PrimaryExpression:
+fragment PrimaryExpression returns PrimaryExpression:
     LiteralExpression | ReferenceExpression | ParenthesizedExpression | FunctionExpression | StringTemplate | BracketExpression
 ;
 

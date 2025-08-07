@@ -19,24 +19,24 @@ describe('function importing', async () => {
   it('existing functions', () => {
     line = 0
     const add = next().receiver as ReferenceExpression
-    expect(add.target.ref).toBeDefined()
+    expect(add.entity.ref).toBeDefined()
 
     const plus = next().receiver as ReferenceExpression
-    expect(plus.target.ref).toBeDefined()
+    expect(plus.entity.ref).toBeDefined()
 
     const scripts_lib_add = next().receiver as MemberAccess
-    expect(scripts_lib_add.target.ref).toBeDefined()
+    expect(scripts_lib_add.entity.ref).toBeDefined()
   })
 
   it('not existing functions', () => {
     line = 3
     const sub = next().receiver as ReferenceExpression
-    expect(sub.target.ref).toBeUndefined()
+    expect(sub.entity.ref).toBeUndefined()
 
     const minus = next().receiver as ReferenceExpression
-    expect(minus.target.ref).toBeUndefined()
+    expect(minus.entity.ref).toBeUndefined()
 
     const scripts_lib_sub = next().receiver as MemberAccess
-    expect(scripts_lib_sub.target.ref).toBeUndefined()
+    expect(scripts_lib_sub.entity.ref).toBeUndefined()
   })
 })

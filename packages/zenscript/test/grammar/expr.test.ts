@@ -1,4 +1,4 @@
-import type { ArrayLiteral, Assignment, BooleanLiteral, CallExpression, ConditionalExpression, Expression, ExpressionStatement, FunctionExpression, IndexingExpression, InfixExpression, InstanceofExpression, MapLiteral, MemberAccess, NullLiteral, NumberLiteral, ParenthesizedExpression, PrefixExpression, ReferenceExpression, StringLiteral, StringTemplate, TypeCastExpression } from '../../src/generated/ast'
+import type { ArrayLiteral, Assignment, BooleanLiteral, CallExpression, ConditionalExpression, Expression, ExpressionStatement, FunctionExpression, IndexExpression, InfixExpression, InstanceofExpression, MapLiteral, MemberAccess, NullLiteral, NumberLiteral, ParenthesizedExpression, PrefixExpression, ReferenceExpression, StringLiteral, StringTemplate, TypeCastExpression } from '../../src/generated/ast'
 import { describe, expect, it } from 'vitest'
 import { IntegerLiteral, UnquotedString } from '../../src/generated/ast'
 import { assertClassTypeReference, assertNoErrors, assertReferenceExpressionText, createParseHelper } from '../utils'
@@ -155,11 +155,11 @@ describe('parse expression of script with ZenScript ', () => {
 
     const functionExpr = expr.expr as FunctionExpression
     expect(functionExpr.$type).toBe('FunctionExpression')
-    expect(functionExpr.parameters.length).toBe(1)
-    const foo = functionExpr.parameters[0]
+    expect(functionExpr.params.length).toBe(1)
+    const foo = functionExpr.params[0]
     expect(foo.name).toBe('foo')
-    assertClassTypeReference(foo.typeRef, 'int')
-    assertClassTypeReference(functionExpr.returnTypeRef, 'void')
+    assertClassTypeReference(foo.type, 'int')
+    assertClassTypeReference(functionExpr.retType, 'void')
   })
 
   it('call expression', async () => {
@@ -171,8 +171,8 @@ describe('parse expression of script with ZenScript ', () => {
     const [noArgs, withArgs] = callExprs
     assertReferenceExpressionText(noArgs.receiver, 'call')
     assertReferenceExpressionText(withArgs.receiver, 'call')
-    expect(withArgs.arguments).toHaveLength(3)
-    for (const arg of withArgs.arguments) {
+    expect(withArgs.args).toHaveLength(3)
+    for (const arg of withArgs.args) {
       expect(arg.$type).toBe('IntegerLiteral')
     }
   })
@@ -180,7 +180,7 @@ describe('parse expression of script with ZenScript ', () => {
   // class "any" is not defined.
   it.skip('member access expression', async () => {
     const memberAccessExpr = await parseExpr<MemberAccess>('foo.bar;')
-    expect(memberAccessExpr.target.$refText).toBe('bar')
+    expect(memberAccessExpr.entity.$refText).toBe('bar')
     assertReferenceExpressionText(memberAccessExpr.receiver, 'foo')
   })
 
@@ -192,10 +192,10 @@ describe('parse expression of script with ZenScript ', () => {
     expect(infixExprs).toHaveLength(2)
     const [to, dotD] = infixExprs
 
-    expect(to.op).toBe('to')
+    expect(to.operator).toBe('to')
     expect(to.left.$type).toBe('IntegerLiteral')
     expect(to.right.$type).toBe('IntegerLiteral')
-    expect(dotD.op).toBe('..')
+    expect(dotD.operator).toBe('..')
     expect(dotD.left.$type).toBe('IntegerLiteral')
     expect(dotD.right.$type).toBe('IntegerLiteral')
   })
@@ -209,21 +209,21 @@ describe('parse expression of script with ZenScript ', () => {
     const [int, otherType] = typeCastExpr
 
     assertReferenceExpressionText(int.expr, 'foo')
-    assertClassTypeReference(int.typeRef, 'int')
+    assertClassTypeReference(int.type, 'int')
     assertReferenceExpressionText(otherType.expr, 'bar')
-    assertClassTypeReference(otherType.typeRef, 'OtherType')
+    assertClassTypeReference(otherType.type, 'OtherType')
   })
 
   it('indexing expression', async () => {
-    const indexingExpr = await parseExpr<IndexingExpression>('foo[0];')
-    assertReferenceExpressionText(indexingExpr.receiver, 'foo')
-    expect(indexingExpr.argument.$type).toBe('IntegerLiteral')
+    const indexExpr = await parseExpr<IndexExpression>('foo[0];')
+    assertReferenceExpressionText(indexExpr.receiver, 'foo')
+    expect(indexExpr.index.$type).toBe('IntegerLiteral')
   })
 
   it('instanceof expression', async () => {
     const instanceofExpr = await parseExpr<InstanceofExpression>('foo instanceof int;')
     assertReferenceExpressionText(instanceofExpr.expr, 'foo')
-    assertClassTypeReference(instanceofExpr.typeRef, 'int')
+    assertClassTypeReference(instanceofExpr.type, 'int')
   })
 
   it('operator priority', async () => {
@@ -231,21 +231,21 @@ describe('parse expression of script with ZenScript ', () => {
       !true ? foo || bar : foo += 2;
     `)
     expect(expr.$type).toBe('Assignment')
-    expect(expr.op).toBe('+=')
+    expect(expr.operator).toBe('+=')
 
-    const leftExpr = expr.left as ConditionalExpression
+    const condExpr = expr.left as ConditionalExpression
 
-    const leftExprLeft = leftExpr.first as PrefixExpression
-    expect(leftExprLeft.op).toBe('!')
-    expect(leftExprLeft.expr.$type).toBe('BooleanLiteral')
+    const cond = condExpr.cond as PrefixExpression
+    expect(cond.operator).toBe('!')
+    expect(cond.expr.$type).toBe('BooleanLiteral')
 
-    const second = leftExpr.second as InfixExpression
-    expect(second.op).toBe('||')
-    assertReferenceExpressionText(second.left, 'foo')
-    assertReferenceExpressionText(second.right, 'bar')
+    const thenBody = condExpr.thenBody as InfixExpression
+    expect(thenBody.operator).toBe('||')
+    assertReferenceExpressionText(thenBody.left, 'foo')
+    assertReferenceExpressionText(thenBody.right, 'bar')
 
-    const third = leftExpr.third as ReferenceExpression
-    assertReferenceExpressionText(third, 'foo')
+    const elseBody = condExpr.elseBody as ReferenceExpression
+    assertReferenceExpressionText(elseBody, 'foo')
 
     expect(expr.right.$type).toBe('IntegerLiteral')
   })

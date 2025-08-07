@@ -17,7 +17,7 @@ describe(`check dynamic this in class`, async () => {
     const statement_this = (script_this_zs.classes[0].members[0] as FunctionDeclaration).body[0] as ExpressionStatement
     const expression_this = statement_this.expr as ReferenceExpression
     const type = services.typing.TypeComputer.inferType(expression_this)
-    expect(expression_this.target.ref).toBeDefined()
+    expect(expression_this.entity.ref).toBeDefined()
     expect(type?.toString()).toBe('Str')
   })
 })

@@ -167,7 +167,8 @@ type Expression = Assignment
     | InfixExpression
     | PrefixExpression
     | PostfixExpression
-    | LiteralExpression
+    | PrimaryExpression
+    | UnquotedString
     | DefaultExpression
 
 interface Assignment {
@@ -235,17 +236,21 @@ interface ParenthesizedExpression {
     expr: Expression
 }
 
-type LiteralExpression = StringLiteral
-    | NumberLiteral
-    | BooleanLiteral
-    | NullLiteral
-    | ArrayLiteral
-    | MapLiteral
+type PrimaryExpression = LiteralExpression
+    | ReferenceExpression
+    | ParenthesizedExpression
+    | FunctionExpression
+    | StringTemplate
+    | BracketExpression
 
 interface FunctionExpression {
     body: Statement[]
     params: ValueParameter[]
     retType?: Type
+}
+
+interface StringTemplate {
+    content: (string | Expression)[]
 }
 
 interface BracketProperty {
@@ -269,6 +274,13 @@ interface ExpressionTemplate {
 interface ReferenceExpression {
     entity: @Entity
 }
+
+type LiteralExpression = StringLiteral
+    | NumberLiteral
+    | BooleanLiteral
+    | NullLiteral
+    | ArrayLiteral
+    | MapLiteral
 
 type NumberLiteral = IntegerLiteral
     | FloatLiteral
@@ -295,10 +307,6 @@ interface UnquotedString {
 
 interface NullLiteral {
     value: 'null'
-}
-
-interface StringTemplate {
-    content: (string | Expression)[]
 }
 
 interface ArrayLiteral {

@@ -16,7 +16,7 @@ describe(`check dynamic arguments`, async () => {
   })
 
   it('check inferring dynamic argument', () => {
-    const up = expression_apply_up.arguments[0]
+    const up = expression_apply_up.args[0]
     const type_up = services.typing.TypeComputer.inferType(up)
     expect(up).toBeDefined()
     expect(type_up?.toString()).toBe('Facing')

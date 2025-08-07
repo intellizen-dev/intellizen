@@ -16,7 +16,7 @@ describe(`check dynamic member`, async () => {
   })
 
   it('check inferring dynamic member', () => {
-    const bar = expression_justAny_foo_bar.target.ref
+    const bar = expression_justAny_foo_bar.entity.ref
     const type_bar = services.typing.TypeComputer.inferType(bar)
     expect(bar).toBeDefined()
     expect(type_bar?.toString()).toBe('any')
