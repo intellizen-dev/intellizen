@@ -31,13 +31,41 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
     this.rules(astNode.$type)?.call(this, astNode, acceptor)
   }
 
-  private acceptTypeHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
-    if ('typeRef' in astNode) {
-      return
-    }
+  private readonly rules = defineRules<RuleMap>({
+    VariableDeclaration: (source, acceptor) => {
+      if (!source.type && source.name) {
+        this.acceptTypeHint(source, acceptor)
+      }
+    },
 
-    const nameNode = this.nameProvider.getNameNode(astNode)
-    if (!nameNode) {
+    LoopParameter: (source, acceptor) => {
+      if (source.name) {
+        this.acceptTypeHint(source, acceptor)
+      }
+    },
+
+    ValueParameter: (source, acceptor) => {
+      if (!source.type && source.name) {
+        this.acceptTypeHint(source, acceptor)
+      }
+    },
+
+    BracketExpression: (source, acceptor) => {
+      const id = getPathAsString(source)
+      const name = this.bracketManager.resolve(id)?.name
+      if (name) {
+        acceptor({
+          position: source.$cstNode!.range.end,
+          label: name,
+          paddingLeft: true,
+        })
+      }
+    },
+  })
+
+  private acceptTypeHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
+    const name = this.nameProvider.getNameNode(astNode)
+    if (!name) {
       return
     }
 
@@ -65,37 +93,11 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
     ]
 
     const typeHint: InlayHint = {
-      position: nameNode.range.end,
+      position: name.range.end,
       label: parts,
       kind: InlayHintKind.Type,
     }
 
     acceptor(typeHint)
   }
-
-  private readonly rules = defineRules<RuleMap>({
-    VariableDeclaration: (source, acceptor) => {
-      this.acceptTypeHint(source, acceptor)
-    },
-
-    LoopParameter: (source, acceptor) => {
-      this.acceptTypeHint(source, acceptor)
-    },
-
-    ValueParameter: (source, acceptor) => {
-      this.acceptTypeHint(source, acceptor)
-    },
-
-    BracketExpression: (source, acceptor) => {
-      const id = getPathAsString(source)
-      const name = this.bracketManager.resolve(id)?.name
-      if (name) {
-        acceptor({
-          position: source.$cstNode!.range.end,
-          label: name,
-          paddingLeft: true,
-        })
-      }
-    },
-  })
 }
