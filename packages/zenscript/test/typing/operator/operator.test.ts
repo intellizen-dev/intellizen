@@ -1,9 +1,9 @@
 import type { ExpressionStatement } from '../../../src/generated/ast'
 import path from 'node:path'
 import { describe, expect, it, suite } from 'vitest'
-import { assertNoErrors, createTestServices, getDocument } from '../../utils'
+import { assertNoErrors, createTestServicesWithWorkspace, getDocument } from '../../utils'
 
-const services = await createTestServices(__dirname)
+const services = await createTestServicesWithWorkspace(__dirname)
 const inferType = services.typing.TypeComputer.inferType.bind(services.typing.TypeComputer)
 
 describe('check operation of bool', async () => {

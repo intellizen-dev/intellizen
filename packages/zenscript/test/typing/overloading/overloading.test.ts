@@ -4,9 +4,9 @@ import path from 'node:path'
 import { AstUtils } from 'langium'
 import { assert, describe, expect, it, suite } from 'vitest'
 import { isCallExpression, isConstructorDeclaration, isFunctionDeclaration } from '../../../src/generated/ast'
-import { assertNoErrors, createTestServices, getDocument } from '../../utils'
+import { assertNoErrors, createTestServicesWithWorkspace, getDocument } from '../../utils'
 
-const services = await createTestServices(__dirname)
+const services = await createTestServicesWithWorkspace(__dirname)
 
 function findOverloadForCall(call: Statement): AstNode {
   const callExpr = AstUtils.streamAst(call).find(isCallExpression)

@@ -3,17 +3,25 @@ import type { Expression, NamedType, ReferenceExpression, Script, Type, Variable
 import type { ZenScriptServices } from '../src/module'
 import { URI, UriUtils } from 'langium'
 import { NodeFileSystem } from 'langium/node'
-import { parseHelper } from 'langium/test'
 import { expect } from 'vitest'
 import { isNamedType, isVariableDeclaration } from '../src/generated/ast'
 import { createZenScriptServices } from '../src/module'
 
-export function createParseHelper() {
-  const service = createZenScriptServices(NodeFileSystem)
-  return parseHelper<Script>(service)
+export function createTestParser() {
+  const services = createZenScriptServices(NodeFileSystem)
+  const documentBuilder = services.shared.workspace.DocumentBuilder
+  let nextDocumentId = 0
+  return async (input: string, options?: { ext?: string, rule?: string, validation?: boolean }) => {
+    const { ext = services.LanguageMetaData.fileExtensions[0], rule, validation = false } = options ?? {}
+    const uri = URI.parse(`file:///${nextDocumentId++}${ext}`)
+    const document = services.shared.workspace.LangiumDocumentFactory.fromString(input, uri, { rule })
+    services.shared.workspace.LangiumDocuments.addDocument(document)
+    await documentBuilder.build([document], { validation })
+    return document
+  }
 }
 
-export async function createTestServices(testingPath: string) {
+export async function createTestServicesWithWorkspace(testingPath: string) {
   const service = createZenScriptServices(NodeFileSystem)
   const testingUri = URI.file(testingPath)
   const folder = {

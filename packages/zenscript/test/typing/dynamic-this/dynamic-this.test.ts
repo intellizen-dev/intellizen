@@ -1,9 +1,9 @@
 import type { ExpressionStatement, FunctionDeclaration, ReferenceExpression } from '../../../src/generated/ast'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { assertNoErrors, createTestServices, getDocument } from '../../utils'
+import { assertNoErrors, createTestServicesWithWorkspace, getDocument } from '../../utils'
 
-const services = await createTestServices(__dirname)
+const services = await createTestServicesWithWorkspace(__dirname)
 
 describe(`check dynamic this in class`, async () => {
   const document_this_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'this.zs'))

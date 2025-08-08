@@ -1,30 +1,23 @@
-import type { ForStatement, IfStatement, VariableDeclaration } from '../../src/generated/ast'
+import type { LangiumDocument } from 'langium'
+import type { ForStatement, IfStatement, Script, VariableDeclaration } from '../../src/generated/ast'
 import { describe, expect, it } from 'vitest'
-import { isExpandFunctionDeclaration } from '../../src/generated/ast'
-import { assertClassTypeReference, assertNoErrors, assertVariableDeclaration, createParseHelper } from '../utils'
+import { FunctionDeclaration, isExpandFunctionDeclaration } from '../../src/generated/ast'
+import { assertClassTypeReference, assertNoErrors, assertVariableDeclaration, createTestParser } from '../utils'
 
-const parse = createParseHelper()
-
-async function parseModel(input: string) {
-  return parse(input, { validation: true })
-}
+const parse = createTestParser()
 
 describe('parse top-level of script with ZenScript', () => {
   it('import declaration', async () => {
-    const model = await parseModel('import foo.bar.baz;')
+    const model = await parse('import foo.bar.baz;') as LangiumDocument<Script>
     const refImport = model.parseResult.value.imports[0]
     await assertNoErrors(model)
     expect(refImport.path.map(p => p.$refText)).toStrictEqual(['foo', 'bar', 'baz'])
   })
 
   it('function declaration', async () => {
-    const model = await parseModel(`
-      function foo(a as int) as int {}
-      static function bar() as void {}
-      global function baz(c as OtherType) as any {}
-    `)
-    await assertNoErrors(model)
-    const [foo, bar, baz] = model.parseResult.value.functions
+    const foo = (await parse('function foo(a as int) as int {}', { ext: '.zs', rule: FunctionDeclaration.$type })).parseResult.value as FunctionDeclaration
+    const bar = (await parse('static function bar() as void', { ext: '.dzs', rule: FunctionDeclaration.$type })).parseResult.value as FunctionDeclaration
+    const baz = (await parse('global function baz(c as OtherType) as any', { ext: '.dzs', rule: FunctionDeclaration.$type })).parseResult.value as FunctionDeclaration
 
     expect(foo.variance).toBeUndefined()
     expect(foo.name).toBe('foo')
@@ -47,10 +40,10 @@ describe('parse top-level of script with ZenScript', () => {
   })
 
   it('expand function declaration', async () => {
-    const model = await parseModel(`
+    const model = await parse(`
       $expand string$reverse() as string {}
       $expand OtherType$foo(foo as OtherType.ChildType) as void {}
-    `)
+    `) as LangiumDocument<Script>
     await assertNoErrors(model)
     const [string$reverse, otherType$foo] = model.parseResult.value.expands.filter(isExpandFunctionDeclaration)
 
@@ -68,10 +61,10 @@ describe('parse top-level of script with ZenScript', () => {
   })
 
   it('class declaration', async () => {
-    const model = await parseModel(`
+    const model = await parse(`
       zenClass Foo {}
       zenClass Bar extends Foo, Baz, Other.Child {} // zenutils
-    `)
+    `, { ext: '.dzs' }) as LangiumDocument<Script>
     await assertNoErrors(model)
 
     const [foo, bar] = model.parseResult.value.classes
@@ -83,7 +76,7 @@ describe('parse top-level of script with ZenScript', () => {
   })
 
   it('class with members', async () => {
-    const model = await parseModel(`
+    const model = await parse(`
       zenClass Foo {
         static foo as string = 'foo';
         
@@ -93,7 +86,7 @@ describe('parse top-level of script with ZenScript', () => {
           return this;
         }
       }
-    `)
+    `, { ext: '.zs' }) as LangiumDocument<Script>
     await assertNoErrors(model)
 
     const classFoo = model.parseResult.value.classes[0]
@@ -107,7 +100,7 @@ describe('parse top-level of script with ZenScript', () => {
   })
 
   it('statements', async () => {
-    const model = await parseModel(`
+    const model = await parse(`
       if (true) {}
       else if (false) {}
       else {}
@@ -122,7 +115,7 @@ describe('parse top-level of script with ZenScript', () => {
       static b as string = '2';
       var c as bool = true;
       val d = false;
-    `)
+    `, { ext: '.zs' }) as LangiumDocument<Script>
     await assertNoErrors(model)
     const [
       ifStatement,

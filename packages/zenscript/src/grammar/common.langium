@@ -178,7 +178,7 @@ interface Assignment {
 }
 
 interface ConditionalExpression {
-    cond: Expression
+    condition: Expression
     thenBody: Expression
     elseBody: Expression
 }

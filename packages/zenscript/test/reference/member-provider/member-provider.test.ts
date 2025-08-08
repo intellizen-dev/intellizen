@@ -4,9 +4,9 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { isConstructorDeclaration, isFunctionDeclaration } from '../../../src/generated/ast'
 import { isStatic } from '../../../src/utils/ast'
-import { createTestServices, getDocument } from '../../utils'
+import { createTestServicesWithWorkspace, getDocument } from '../../utils'
 
-const services = await createTestServices(__dirname)
+const services = await createTestServicesWithWorkspace(__dirname)
 
 function getMembers(expression: Expression): AstNode[] {
   return services.references.MemberProvider.streamMembers(expression).toArray()

@@ -1,9 +1,9 @@
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { ClassType } from '../../../../src/typing/type-description'
-import { assertNoErrors, createTestServices, getDocument } from '../../../utils'
+import { assertNoErrors, createTestServicesWithWorkspace, getDocument } from '../../../utils'
 
-const services = await createTestServices(__dirname)
+const services = await createTestServicesWithWorkspace(__dirname)
 
 describe(`check sub-typing features`, async () => {
   const document_classes_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'classes.dzs'))

@@ -113,9 +113,30 @@ AssignmentNoMap returns Assignment:
 ;
 
 ConditionalExpressionNoMap returns ConditionalExpression:
-    InfixExpressionNoMap ({ConditionalExpression.cond=current} '?' thenBody=ConditionalExpressionNoMap ':' elseBody=ConditionalExpressionNoMap)?
+    LogicalExpressionNoMap ({ConditionalExpression.condition=current} '?' thenBody=ConditionalExpressionNoMap ':' elseBody=ConditionalExpressionNoMap)?
 ;
 
+LogicalExpressionNoMap returns InfixExpression:
+    BitwiseExpressionNoMap ({ InfixExpression.left=current} operator=('&&'|'||') right=BitwiseExpressionNoMap)*
+;
+
+BitwiseExpressionNoMap returns InfixExpression:
+    RelationalExpressionNoMap ({ InfixExpression.left=current} operator=('&'|'|'|'^') right=RelationalExpressionNoMap)*
+;
+
+RelationalExpressionNoMap returns InfixExpression:
+    AdditiveExpressionNoMap  ({ InfixExpression.left=current} operator=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpressionNoMap)*
+;
+
+AdditiveExpressionNoMap returns InfixExpression:
+    MultiplicativeExpressionNoMap ({ InfixExpression.left=current} operator=('+'|'-'|'~') right=MultiplicativeExpressionNoMap)*
+;
+
+MultiplicativeExpressionNoMap returns InfixExpression:
+    PrefixExpressionNoMap ({ InfixExpression.left=current} operator=('*'|'/'|'%') right=PrefixExpressionNoMap)*
+;
+
+/*
 infix InfixExpressionNoMap on PrefixExpressionNoMap returns InfixExpression:
     // Multiplicative
     '*' | '/' | '%'
@@ -132,10 +153,11 @@ infix InfixExpressionNoMap on PrefixExpressionNoMap returns InfixExpression:
     // Logical
     > '&&' | '||'
 ;
+*/
 
 PrefixExpressionNoMap returns PrefixExpression:
-    PostfixExpressionNoMap
-    | ({PrefixExpression} operator=('!'|'-') expr=PrefixExpressionNoMap)
+    PostfixExpressionNoMap |
+    ({PrefixExpression} operator=('!'|'-') expr=PrefixExpressionNoMap)
 ;
 
 PostfixExpressionNoMap returns PostfixExpression:
@@ -168,9 +190,30 @@ Assignment returns Assignment:
 ;
 
 ConditionalExpression returns ConditionalExpression:
-    InfixExpression ({ConditionalExpression.cond=current} '?' thenBody=ConditionalExpression ':' elseBody=ConditionalExpression)?
+    LogicalExpression ({ConditionalExpression.condition=current} '?' thenBody=ConditionalExpression ':' elseBody=ConditionalExpression)?
 ;
 
+LogicalExpression returns InfixExpression:
+    BitwiseExpression ({InfixExpression.left=current} operator=('&&'|'||') right=BitwiseExpression)*
+;
+
+BitwiseExpression returns InfixExpression:
+    RelationalExpression ({InfixExpression.left=current} operator=('&'|'|'|'^') right=RelationalExpression)*
+;
+
+RelationalExpression returns InfixExpression:
+    AdditiveExpression ({InfixExpression.left=current} operator=('=='|'!='|'<'|'<='|'>'|'>='|'in'|'has') right=AdditiveExpression)*
+;
+
+AdditiveExpression returns InfixExpression:
+    MultiplicativeExpression ({InfixExpression.left=current} operator=('+'|'-'|'~') right=MultiplicativeExpression)*
+;
+
+MultiplicativeExpression returns InfixExpression:
+    PrefixExpression ({InfixExpression.left=current} operator=('*'|'/'|'%') right=PrefixExpression)*
+;
+
+/*
 infix InfixExpression on PrefixExpression returns InfixExpression:
     // Multiplicative
     '*' | '/' | '%'
@@ -187,10 +230,11 @@ infix InfixExpression on PrefixExpression returns InfixExpression:
     // Logical
     > '&&' | '||'
 ;
+*/
 
 PrefixExpression returns PrefixExpression:
+    PostfixExpression | 
     {PrefixExpression} operator=('!'|'-') expr=PrefixExpression
-    | PostfixExpression
 ;
 
 PostfixExpression returns PostfixExpression:
@@ -241,7 +285,7 @@ MapLiteral returns MapLiteral:
 ;
 
 MapEntry returns MapEntry:
-    key=Expression ':' value=Expression
+    key=(UnquotedString | Expression) ':' value=Expression
 ;
 
 ReferenceExpression returns ReferenceExpression:
