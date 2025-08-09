@@ -6,7 +6,7 @@ import { assertNoErrors, createTestServicesWithWorkspace, getDocument } from '..
 const services = await createTestServicesWithWorkspace(__dirname)
 
 describe('check qualified name reference', async () => {
-  const document_LogUtils_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'utils', 'LogUtils.zs'))
+  const document_LogUtils_dzs = await getDocument(services, path.resolve(__dirname, 'scripts', 'utils', 'LogUtils.dzs'))
   const document_log_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'log.zs'))
   const script_log_zs = document_log_zs.parseResult.value
   const statement_utils_LogUtils_createLogHelper = script_log_zs.statements[0] as ExpressionStatement
@@ -14,7 +14,7 @@ describe('check qualified name reference', async () => {
   const statement_utils_LogUtils_LogHelper_create = script_log_zs.statements[2] as ExpressionStatement
 
   it('should no errors', () => {
-    assertNoErrors(document_LogUtils_zs)
+    assertNoErrors(document_LogUtils_dzs)
     assertNoErrors(document_log_zs)
   })
 

@@ -28,11 +28,11 @@ ClassDeclaration returns ClassDeclaration:
 ;
 
 FieldDeclaration returns FieldDeclaration:
-    variance=('static' | 'var' | 'val') name=ID 'as' type=Type ('=' initializer=Expression)? ';'?
+    variance=('static' | 'var' | 'val') name=ID ('as' type=Type)? ('=' initializer=Expression)? ';'?
 ;
 
 ValueParameter returns ValueParameter:
-    (varargs?='...')? name=ID 'as' type=Type ('=' defaultValue=(DefaultExpression | Expression))?
+    (varargs?='...')? name=ID ('as' type=Type)? ('=' defaultValue=(DefaultExpression | Expression))?
 ;
 
 TypeParameter returns TypeParameter:

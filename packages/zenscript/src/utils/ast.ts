@@ -10,15 +10,15 @@ export function isToplevel(node: AstNode | undefined): boolean {
 }
 
 export function isStatic(node: AstNode | undefined) {
-  return node && 'prefix' in node && node.prefix === 'static'
+  return node && 'variance' in node && node.variance === 'static'
 }
 
 export function isGlobal(node: AstNode | undefined) {
-  return node && 'prefix' in node && node.prefix === 'global'
+  return node && 'variance' in node && node.variance === 'global'
 }
 
 export function isVal(node: AstNode | undefined) {
-  return node && 'prefix' in node && node.prefix === 'val'
+  return node && 'variance' in node && node.variance === 'val'
 }
 
 export function isImportable(node: AstNode | undefined) {
