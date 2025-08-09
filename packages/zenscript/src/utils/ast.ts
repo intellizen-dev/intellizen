@@ -21,6 +21,10 @@ export function isVal(node: AstNode | undefined) {
   return node && 'variance' in node && node.variance === 'val'
 }
 
+export function isReadonly(node: AstNode | undefined) {
+  return node && 'variance' in node && typeof node.variance === 'string' && /^(?:val|static|global)$/.test(node.variance)
+}
+
 export function isImportable(node: AstNode | undefined) {
   if (isScript(node)) {
     return isZs(AstUtils.getDocument(node))
