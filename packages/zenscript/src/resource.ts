@@ -22,7 +22,7 @@ export const BracketsJsonSchema = z.object({
   entries: z.object({
     _id: z.string(),
     _name: z.string().optional(),
-  }).passthrough().array(),
+  }).catchall(z.string().array()).array(),
 }).array()
 
 export interface BracketMirror {
