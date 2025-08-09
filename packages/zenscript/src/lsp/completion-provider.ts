@@ -79,7 +79,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
 
     const middles = stream(tree.children.values())
-      .filter(node => node.isInternalNode())
+      .filter(node => !node.hasData())
       .map(node => ({ node, label: node.name }))
 
     for (const middle of middles) {
@@ -102,7 +102,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
 
     const ends = stream(tree.children.values())
-      .filter(node => node.isDataNode())
+      .filter(node => node.hasData())
       .flatMap(node => node.data.values().map(entry => ({ label: node.name, description: entry.name })))
 
     for (const end of ends) {

@@ -488,8 +488,10 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return mapType
     },
 
-    SyntheticStringLiteral: () => {
-      return this.classTypeOf('string')
+    SyntheticAstNode: ({ content }) => {
+      if ('$type' in content && content.$type === 'StringLiteral') {
+        return this.classTypeOf('string')
+      }
     },
   })
 }

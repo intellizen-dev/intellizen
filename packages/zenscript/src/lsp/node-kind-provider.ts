@@ -4,6 +4,7 @@ import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import { DefaultNodeKindProvider } from 'langium/lsp'
 import { CompletionItemKind, SymbolKind } from 'vscode-languageserver'
 import { toAstNode } from '../utils/ast'
+import { isNamespaceNode } from '../utils/namespace-tree'
 import { defineRules } from '../utils/rule'
 
 type RuleSpec = ZenScriptAstType & ZenScriptSyntheticAstType
@@ -27,8 +28,21 @@ export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
     OperatorFunctionDeclaration: () => SymbolKind.Operator,
     TypeParameter: () => SymbolKind.TypeParameter,
     ValueParameter: () => SymbolKind.Variable,
-    SyntheticNamespaceNode: () => SymbolKind.Module,
     VariableDeclaration: () => SymbolKind.Variable,
+    SyntheticAstNode: ({ content }) => {
+      if (isNamespaceNode(content)) {
+        return SymbolKind.Module
+      }
+      else if (content.$type === 'Unknown') {
+        return SymbolKind.Variable
+      }
+      else if (content.$type === 'StringLiteral') {
+        return SymbolKind.String
+      }
+      else {
+        return SymbolKind.Variable
+      }
+    },
   })
 
   override getCompletionItemKind(node: AstNode | AstNodeDescription): CompletionItemKind {
@@ -48,7 +62,20 @@ export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
     OperatorFunctionDeclaration: () => CompletionItemKind.Operator,
     TypeParameter: () => CompletionItemKind.TypeParameter,
     ValueParameter: () => CompletionItemKind.Variable,
-    SyntheticNamespaceNode: () => CompletionItemKind.Module,
     VariableDeclaration: () => CompletionItemKind.Variable,
+    SyntheticAstNode: ({ content }) => {
+      if (isNamespaceNode(content)) {
+        return CompletionItemKind.Module
+      }
+      else if (content.$type === 'Unknown') {
+        return CompletionItemKind.Variable
+      }
+      else if (content.$type === 'StringLiteral') {
+        return CompletionItemKind.Value
+      }
+      else {
+        return CompletionItemKind.Variable
+      }
+    },
   })
 }

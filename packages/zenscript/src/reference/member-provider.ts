@@ -8,8 +8,9 @@ import { AstUtils, EMPTY_STREAM, stream } from 'langium'
 import { isClassDeclaration, isConstructorDeclaration, isFunctionDeclaration, isMemberAccess, isReferenceExpression, isScript, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType } from '../typing/type-description'
 import { isStatic, streamClassChain, streamDeclaredMembers } from '../utils/ast'
+import { isNamespaceNode } from '../utils/namespace-tree'
 import { defineRules } from '../utils/rule'
-import { isSyntheticAstNode } from './synthetic'
+import { isSyntheticAstNode, SyntheticAstNode } from './synthetic'
 
 export interface MemberProvider {
   streamMembers: (element: AstNode | Type | undefined) => Stream<AstNode>
@@ -30,13 +31,11 @@ export class ZenScriptMemberProvider implements MemberProvider {
   }
 
   private readonly memberRules = defineRules<RuleMap>({
-    SyntheticNamespaceNode: (element) => {
-      const declarations = stream(element.children.values())
-        .filter(it => it.isDataNode())
-        .flatMap(it => it.data)
-      const packages = stream(element.children.values())
-        .filter(it => it.isInternalNode())
-      return stream(declarations, packages)
+    SyntheticAstNode: ({ content }) => {
+      if (isNamespaceNode(content)) {
+        return stream(content.children.values()).flatMap(it => it.hasData() ? it.data : new SyntheticAstNode(it))
+      }
+      return EMPTY_STREAM
     },
 
     Script: (element) => {

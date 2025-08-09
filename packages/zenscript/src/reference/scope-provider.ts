@@ -12,6 +12,7 @@ import { ClassDeclaration, ImportDeclaration, isCallExpression, isClassDeclarati
 import { getPathAsString } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 import { generateStream } from '../utils/stream'
+import { createSyntheticAstNodeDescription, SyntheticAstNode } from './synthetic'
 
 type RuleSpec = ZenScriptAstType
 type RuleMap = { [K in keyof RuleSpec]?: (element: ReferenceInfo & { container: RuleSpec[K] }) => Scope }
@@ -59,13 +60,14 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
   private packageScope(outside?: Scope) {
     const packages = stream(this.packageManager.root.children.values())
-      .filter(it => it.isInternalNode())
+      .filter(it => !it.hasData())
+      .map(it => new SyntheticAstNode(it))
     return this.createScopeForNodes(packages, outside)
   }
 
   private classScope(outside?: Scope) {
     const classes = stream(this.packageManager.root.children.values())
-      .filter(it => it.isDataNode())
+      .filter(it => it.hasData())
       .flatMap(it => it.data)
       .filter(isClassDeclaration)
     return this.createScopeForNodes(classes, outside)
@@ -120,11 +122,11 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
       }
 
       const elements = stream(tree.children.values()).flatMap((child) => {
-        if (child.isDataNode()) {
+        if (child.hasData()) {
           return child.data.values().map(it => this.descriptionCreator.getOrCreateDescription(it))
         }
         else {
-          return this.descriptionCreator.getOrCreateDescription(child)
+          return createSyntheticAstNodeDescription(child.name, child)
         }
       })
 

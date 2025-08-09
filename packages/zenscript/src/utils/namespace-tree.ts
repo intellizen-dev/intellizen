@@ -1,5 +1,9 @@
-import type { AstNode } from 'langium'
-
+/**
+ * The NamespaceTree is used to build a namespace-based tree structure that
+ * supports inserting and retrieving path-associated data.
+ *
+ * @template V - The type of data stored in the tree
+ */
 export class NamespaceTree<V> {
   readonly root: NamespaceNode<V>
   readonly separator: string
@@ -9,6 +13,12 @@ export class NamespaceTree<V> {
     this.separator = separator
   }
 
+  /**
+   * Inserts a value into the tree at the specified path.
+   *
+   * @param path - The namespace path to insert the value at
+   * @param value - The value to insert
+   */
   insert(path: string, value: V): void {
     if (!path) {
       return
@@ -18,10 +28,22 @@ export class NamespaceTree<V> {
     target.data.add(value)
   }
 
+  /**
+   * Retrieves all values stored at the specified path in the tree.
+   *
+   * @param path - The namespace path to retrieve values from
+   * @returns A set of values stored at the path, or an empty set if none exist
+   */
   retrieve(path: string): ReadonlySet<V> {
     return this.find(path)?.data ?? new Set()
   }
 
+  /**
+   * Finds the node at the specified path in the tree.
+   *
+   * @param path - The namespace path to find
+   * @returns The node at the specified path, or undefined if not found
+   */
   find(path: string): NamespaceNode<V> | undefined {
     if (path === this.root.name) {
       return this.root
@@ -31,8 +53,7 @@ export class NamespaceTree<V> {
   }
 }
 
-export class NamespaceNode<V> implements AstNode {
-  readonly $type = 'SyntheticNamespaceNode'
+export class NamespaceNode<V> {
   readonly name: string
   readonly parent?: NamespaceNode<V>
   readonly children: Map<string, NamespaceNode<V>>
@@ -45,12 +66,8 @@ export class NamespaceNode<V> implements AstNode {
     this.data = new Set()
   }
 
-  isDataNode(): boolean {
+  hasData(): boolean {
     return this.data.size > 0
-  }
-
-  isInternalNode(): boolean {
-    return this.data.size === 0
   }
 
   createChild(name: string): NamespaceNode<V> {

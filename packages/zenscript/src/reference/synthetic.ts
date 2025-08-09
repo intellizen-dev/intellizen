@@ -3,43 +3,36 @@ import type { NamespaceNode } from '../utils/namespace-tree'
 import { URI } from 'langium'
 
 export interface ZenScriptSyntheticAstType {
-  SyntheticNamespaceNode: NamespaceNode<AstNode>
-  SyntheticUnknown: AstNode
-  SyntheticStringLiteral: AstNode
+  SyntheticAstNode: SyntheticAstNode
 }
 
-export function createStringLiteralAstDescription(name: string): AstNodeDescription {
+export type SyntheticAstNodeContent = NamespaceNode<AstNode> | { $type: 'Unknown' } | { $type: 'StringLiteral' }
+
+/**
+ * Wrap a given content as an AstNode.
+ * This is used to create synthetic nodes for the purpose of linking.
+ *
+ * @param content The content to wrap
+ * @returns The wrapped content as an AstNode.
+ */
+export class SyntheticAstNode implements AstNode {
+  readonly $type = 'SyntheticAstNode'
+  readonly content: SyntheticAstNodeContent
+  constructor(content: SyntheticAstNodeContent) {
+    this.content = content
+  }
+}
+
+export function createSyntheticAstNodeDescription(name: string, content: SyntheticAstNodeContent): AstNodeDescription {
   return {
     name,
-    node: createSyntheticStringLiteral(),
-    type: 'SyntheticStringLiteral',
-    documentUri: URI.from({ scheme: 'unknown' }),
+    type: 'SyntheticAstNode',
+    node: new SyntheticAstNode(content),
+    documentUri: URI.from({ scheme: 'synthetic', path: name }),
     path: '',
   }
 }
 
-export function createUnknownAstDescription(name: string): AstNodeDescription {
-  return {
-    name,
-    node: createUnknownAst(),
-    type: 'SyntheticUnknown',
-    documentUri: URI.from({ scheme: 'unknown' }),
-    path: '',
-  }
-}
-
-export function createUnknownAst(): AstNode {
-  return {
-    $type: 'SyntheticUnknown',
-  }
-}
-
-export function createSyntheticStringLiteral(): AstNode {
-  return {
-    $type: 'SyntheticStringLiteral',
-  }
-}
-
-export function isSyntheticAstNode(node: AstNode): boolean {
-  return node?.$type?.startsWith('Synthetic')
+export function isSyntheticAstNode(node: AstNode): node is SyntheticAstNode {
+  return node.$type === 'SyntheticAstNode'
 }
