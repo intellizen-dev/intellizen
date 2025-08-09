@@ -6,7 +6,7 @@ import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { BracketEntry } from '../resource'
 import type { TypeComputer } from '../typing/type-computer'
-import type { HierarchyNode } from '../utils/hierarchy-tree'
+import type { NamespaceNode } from '../utils/namespace-tree'
 import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
 import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, CstUtils, GrammarAST, stream } from 'langium'
@@ -18,8 +18,8 @@ import { getPathAsString, toAstNode } from '../utils/ast'
 import { isZs } from '../utils/document'
 import { defineRules } from '../utils/rule'
 
-type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CompletionItemLabelDetails | undefined }
+type RuleSpec = ZenScriptAstType & ZenScriptSyntheticAstType
+type RuleMap = { [K in keyof RuleSpec]?: (element: RuleSpec[K]) => CompletionItemLabelDetails | undefined }
 
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private readonly typeComputer: TypeComputer
@@ -71,7 +71,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     this.completionForBracketProperty(tree, context, next, acceptor)
   }
 
-  private completionForBracketLocation(tree: HierarchyNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+  private completionForBracketLocation(tree: NamespaceNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     const requiredNextFeature
       = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
     if (!requiredNextFeature) {
@@ -79,7 +79,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
 
     const middles = stream(tree.children.values())
-      .filter(node => node.isInternalNode())
+      .filter(node => !node.hasData())
       .map(node => ({ node, label: node.name }))
 
     for (const middle of middles) {
@@ -102,7 +102,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
 
     const ends = stream(tree.children.values())
-      .filter(node => node.isDataNode())
+      .filter(node => node.hasData())
       .flatMap(node => node.data.values().map(entry => ({ label: node.name, description: entry.name })))
 
     for (const end of ends) {
@@ -122,7 +122,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
   }
 
-  private completionForBracketProperty(tree: HierarchyNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+  private completionForBracketProperty(tree: NamespaceNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     const entry = tree.data.values().next().value
     if (!entry) {
       return
@@ -141,7 +141,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
     const invalidContainerProperty
       = (context.node?.$containerProperty === 'properties')
-      || (context.node?.$containerProperty === 'value')
+        || (context.node?.$containerProperty === 'value')
     if (invalidContainerProperty) {
       return
     }
@@ -169,7 +169,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private completionForBracketPropertyValue(entry: BracketEntry, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     const requiredNextFeature
       = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
-      || (GrammarAST.isKeyword(next.feature) && next.feature.value === '=')
+        || (GrammarAST.isKeyword(next.feature) && next.feature.value === '=')
     if (!requiredNextFeature) {
       return
     }
@@ -216,9 +216,9 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
-    const source = toAstNode(nodeDescription)
+    const element = toAstNode(nodeDescription)
     const kind = this.nodeKindProvider.getCompletionItemKind(nodeDescription)
-    const labelDetails = this.labelDetailRules(source?.$type)?.call(this, source)
+    const labelDetails = this.labelDetailRules(element?.$type)?.call(this, element)
 
     return {
       nodeDescription,
@@ -229,8 +229,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   private readonly labelDetailRules = defineRules<RuleMap>({
-    ClassDeclaration: (source) => {
-      const qualifiedName = this.nameProvider.getQualifiedName(source)
+    ClassDeclaration: (element) => {
+      const qualifiedName = this.nameProvider.getQualifiedName(element)
       if (qualifiedName) {
         return {
           description: substringBeforeLast(qualifiedName, '.'),
@@ -238,13 +238,13 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       }
     },
 
-    FunctionDeclaration: (source) => {
-      const funcType = this.typeComputer.inferType(source)
+    FunctionDeclaration: (element) => {
+      const funcType = this.typeComputer.inferType(element)
       if (!isFunctionType(funcType)) {
         return
       }
 
-      const params = source.parameters.map((param, index) => {
+      const params = element.params.map((param, index) => {
         return `${param.name}: ${funcType.paramTypes[index].toString()}`
       }).join(', ')
 
@@ -254,27 +254,27 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       }
     },
 
-    ImportDeclaration: (source) => {
+    ImportDeclaration: (element) => {
       return {
-        description: getPathAsString(source),
+        description: getPathAsString(element),
       }
     },
 
-    VariableDeclaration: (source) => {
+    VariableDeclaration: (element) => {
       return {
-        description: this.typeComputer.inferType(source)?.toString(),
+        description: this.typeComputer.inferType(element)?.toString(),
       }
     },
 
-    ValueParameter: (source) => {
+    ValueParameter: (element) => {
       return {
-        description: this.typeComputer.inferType(source)?.toString(),
+        description: this.typeComputer.inferType(element)?.toString(),
       }
     },
 
-    FieldDeclaration: (source) => {
+    FieldDeclaration: (element) => {
       return {
-        description: this.typeComputer.inferType(source)?.toString(),
+        description: this.typeComputer.inferType(element)?.toString(),
       }
     },
   })

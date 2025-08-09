@@ -1,25 +1,25 @@
 import type { AstNode, LangiumDocument, NameProvider, ServiceRegistry } from 'langium'
 import type { ZenScriptSharedServices } from '../module'
-import type { HierarchyNode } from '../utils/hierarchy-tree'
+import type { NamespaceNode } from '../utils/namespace-tree'
 import { AstUtils, DocumentState, stream } from 'langium'
 import { isClassDeclaration } from '../generated/ast'
 import { isImportable, isStatic } from '../utils/ast'
-import { HierarchyTree } from '../utils/hierarchy-tree'
+import { NamespaceTree } from '../utils/namespace-tree'
 
 export interface PackageManager {
   retrieve: (path: string) => ReadonlySet<AstNode>
-  find: (path: string) => HierarchyNode<AstNode> | undefined
-  root: HierarchyNode<AstNode>
+  find: (path: string) => NamespaceNode<AstNode> | undefined
+  root: NamespaceNode<AstNode>
 }
 
 export class ZenScriptPackageManager implements PackageManager {
   // private readonly nameProvider: NameProvider
-  private readonly packageTree: HierarchyTree<AstNode>
+  private readonly packageTree: NamespaceTree<AstNode>
   private readonly serviceRegistry: ServiceRegistry
 
   constructor(services: ZenScriptSharedServices) {
     // this.nameProvider = services.references.NameProvider
-    this.packageTree = new HierarchyTree()
+    this.packageTree = new NamespaceTree('.')
 
     this.serviceRegistry = services.ServiceRegistry
 
@@ -41,11 +41,11 @@ export class ZenScriptPackageManager implements PackageManager {
     return this.packageTree.retrieve(path)
   }
 
-  find(path: string): HierarchyNode<AstNode> | undefined {
+  find(path: string): NamespaceNode<AstNode> | undefined {
     return this.packageTree.find(path)
   }
 
-  get root(): HierarchyNode<AstNode> {
+  get root(): NamespaceNode<AstNode> {
     return this.packageTree.root
   }
 

@@ -1,5 +1,5 @@
 import type { AstNode, AstNodeDescription, Stream, URI } from 'langium'
-import type { BracketExpression, ClassDeclaration, ClassMemberDeclaration, FunctionDeclaration, ImportDeclaration, OperatorFunctionDeclaration } from '../generated/ast'
+import type { BracketExpression, ClassDeclaration, ImportDeclaration } from '../generated/ast'
 import { AstUtils, isAstNodeDescription, stream } from 'langium'
 import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
@@ -10,15 +10,19 @@ export function isToplevel(node: AstNode | undefined): boolean {
 }
 
 export function isStatic(node: AstNode | undefined) {
-  return node && 'prefix' in node && node.prefix === 'static'
+  return node && 'variance' in node && node.variance === 'static'
 }
 
 export function isGlobal(node: AstNode | undefined) {
-  return node && 'prefix' in node && node.prefix === 'global'
+  return node && 'variance' in node && node.variance === 'global'
 }
 
 export function isVal(node: AstNode | undefined) {
-  return node && 'prefix' in node && node.prefix === 'val'
+  return node && 'variance' in node && node.variance === 'val'
+}
+
+export function isReadonly(node: AstNode | undefined) {
+  return node && 'variance' in node && typeof node.variance === 'string' && /^(?:val|static|global)$/.test(node.variance)
 }
 
 export function isImportable(node: AstNode | undefined) {
@@ -89,14 +93,14 @@ export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDecla
   })
 }
 
-export function streamDeclaredMembers(classDecl: ClassDeclaration): Stream<ClassMemberDeclaration> {
+export function streamDeclaredMembers(classDecl: ClassDeclaration) {
   return stream(classDecl.members)
 }
 
-export function streamDeclaredFunctions(classDecl: ClassDeclaration): Stream<FunctionDeclaration> {
+export function streamDeclaredFunctions(classDecl: ClassDeclaration) {
   return streamDeclaredMembers(classDecl).filter(isFunctionDeclaration)
 }
 
-export function streamDeclaredOperators(classDecl: ClassDeclaration): Stream<OperatorFunctionDeclaration> {
+export function streamDeclaredOperators(classDecl: ClassDeclaration) {
   return streamDeclaredMembers(classDecl).filter(isOperatorFunctionDeclaration)
 }

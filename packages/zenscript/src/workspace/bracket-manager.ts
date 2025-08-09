@@ -3,8 +3,8 @@ import type { WorkspaceFolder } from 'vscode-languageserver'
 import type { ZenScriptSharedServices } from '../module'
 import type { BracketEntry, BracketMirror } from '../resource'
 import { BracketsJsonSchema } from '../resource'
-import { existsFileUri } from '../utils/fs'
-import { HierarchyTree } from '../utils/hierarchy-tree'
+import { existsFile } from '../utils/fs'
+import { NamespaceTree } from '../utils/namespace-tree'
 
 export interface BracketManager {
   resolve: (id: string) => BracketEntry | undefined
@@ -20,14 +20,14 @@ export function appendItemPrefix(id: string): string {
 }
 
 export class ZenScriptBracketManager implements BracketManager {
-  private readonly fileSystemProvider: FileSystemProvider
+  private readonly fsProvider: FileSystemProvider
   readonly mirrors: BracketMirror[]
-  readonly entryTree: HierarchyTree<BracketEntry>
+  readonly entryTree: NamespaceTree<BracketEntry>
 
   constructor(services: ZenScriptSharedServices) {
-    this.fileSystemProvider = services.workspace.FileSystemProvider
+    this.fsProvider = services.workspace.FileSystemProvider
     this.mirrors = []
-    this.entryTree = new HierarchyTree<BracketEntry>(':')
+    this.entryTree = new NamespaceTree(':')
     services.workspace.ConfigurationManager.onLoaded(async (folders) => {
       await this.initializeMirrors(folders)
       await this.initializeEntryTree()
@@ -68,11 +68,11 @@ export class ZenScriptBracketManager implements BracketManager {
   }
 
   private async loadBrackets(bracketsUri: URI | undefined) {
-    if (!bracketsUri || !existsFileUri(bracketsUri)) {
+    if (!bracketsUri || !await existsFile(this.fsProvider, bracketsUri)) {
       return
     }
 
-    const content = await this.fileSystemProvider.readFile(bracketsUri)
+    const content = await this.fsProvider.readFile(bracketsUri)
     const json = JSON.parse(content)
     const schema = BracketsJsonSchema.parse(json)
     schema.forEach((mirror) => {

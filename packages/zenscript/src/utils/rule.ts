@@ -1,9 +1,9 @@
-type RuleMap = { [K in string]: (source: any, ...rest: any) => any }
+type RuleMap = { [K in string]: (element: any, ...rest: any) => any }
 type RuleGetter<M extends RuleMap> = ($type: string | undefined) => RuleFunction<M> | undefined
-type RuleFunction<M extends RuleMap> = (source: any, ...rest: RestParameters<RuleFunctionType<M>>) => ReturnType<RuleFunctionType<M>>
+type RuleFunction<M extends RuleMap> = (element: any, ...rest: RestParameters<RuleFunctionType<M>>) => ReturnType<RuleFunctionType<M>>
 
-type RestParameters<T> = T extends (source: any, ...rest: infer U) => any ? U : never
-type RuleFunctionType<T> = T extends { [K in string]: infer V } ? (V extends (source: any, ...rest: any) => any ? V : never) : never
+type RestParameters<T> = T extends (element: any, ...rest: infer U) => any ? U : never
+type RuleFunctionType<T> = T extends { [K in string]: infer V } ? (V extends (element: any, ...rest: any) => any ? V : never) : never
 
 export function defineRules<M extends RuleMap>(rules: M): RuleGetter<M> {
   // assign the name for anonymous rule function

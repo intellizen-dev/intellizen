@@ -1,9 +1,9 @@
 import type { ExpressionStatement, FunctionDeclaration, ReferenceExpression } from '../../../src/generated/ast'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { assertNoErrors, createTestServices, getDocument } from '../../utils'
+import { assertNoErrors, createTestServicesWithWorkspace, getDocument } from '../../utils'
 
-const services = await createTestServices(__dirname)
+const services = await createTestServicesWithWorkspace(__dirname)
 
 describe(`check dynamic this in class`, async () => {
   const document_this_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'this.zs'))
@@ -17,7 +17,7 @@ describe(`check dynamic this in class`, async () => {
     const statement_this = (script_this_zs.classes[0].members[0] as FunctionDeclaration).body[0] as ExpressionStatement
     const expression_this = statement_this.expr as ReferenceExpression
     const type = services.typing.TypeComputer.inferType(expression_this)
-    expect(expression_this.target.ref).toBeDefined()
+    expect(expression_this.entity.ref).toBeDefined()
     expect(type?.toString()).toBe('Str')
   })
 })

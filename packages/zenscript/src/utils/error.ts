@@ -1,4 +1,4 @@
-import type { WorkspaceFolder } from 'langium'
+import type { URI, WorkspaceFolder } from 'langium'
 import { StringConstants } from '../resource'
 
 export class ConfigError extends Error {
@@ -20,7 +20,7 @@ export class FileNotFoundError extends Error {
 }
 
 export class DirectoryNotFoundError extends Error {
-  constructor(dirPath: string, options?: ErrorOptions) {
-    super(`Directory "${dirPath}" does not exist.`, options)
+  constructor(dirUri: URI, options?: ErrorOptions) {
+    super(`Directory "${dirUri}" does not exist.`, options)
   }
 }

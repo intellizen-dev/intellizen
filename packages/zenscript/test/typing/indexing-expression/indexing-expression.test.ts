@@ -1,9 +1,9 @@
 import type { VariableDeclaration } from '../../../src/generated/ast'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { assertNoErrors, createTestServices, getDocument } from '../../utils'
+import { assertNoErrors, createTestServicesWithWorkspace, getDocument } from '../../utils'
 
-const services = await createTestServices(__dirname)
+const services = await createTestServicesWithWorkspace(__dirname)
 
 describe(`check inferring indexing expression`, async () => {
   const document_indexing_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'indexing.zs'))

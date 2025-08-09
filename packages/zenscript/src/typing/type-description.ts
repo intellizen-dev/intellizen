@@ -54,9 +54,9 @@ export class ClassType extends NamedType<ClassDeclaration> {
 
   override toString(): string {
     let result = this.declaration.name
-    if (this.declaration.typeParameters.length) {
+    if (this.declaration.typeParams.length) {
       result += '<'
-      result += this.declaration.typeParameters
+      result += this.declaration.typeParams
         .map(it => this.substitutions.get(it)?.toString() ?? it.name)
         .join(', ')
       result += '>'

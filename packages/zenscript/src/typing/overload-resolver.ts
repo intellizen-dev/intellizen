@@ -1,9 +1,10 @@
+import type { AstNode } from 'langium'
 import type { CallableDeclaration, CallExpression, Expression, FieldDeclaration, ValueParameter } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from './type-computer'
 import type { FunctionType, Type } from './type-description'
 import type { TypeFeatures } from './type-features'
-import { type AstNode, MultiMap } from 'langium'
+import { MultiMap } from 'langium'
 import { isCallableDeclaration, isClassDeclaration, isConstructorDeclaration, isFieldDeclaration } from '../generated/ast'
 import { isFunctionType } from './type-description'
 
@@ -43,7 +44,7 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
 
     const groupedCandidates = candidates.reduce((map, it) => map.add(it.$container!, it), new MultiMap<AstNode, AstNode>())
     for (const container of groupedCandidates.keys()) {
-      const overloads = this.analyzeOverloads(new Set(groupedCandidates.get(container)), callExpr.arguments)
+      const overloads = this.analyzeOverloads(new Set(groupedCandidates.get(container)), callExpr.args)
       if (overloads.length) {
         return overloads
       }
@@ -102,7 +103,7 @@ export class ZenScriptOverloadResolver implements OverloadResolver {
   }
 
   private matchCallable(callable: CallableDeclaration, args: Expression[], matchSet: Set<OverloadMatch>) {
-    const params = [...callable.parameters]
+    const params = [...callable.params]
     const map = this.createParamToArgsMap(params, args)
 
     if (args.length > map.size) {
