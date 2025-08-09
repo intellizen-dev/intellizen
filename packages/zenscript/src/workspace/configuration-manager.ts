@@ -1,7 +1,6 @@
 import type { FileSystemProvider, WorkspaceFolder } from 'langium'
 import type { ZenScriptSharedServices } from '../module'
 import type { WorkspaceConfig } from '../resource'
-import { resolve as resolvePath } from 'node:path'
 import { Resolver } from '@stoplight/json-ref-resolver'
 import { URI, UriUtils } from 'langium'
 import { IntelliZenJsonSchema, StringConstants } from '../resource'
@@ -22,11 +21,11 @@ export interface ConfigurationManager {
 export type LoadedListener = (folders: WorkspaceFolder[]) => Promise<void>
 
 export class ZenScriptConfigurationManager implements ConfigurationManager {
-  private readonly fileSystemProvider: FileSystemProvider
+  private readonly fsProvider: FileSystemProvider
   private readonly loadedListeners: LoadedListener[]
 
   constructor(services: ZenScriptSharedServices) {
-    this.fileSystemProvider = services.workspace.FileSystemProvider
+    this.fsProvider = services.workspace.FileSystemProvider
     this.loadedListeners = []
   }
 
@@ -59,18 +58,18 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
   }
 
   private async load(config: WorkspaceConfig, configUri: URI) {
-    const content = await this.fileSystemProvider.readFile(configUri)
+    const content = await this.fsProvider.readFile(configUri)
     const json = JSON.parse(content)
     const resolved = await new Resolver().resolve(json)
     const schema = IntelliZenJsonSchema.parse(resolved.result)
 
     for (const srcRoot of schema.srcRoots) {
-      const srcRootPath = resolvePath(configUri.fsPath, '..', srcRoot)
-      if (existsDirectory(srcRootPath)) {
-        config.srcRoots.push(URI.file(srcRootPath))
+      const srcRootUri = UriUtils.resolvePath(configUri, '..', srcRoot)
+      if (await existsDirectory(this.fsProvider, srcRootUri)) {
+        config.srcRoots.push(srcRootUri)
       }
       else {
-        console.error(new DirectoryNotFoundError(srcRootPath))
+        console.error(new DirectoryNotFoundError(srcRootUri))
       }
     }
 
@@ -78,7 +77,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
   }
 
   private async processExtraFile(config: WorkspaceConfig) {
-    const nodes = (await Promise.all(config.srcRoots.map(srcRoot => this.fileSystemProvider.readDirectory(srcRoot)))).flat()
+    const nodes = (await Promise.all(config.srcRoots.map(srcRoot => this.fsProvider.readDirectory(srcRoot)))).flat()
     config.extra.brackets = nodes.find(it => isFile(it, StringConstants.File.brackets))?.uri
     config.extra.preprocessors = nodes.find(it => isFile(it, StringConstants.File.preprocessors))?.uri
   }
@@ -93,7 +92,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
       return
     }
 
-    const scriptsUri = await findInside(this.fileSystemProvider, workspaceUri, node => isDirectory(node, StringConstants.Folder.scripts))
+    const scriptsUri = await findInside(this.fsProvider, workspaceUri, node => isDirectory(node, StringConstants.Folder.scripts))
     if (scriptsUri) {
       config.srcRoots = [scriptsUri]
       return
@@ -104,6 +103,6 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
 
   private async findConfig(folder: WorkspaceFolder): Promise<URI | undefined> {
     const folderUri = URI.parse(folder.uri)
-    return findInside(this.fileSystemProvider, folderUri, node => isFile(node, StringConstants.File.intellizen))
+    return findInside(this.fsProvider, folderUri, node => isFile(node, StringConstants.File.intellizen))
   }
 }
