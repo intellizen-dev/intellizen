@@ -323,7 +323,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     BracketExpression: (element) => {
       const id = element.path.map(it => it.$cstNode?.text).join(':')
-      const type = this.bracketManager.type(id)
+      const type = this.bracketManager.resolveType(id)
       if (!type) {
         return this.classTypeOf('any')
       }

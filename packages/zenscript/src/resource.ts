@@ -15,28 +15,6 @@ export const StringConstants = Object.freeze({
   },
 })
 
-// region Brackets
-export const BracketsJsonSchema = z.object({
-  type: z.string(),
-  regex: z.string(),
-  entries: z.object({
-    _id: z.string(),
-    _name: z.string().optional(),
-  }).catchall(z.string().array()).array(),
-}).array()
-
-export interface BracketMirror {
-  type: string
-  regex: RegExp
-  entries: Map<string, BracketEntry>
-}
-
-export interface BracketEntry {
-  name?: string
-  properties: Record<string, string[]>
-}
-// endregion
-
 // region Workspace Config
 export const IntelliZenJsonSchema = z.object({
   srcRoots: z.string().array(),

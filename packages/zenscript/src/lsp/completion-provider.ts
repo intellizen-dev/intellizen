@@ -4,10 +4,9 @@ import type { CompletionItemLabelDetails } from 'vscode-languageserver'
 import type { BracketExpression, BracketProperty, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
-import type { BracketEntry } from '../resource'
 import type { TypeComputer } from '../typing/type-computer'
 import type { NamespaceNode } from '../utils/namespace-tree'
-import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
+import type { BracketEntry, ZenScriptBracketManager } from '../workspace/bracket-manager'
 import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, CstUtils, GrammarAST, stream } from 'langium'
 import { DefaultCompletionProvider } from 'langium/lsp'
@@ -62,23 +61,23 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       subPath = ''
     }
 
-    const tree = this.bracketManager.entryTree.find(subPath)
-    if (!tree) {
+    const node = this.bracketManager.entries.find(subPath)
+    if (!node) {
       return
     }
 
-    this.completionForBracketLocation(tree, context, next, acceptor)
-    this.completionForBracketProperty(tree, context, next, acceptor)
+    this.completionForBracketLocation(node, context, next, acceptor)
+    this.completionForBracketProperty(node, context, next, acceptor)
   }
 
-  private completionForBracketLocation(tree: NamespaceNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+  private completionForBracketLocation(node: NamespaceNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     const requiredNextFeature
       = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
     if (!requiredNextFeature) {
       return
     }
 
-    const middles = stream(tree.children.values())
+    const middles = stream(node.children.values())
       .filter(node => !node.hasData())
       .map(node => ({ node, label: node.name }))
 
@@ -101,7 +100,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       acceptor(context, item)
     }
 
-    const ends = stream(tree.children.values())
+    const ends = stream(node.children.values())
       .filter(node => node.hasData())
       .flatMap(node => node.data.values().map(entry => ({ label: node.name, description: entry.name })))
 
@@ -122,8 +121,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
   }
 
-  private completionForBracketProperty(tree: NamespaceNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
-    const entry = tree.data.values().next().value
+  private completionForBracketProperty(node: NamespaceNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+    const entry = node.data.values().next().value
     if (!entry) {
       return
     }

@@ -1,63 +1,54 @@
 import type { FileSystemProvider, URI } from 'langium'
 import type { WorkspaceFolder } from 'vscode-languageserver'
 import type { ZenScriptSharedServices } from '../module'
-import type { BracketEntry, BracketMirror } from '../resource'
-import { BracketsJsonSchema } from '../resource'
-import { existsFile } from '../utils/fs'
+import { z } from 'zod'
 import { NamespaceTree } from '../utils/namespace-tree'
 
+export interface BracketMirror {
+  type: string
+  regex: RegExp
+  entries: Map<string, BracketEntry>
+}
+
+export interface BracketEntry {
+  name?: string
+  properties: Record<string, string[]>
+}
+
 export interface BracketManager {
-  resolve: (id: string) => BracketEntry | undefined
-  type: (id: string) => string | undefined
+  resolveEntry: (id: string) => BracketEntry | undefined
+  resolveType: (id: string) => string | undefined
 }
 
-export function isItemType(type: string): boolean {
-  return type === 'crafttweaker.item.IItemStack'
-}
-
-export function appendItemPrefix(id: string): string {
-  return `item:${id}`
-}
+export const BracketsJsonSchema = z.object({
+  type: z.string(),
+  regex: z.string(),
+  entries: z.object({
+    _id: z.string(),
+    _name: z.string().optional(),
+  }).catchall(z.string().array()).array(),
+}).array()
 
 export class ZenScriptBracketManager implements BracketManager {
+  public readonly mirrors: BracketMirror[] = []
+  public readonly entries: NamespaceTree<BracketEntry> = new NamespaceTree(':')
+
   private readonly fsProvider: FileSystemProvider
-  readonly mirrors: BracketMirror[]
-  readonly entryTree: NamespaceTree<BracketEntry>
 
   constructor(services: ZenScriptSharedServices) {
     this.fsProvider = services.workspace.FileSystemProvider
-    this.mirrors = []
-    this.entryTree = new NamespaceTree(':')
     services.workspace.ConfigurationManager.onLoaded(async (folders) => {
       await this.initializeMirrors(folders)
-      await this.initializeEntryTree()
+      await this.initializeEntries()
     })
   }
 
-  private async initializeMirrors(folders: WorkspaceFolder[]) {
-    await Promise.all(folders.map(folder => this.loadBrackets(folder.config.extra.brackets)))
-  }
-
-  private async initializeEntryTree() {
-    this.mirrors.forEach((mirror) => {
-      if (isItemType(mirror.type)) {
-        mirror.entries.forEach((entry, id) => {
-          this.entryTree.insert(appendItemPrefix(id), entry)
-        })
-      }
-
-      mirror.entries.forEach((entry, id) => {
-        this.entryTree.insert(id, entry)
-      })
-    })
-  }
-
-  resolve(id: string) {
+  resolveEntry(id: string) {
     id = this.normalize(id)
     return this.mirrors.find(mirror => mirror.entries.has(id))?.entries.get(id)
   }
 
-  type(id: string) {
+  resolveType(id: string) {
     id = this.normalize(id)
     return this.mirrors.find(mirror => mirror.regex.test(id))?.type
       ?? this.mirrors.find(mirror => mirror.entries.has(id))?.type
@@ -67,25 +58,46 @@ export class ZenScriptBracketManager implements BracketManager {
     return id.replace(/^item:/, '').replace(/:[0*]$/, '')
   }
 
-  private async loadBrackets(bracketsUri: URI | undefined) {
-    if (!bracketsUri || !await existsFile(this.fsProvider, bracketsUri)) {
+  private async initializeMirrors(folders: WorkspaceFolder[]) {
+    await Promise.all(folders.map(folder => this.loadMirrorsFromUri(folder.config.extra.brackets)))
+  }
+
+  private async loadMirrorsFromUri(bracketsUri: URI | undefined) {
+    if (!bracketsUri) {
       return
     }
 
-    const content = await this.fsProvider.readFile(bracketsUri)
-    const json = JSON.parse(content)
-    const schema = BracketsJsonSchema.parse(json)
-    schema.forEach((mirror) => {
-      const entries = mirror.entries.reduce((map, entry) => {
-        const { _id: id, _name: name, ...properties } = entry
-        return map.set(id, { name, properties })
-      }, new Map<string, BracketEntry>())
+    try {
+      const content = await this.fsProvider.readFile(bracketsUri)
+      const rawJson = JSON.parse(content)
+      const bracketsJson = BracketsJsonSchema.parse(rawJson)
 
-      this.mirrors.push({
-        type: mirror.type,
-        regex: new RegExp(mirror.regex),
-        entries,
-      })
-    })
+      for (const mirror of bracketsJson) {
+        const entries: Map<string, BracketEntry> = new Map()
+        for (const { _id: id, _name: name, ...properties } of mirror.entries) {
+          entries.set(id, { name, properties })
+        }
+        this.mirrors.push({
+          type: mirror.type,
+          regex: new RegExp(mirror.regex),
+          entries,
+        })
+      }
+    }
+    catch (error) {
+      console.error('Failed to load brackets from URI:', bracketsUri, error)
+    }
+  }
+
+  private async initializeEntries() {
+    for (const mirror of this.mirrors) {
+      const isItemType = mirror.type === 'crafttweaker.item.IItemStack'
+      for (const [id, entry] of mirror.entries) {
+        this.entries.insert(id, entry)
+        if (isItemType) {
+          this.entries.insert(`item:${id}`, entry)
+        }
+      }
+    }
   }
 }
