@@ -16,8 +16,8 @@ export interface BracketEntry {
 }
 
 export interface BracketManager {
-  resolveEntry: (id: string) => BracketEntry | undefined
-  resolveType: (id: string) => string | undefined
+  findEntry: (id: string) => BracketEntry | undefined
+  findType: (id: string) => string | undefined
 }
 
 export const BracketsJsonSchema = z.object({
@@ -43,12 +43,12 @@ export class ZenScriptBracketManager implements BracketManager {
     })
   }
 
-  resolveEntry(id: string) {
+  findEntry(id: string) {
     id = this.normalize(id)
     return this.mirrors.find(mirror => mirror.entries.has(id))?.entries.get(id)
   }
 
-  resolveType(id: string) {
+  findType(id: string) {
     id = this.normalize(id)
     return this.mirrors.find(mirror => mirror.regex.test(id))?.type
       ?? this.mirrors.find(mirror => mirror.entries.has(id))?.type

@@ -52,7 +52,7 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
 
     BracketExpression: (element, acceptor) => {
       const id = getPathAsString(element)
-      const name = this.bracketManager.resolveEntry(id)?.name
+      const name = this.bracketManager.findEntry(id)?.name
       if (name) {
         acceptor({
           position: element.$cstNode!.range.end,

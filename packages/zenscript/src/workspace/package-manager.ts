@@ -1,99 +1,97 @@
-import type { AstNode, LangiumDocument, NameProvider, ServiceRegistry } from 'langium'
-import type { ZenScriptSharedServices } from '../module'
+import type { AstNode, LangiumDocument, NameProvider } from 'langium'
+import type { ZenScriptServices } from '../module'
+import type { MemberProvider } from '../reference/member-provider'
 import type { NamespaceNode } from '../utils/namespace-tree'
-import { AstUtils, DocumentState, stream } from 'langium'
+import { DocumentState, stream } from 'langium'
 import { isClassDeclaration } from '../generated/ast'
-import { isImportable, isStatic } from '../utils/ast'
+import { isStatic } from '../utils/ast'
+import { isZs } from '../utils/document'
 import { NamespaceTree } from '../utils/namespace-tree'
 
 export interface PackageManager {
-  retrieve: (path: string) => ReadonlySet<AstNode>
-  find: (path: string) => NamespaceNode<AstNode> | undefined
+  find: (path: string) => ReadonlySet<AstNode>
+  findNode: (path: string) => NamespaceNode<AstNode> | undefined
   root: NamespaceNode<AstNode>
 }
 
 export class ZenScriptPackageManager implements PackageManager {
-  // private readonly nameProvider: NameProvider
-  private readonly packageTree: NamespaceTree<AstNode>
-  private readonly serviceRegistry: ServiceRegistry
+  private readonly packages: NamespaceTree<AstNode> = new NamespaceTree('.')
+  private readonly nameProvider: () => NameProvider
+  private readonly memberProvider: () => MemberProvider
 
-  constructor(services: ZenScriptSharedServices) {
-    // this.nameProvider = services.references.NameProvider
-    this.packageTree = new NamespaceTree('.')
-
-    this.serviceRegistry = services.ServiceRegistry
+  constructor(services: ZenScriptServices) {
+    this.nameProvider = () => services.references.NameProvider
+    this.memberProvider = () => services.references.MemberProvider
 
     // insert data once document is indexed content
-    services.workspace.DocumentBuilder.onDocumentPhase(DocumentState.IndexedContent, (document) => {
+    services.shared.workspace.DocumentBuilder.onDocumentPhase(DocumentState.IndexedContent, (document) => {
       this.insert(document)
     })
 
     // remove data once document is changed or deleted
-    services.workspace.DocumentBuilder.onUpdate((changed, deleted) => {
+    services.shared.workspace.DocumentBuilder.onUpdate((changed, deleted) => {
       stream(changed, deleted)
-        .map(it => services.workspace.LangiumDocuments.getDocument(it))
-        .filter(it => !!it)
+        .map(it => services.shared.workspace.LangiumDocuments.getDocument(it))
+        .nonNullable()
         .forEach(it => this.remove(it))
     })
   }
 
-  retrieve(path: string): ReadonlySet<AstNode> {
-    return this.packageTree.retrieve(path)
+  find(path: string): ReadonlySet<AstNode> {
+    return this.packages.find(path)
   }
 
-  find(path: string): NamespaceNode<AstNode> | undefined {
-    return this.packageTree.find(path)
+  findNode(path: string): NamespaceNode<AstNode> | undefined {
+    return this.packages.findNode(path)
   }
 
   get root(): NamespaceNode<AstNode> {
-    return this.packageTree.root
+    return this.packages.root
   }
 
   private insert(document: LangiumDocument) {
-    const services = this.serviceRegistry.getServices(document.uri)
-    const nameProvider = services.references.NameProvider
     const root = document.parseResult.value
-    if (isImportable(root)) {
-      this.insertNode(root, nameProvider)
+    if (isZs(document)) {
+      this.insertNode(root)
     }
-    AstUtils.streamContents(root)
-      .filter(toplevel => isImportable(toplevel))
-      .forEach((toplevel) => {
-        this.insertNode(toplevel, nameProvider)
-        if (isClassDeclaration(toplevel)) {
-          AstUtils.streamContents(toplevel)
-            .filter(classMember => isStatic(classMember))
-            .forEach((classMember) => {
-              this.insertNode(classMember, nameProvider)
-            })
+    const toplevels = this.memberProvider().streamMembers(root)
+    for (const toplevel of toplevels) {
+      this.insertNode(toplevel)
+      if (isClassDeclaration(toplevel)) {
+        for (const staticMember of toplevel.members.filter(isStatic)) {
+          this.insertNode(staticMember)
         }
-      })
+      }
+    }
   }
 
-  private insertNode(node: AstNode, nameProvider: NameProvider) {
-    // const nameProvider =
-    const name = nameProvider.getQualifiedName(node)
+  private insertNode(node: AstNode) {
+    const name = this.nameProvider().getQualifiedName(node)
     if (name) {
-      this.packageTree.insert(name, node)
+      this.packages.insert(name, node)
     }
   }
 
   private remove(document: LangiumDocument) {
-    const services = this.serviceRegistry.getServices(document.uri)
-    const nameProvider = services.references.NameProvider
     const root = document.parseResult.value
-    if (isImportable(root)) {
-      this.removeNode(root, nameProvider)
+    if (isZs(document)) {
+      this.removeNode(root)
     }
-    AstUtils.streamContents(root)
-      .filter(toplevel => isImportable(toplevel))
-      .forEach(classDecl => this.removeNode(classDecl, nameProvider))
+    const toplevels = this.memberProvider().streamMembers(root)
+    for (const toplevel of toplevels) {
+      this.removeNode(toplevel)
+      if (isClassDeclaration(toplevel)) {
+        for (const staticMember of toplevel.members.filter(isStatic)) {
+          this.removeNode(staticMember)
+        }
+      }
+    }
   }
 
-  private removeNode(node: AstNode, nameProvider: NameProvider) {
-    const name = nameProvider.getQualifiedName(node)
+  private removeNode(node: AstNode) {
+    const name = this.nameProvider().getQualifiedName(node)
     if (name) {
-      this.packageTree.find(name)?.free()
+      this.packages.findNode(name)?.free()
     }
   }
 }

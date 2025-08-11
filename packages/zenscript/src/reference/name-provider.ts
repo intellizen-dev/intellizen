@@ -2,7 +2,7 @@ import type { AstNode, CstNode } from 'langium'
 import type { Script, ZenScriptAstType } from '../generated/ast'
 import { AstUtils, DefaultNameProvider, GrammarUtils } from 'langium'
 import { isClassDeclaration, isScript } from '../generated/ast'
-import { isImportable, isStatic, isToplevel } from '../utils/ast'
+import { isExposed, isStatic, isToplevel } from '../utils/ast'
 import { getName, getQualifiedName } from '../utils/document'
 import { defineRules } from '../utils/rule'
 
@@ -33,7 +33,7 @@ export class ZenScriptNameProvider extends DefaultNameProvider {
     if (isScript(node)) {
       return getQualifiedName(document)
     }
-    else if (isToplevel(node) && isImportable(node)) {
+    else if (isToplevel(node) && isExposed(node)) {
       return concat(getQualifiedName(document), this.getName(node))
     }
     else if (isClassDeclaration(node.$container) && isStatic(node)) {

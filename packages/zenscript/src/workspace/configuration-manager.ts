@@ -4,7 +4,6 @@ import type { WorkspaceConfig } from '../resource'
 import { Resolver } from '@stoplight/json-ref-resolver'
 import { URI, UriUtils } from 'langium'
 import { IntelliZenJsonSchema, StringConstants } from '../resource'
-import { ConfigError, DirectoryNotFoundError } from '../utils/error'
 import { existsDirectory, findInside, isDirectory, isFile } from '../utils/fs'
 
 declare module 'langium' {
@@ -19,6 +18,12 @@ export interface ConfigurationManager {
 }
 
 export type LoadedListener = (folders: WorkspaceFolder[]) => Promise<void>
+
+export class ConfigError extends Error {
+  constructor(workspaceFolder: WorkspaceFolder, options?: ErrorOptions) {
+    super(`An error occurred parsing "${StringConstants.File.intellizen}" located in the workspace folder "${workspaceFolder.name}".`, options)
+  }
+}
 
 export class ZenScriptConfigurationManager implements ConfigurationManager {
   private readonly fsProvider: FileSystemProvider
@@ -69,7 +74,7 @@ export class ZenScriptConfigurationManager implements ConfigurationManager {
         config.srcRoots.push(srcRootUri)
       }
       else {
-        console.error(new DirectoryNotFoundError(srcRootUri))
+        console.error(`Directory "${srcRootUri}" does not exist.`)
       }
     }
 

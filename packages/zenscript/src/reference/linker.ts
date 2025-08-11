@@ -33,4 +33,9 @@ export class ZenScriptLinker extends DefaultLinker {
 
     return this.createLinkingError(refInfo)
   }
+
+  override getCandidates(refInfo: ReferenceInfo): AstNodeDescription[] | LinkingError {
+    // TODO: multi reference
+    return this.createLinkingError(refInfo)
+  }
 }

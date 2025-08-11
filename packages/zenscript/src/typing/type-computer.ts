@@ -19,13 +19,13 @@ type RuleSpec = ZenScriptAstType & ZenScriptSyntheticAstType
 type RuleMap = { [K in keyof RuleSpec]?: (element: RuleSpec[K]) => Type | undefined }
 
 export class ZenScriptTypeComputer implements TypeComputer {
-  private readonly packageManager: PackageManager
   private readonly bracketManager: BracketManager
+  private readonly packageManager: () => PackageManager
   private readonly memberProvider: () => MemberProvider
 
   constructor(services: ZenScriptServices) {
-    this.packageManager = services.shared.workspace.PackageManager
     this.bracketManager = services.shared.workspace.BracketManager
+    this.packageManager = () => services.references.PackageManager
     this.memberProvider = () => services.references.MemberProvider
   }
 
@@ -42,7 +42,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   private classDeclOf(className: BuiltinTypes | string): ClassDeclaration | undefined {
-    return stream(this.packageManager.retrieve(className)).find(isClassDeclaration)
+    return stream(this.packageManager().find(className)).find(isClassDeclaration)
   }
 
   private readonly inferRules = defineRules<RuleMap>({
@@ -323,7 +323,7 @@ export class ZenScriptTypeComputer implements TypeComputer {
 
     BracketExpression: (element) => {
       const id = element.path.map(it => it.$cstNode?.text).join(':')
-      const type = this.bracketManager.resolveType(id)
+      const type = this.bracketManager.findType(id)
       if (!type) {
         return this.classTypeOf('any')
       }

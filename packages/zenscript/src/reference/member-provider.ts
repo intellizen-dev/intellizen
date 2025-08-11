@@ -7,10 +7,10 @@ import type { ZenScriptSyntheticAstType } from './synthetic'
 import { AstUtils, EMPTY_STREAM, stream } from 'langium'
 import { isClassDeclaration, isConstructorDeclaration, isFunctionDeclaration, isMemberAccess, isReferenceExpression, isScript, isVariableDeclaration } from '../generated/ast'
 import { ClassType, isAnyType, isClassType, isFunctionType } from '../typing/type-description'
-import { isStatic, streamClassChain, streamDeclaredMembers } from '../utils/ast'
+import { isStatic, streamClassChain } from '../utils/ast'
 import { isNamespaceNode } from '../utils/namespace-tree'
 import { defineRules } from '../utils/rule'
-import { isSyntheticAstNode, SyntheticAstNode } from './synthetic'
+import { createSyntheticAstNode, isSyntheticAstNode } from './synthetic'
 
 export interface MemberProvider {
   streamMembers: (element: AstNode | Type | undefined) => Stream<AstNode>
@@ -33,7 +33,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
   private readonly memberRules = defineRules<RuleMap>({
     SyntheticAstNode: ({ content }) => {
       if (isNamespaceNode(content)) {
-        return stream(content.children.values()).flatMap(it => it.hasData() ? it.data : new SyntheticAstNode(it))
+        return stream(content.children.values()).flatMap(it => it.hasData() ? it.data : createSyntheticAstNode(it))
       }
       return EMPTY_STREAM
     },
@@ -51,7 +51,7 @@ export class ZenScriptMemberProvider implements MemberProvider {
     },
 
     ClassDeclaration: (element) => {
-      return streamDeclaredMembers(element).filter(isStatic)
+      return stream(element.members).filter(isStatic)
     },
 
     VariableDeclaration: (element) => {

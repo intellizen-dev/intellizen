@@ -6,6 +6,11 @@ export interface ZenScriptSyntheticAstType {
   SyntheticAstNode: SyntheticAstNode
 }
 
+export interface SyntheticAstNode extends AstNode {
+  $type: 'SyntheticAstNode'
+  content: SyntheticAstNodeContent
+}
+
 export type SyntheticAstNodeContent = NamespaceNode<AstNode> | { $type: 'Unknown' } | { $type: 'StringLiteral' }
 
 /**
@@ -15,19 +20,26 @@ export type SyntheticAstNodeContent = NamespaceNode<AstNode> | { $type: 'Unknown
  * @param content The content to wrap
  * @returns The wrapped content as an AstNode.
  */
-export class SyntheticAstNode implements AstNode {
-  readonly $type = 'SyntheticAstNode'
-  readonly content: SyntheticAstNodeContent
-  constructor(content: SyntheticAstNodeContent) {
-    this.content = content
+export function createSyntheticAstNode(content: SyntheticAstNodeContent): SyntheticAstNode {
+  return {
+    $type: 'SyntheticAstNode',
+    content,
   }
 }
 
+/**
+ * Wrap a given content as an AstNodeDescription.
+ * This is used to create synthetic descriptions for the purpose of linking.
+ *
+ * @param name The name of the synthetic node
+ * @param content The content to wrap
+ * @returns The wrapped content as an AstNodeDescription.
+ */
 export function createSyntheticAstNodeDescription(name: string, content: SyntheticAstNodeContent): AstNodeDescription {
   return {
     name,
     type: 'SyntheticAstNode',
-    node: new SyntheticAstNode(content),
+    node: createSyntheticAstNode(content),
     documentUri: URI.from({ scheme: 'synthetic', path: name }),
     path: '',
   }

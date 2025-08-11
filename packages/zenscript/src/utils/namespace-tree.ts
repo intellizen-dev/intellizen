@@ -24,7 +24,7 @@ export class NamespaceTree<V> {
       return
     }
     const names = path.split(this.separator)
-    const target = names.reduce((node, name) => node.children.get(name) || node.createChild(name), this.root)
+    const target = names.reduce((node, name) => node.children.get(name) ?? node.createChild(name), this.root)
     target.data.add(value)
   }
 
@@ -34,8 +34,8 @@ export class NamespaceTree<V> {
    * @param path - The namespace path to retrieve values from
    * @returns A set of values stored at the path, or an empty set if none exist
    */
-  retrieve(path: string): ReadonlySet<V> {
-    return this.find(path)?.data ?? new Set()
+  find(path: string): ReadonlySet<V> {
+    return this.findNode(path)?.data ?? new Set()
   }
 
   /**
@@ -44,7 +44,7 @@ export class NamespaceTree<V> {
    * @param path - The namespace path to find
    * @returns The node at the specified path, or undefined if not found
    */
-  find(path: string): NamespaceNode<V> | undefined {
+  findNode(path: string): NamespaceNode<V> | undefined {
     if (path === this.root.name) {
       return this.root
     }

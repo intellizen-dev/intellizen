@@ -49,8 +49,7 @@ export class ZenScriptWorkspaceManager extends DefaultWorkspaceManager {
 
   private async process(srcFile: URI, srcRoot: URI): Promise<LangiumDocument> {
     const document = await this.langiumDocuments.getOrCreateDocument(srcFile)
-    // @ts-expect-error cause readonly
-    document.srcRootUri = srcRoot
+    Object.assign(document, { srcRootUri: srcRoot })
     if (!this.langiumDocuments.hasDocument(document.uri)) {
       this.langiumDocuments.addDocument(document)
     }

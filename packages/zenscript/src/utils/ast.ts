@@ -1,7 +1,7 @@
 import type { AstNode, AstNodeDescription, Stream, URI } from 'langium'
 import type { BracketExpression, ClassDeclaration, ImportDeclaration } from '../generated/ast'
-import { AstUtils, isAstNodeDescription, stream } from 'langium'
-import { isBracketExpression, isClassDeclaration, isFunctionDeclaration, isImportDeclaration, isOperatorFunctionDeclaration, isScript } from '../generated/ast'
+import { AstUtils, isAstNodeDescription } from 'langium'
+import { isBracketExpression, isClassDeclaration, isClassMemberDeclaration, isFunctionDeclaration, isImportDeclaration, isScript } from '../generated/ast'
 import { isZs } from './document'
 import { toStream } from './stream'
 
@@ -25,16 +25,10 @@ export function isReadonly(node: AstNode | undefined) {
   return node && 'variance' in node && typeof node.variance === 'string' && /^(?:val|static|global)$/.test(node.variance)
 }
 
-export function isImportable(node: AstNode | undefined) {
-  if (isScript(node)) {
-    return isZs(AstUtils.getDocument(node))
-  }
-  else if (isToplevel(node) && isFunctionDeclaration(node)) {
-    return true
-  }
-  else {
-    return isStatic(node) || isClassDeclaration(node)
-  }
+export function isExposed(node: AstNode | undefined) {
+  return (isScript(node) && isZs(AstUtils.getDocument(node)))
+    || (isToplevel(node) && (isStatic(node) || isClassDeclaration(node) || isFunctionDeclaration(node)))
+    || (isClassMemberDeclaration(node) && isStatic(node))
 }
 
 export function getDocumentUri(node: AstNode | undefined): URI | undefined {
@@ -91,16 +85,4 @@ export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDecla
         .forEach(it => deque.push(it))
     }
   })
-}
-
-export function streamDeclaredMembers(classDecl: ClassDeclaration) {
-  return stream(classDecl.members)
-}
-
-export function streamDeclaredFunctions(classDecl: ClassDeclaration) {
-  return streamDeclaredMembers(classDecl).filter(isFunctionDeclaration)
-}
-
-export function streamDeclaredOperators(classDecl: ClassDeclaration) {
-  return streamDeclaredMembers(classDecl).filter(isOperatorFunctionDeclaration)
 }
