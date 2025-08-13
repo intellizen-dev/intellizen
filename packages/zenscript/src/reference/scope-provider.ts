@@ -1,12 +1,12 @@
-import type { AstNode, ReferenceInfo, Scope, ScopeOptions } from 'langium'
+import type { AstNode, AstNodeDescription, ReferenceInfo, Scope, ScopeOptions, Stream } from 'langium'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
 import type { PackageManager } from '../workspace/package-manager'
 import type { MemberProvider } from './member-provider'
 import { substringBeforeLast } from '@intellizen/shared'
-import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, stream, StreamScope } from 'langium'
-import { CallExpression, isCallExpression, isClassDeclaration, isFunctionDeclaration, isMemberAccess, isOperatorFunctionDeclaration, isReferenceExpression } from '../generated/ast'
+import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, EMPTY_STREAM, stream, StreamScope } from 'langium'
+import * as ast from '../generated/ast'
 import { isClassType, isFunctionType } from '../typing/type-description'
 import { getPathAsString, isStatic } from '../utils/ast'
 import { defineRules } from '../utils/rule'
@@ -14,7 +14,7 @@ import { generateStream, toStream } from '../utils/stream'
 import { createSyntheticAstNodeDescription } from './synthetic'
 
 type RuleSpec = ZenScriptAstType
-type RuleMap = { [K in keyof RuleSpec]?: (element: ReferenceInfo & { container: RuleSpec[K] }) => Scope }
+type RuleMap = { [K in keyof RuleSpec]?: (element: Omit<ReferenceInfo, 'container'> & { container: RuleSpec[K] }) => Scope }
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
@@ -63,12 +63,28 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     },
 
     ReferenceExpression: ({ container }) => {
-      let outer: Scope
-      outer = this.createPackageNameScope()
-      outer = this.createGlobalScope(outer)
-      outer = this.createDynamicScope(container, outer)
-      outer = this.createLexicalScope(container, outer)
-      return outer
+      let scope: Scope
+      scope = this.createPackageNameScope()
+      scope = this.createGlobalScope(scope)
+      scope = this.createDynamicScope(container, scope)
+
+      {
+        let seed: AstNode = container.$container
+        if (ast.isForStatement(seed) && container.$containerProperty === ast.ForStatement.range) {
+          // ForStatement::range should not be accessible to ForStatement::params
+          // Skip ForStatement
+          seed = seed.$container
+        }
+        else if (ast.isValueParameter(seed) && container.$containerProperty === ast.ValueParameter.defaultValue) {
+          // ValueParameter::defaultValue should not be accessible to ValueParameter itself
+          // Skip CallableDeclaration
+          seed = seed.$container.$container
+        }
+        scope = this.streamLexicalScope(seed)
+          .reduceRight((outer, symbols) => new StreamScope(symbols, outer), scope)
+      }
+
+      return scope
     },
 
     MemberAccess: ({ container }) => {
@@ -79,11 +95,13 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
 
     NamedType: ({ container, index }) => {
       if (!index) {
-        let outer: Scope
-        outer = this.createPackageNameScope()
-        outer = this.createClassNameScope(outer)
-        outer = this.createLexicalScope(container, outer)
-        return outer
+        let scope: Scope
+        scope = this.createPackageNameScope()
+        scope = this.createClassNameScope(scope)
+        scope = this.streamLexicalScope(container)
+          .filter(it => ast.isClassDeclaration(it) || ast.isTypeParameter(it) || ast.isImportDeclaration(it))
+          .reduceRight((outer, symbols) => new StreamScope(symbols, outer), scope)
+        return scope
       }
       else {
         const prev = container.path[index - 1].ref
@@ -93,33 +111,32 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     },
   })
 
-  private createLexicalScope(node: AstNode, outer?: Scope): Scope {
-    const localSymbols = AstUtils.getDocument(node).localSymbols
-    return generateStream(node, it => it.$container)
-      .map(container => localSymbols?.getStream(container))
-      .nonNullable()
-      .map(descriptions => stream(descriptions))
-      .reduceRight((outer, descriptions) => new StreamScope(descriptions, outer), outer as Scope)
+  private streamLexicalScope(seed: AstNode): Stream<Stream<AstNodeDescription>> {
+    const localSymbols = AstUtils.getDocument(seed).localSymbols
+    if (localSymbols)
+      return generateStream(seed, it => it.$container).map(it => localSymbols.getStream(it))
+    else
+      return EMPTY_STREAM
   }
 
   private createDynamicScope(node: AstNode, outer?: Scope): Scope {
-    if (isReferenceExpression(node)) {
+    if (ast.isReferenceExpression(node)) {
       return new StreamScope(toStream(function* (this: ZenScriptScopeProvider) {
         // dynamic this
-        const classDecl = AstUtils.getContainerOfType(node, isClassDeclaration)
+        const classDecl = AstUtils.getContainerOfType(node, ast.isClassDeclaration)
         if (classDecl) {
           yield this.descriptions.createDescription(classDecl, 'this')
         }
 
         // dynamic arguments
-        if (isCallExpression(node.$container) && node.$containerProperty === CallExpression.args) {
+        if (ast.isCallExpression(node.$container) && node.$containerProperty === ast.CallExpression.args) {
           const index = node.$containerIndex!
           const receiverType = this.typeComputer.inferType(node.$container.receiver)
           if (isFunctionType(receiverType)) {
             const paramType = receiverType.paramTypes[index]
             if (isClassType(paramType)) {
               yield* stream(paramType.declaration.members)
-                .filter(isFunctionDeclaration)
+                .filter(ast.isFunctionDeclaration)
                 .filter(isStatic)
                 .filter(it => it.params.length === 0)
                 .map(it => this.descriptions.getOrCreateDescription(it))
@@ -128,13 +145,13 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         }
       }.bind(this)), outer)
     }
-    else if (isMemberAccess(node)) {
+    else if (ast.isMemberAccess(node)) {
       return new StreamScope(toStream(function* (this: ZenScriptScopeProvider) {
         // dynamic members
         const receiverType = this.typeComputer.inferType(node.receiver)
         if (isClassType(receiverType)) {
           const operatorDecl = stream(receiverType.declaration.members)
-            .filter(isOperatorFunctionDeclaration)
+            .filter(ast.isOperatorFunctionDeclaration)
             .filter(it => it.operator === '.')
             .filter(it => it.params.length === 1)
             .head()
@@ -164,7 +181,7 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     const classes = stream(this.packageManager.root.children.values())
       .filter(it => it.hasData())
       .flatMap(it => it.data)
-      .filter(isClassDeclaration)
+      .filter(ast.isClassDeclaration)
     return this.createScopeForNodes(classes, outer)
   }
 
