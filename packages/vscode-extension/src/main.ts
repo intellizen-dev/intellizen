@@ -2,6 +2,7 @@ import type { ExtensionContext } from 'vscode'
 import type { LanguageClientOptions, ServerOptions } from 'vscode-languageclient/node'
 import { join } from 'node:path'
 import { env } from 'node:process'
+import { window } from 'vscode'
 import { LanguageClient, TransportKind } from 'vscode-languageclient/node'
 
 let client: LanguageClient
@@ -39,6 +40,7 @@ function startLanguageClient(context: ExtensionContext): LanguageClient {
       { scheme: 'file', language: 'zenscript' },
       { scheme: 'file', language: 'zenscript-declaration' },
     ],
+    outputChannel: window.createOutputChannel('ZenScript', 'log'),
   }
 
   // Create the language client and start the client.

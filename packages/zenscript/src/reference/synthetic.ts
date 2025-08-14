@@ -1,44 +1,50 @@
 import type { AstNode, AstNodeDescription } from 'langium'
-import type { HierarchyNode } from '../utils/hierarchy-tree'
+import type { NamespaceNode } from '../utils/namespace-tree'
 import { URI } from 'langium'
 
 export interface ZenScriptSyntheticAstType {
-  SyntheticHierarchyNode: HierarchyNode<AstNode>
-  SyntheticUnknown: AstNode
-  SyntheticStringLiteral: AstNode
+  SyntheticAstNode: SyntheticAstNode
 }
-export function createStringLiteralAstDescription(name: string): AstNodeDescription {
+
+export interface SyntheticAstNode extends AstNode {
+  $type: 'SyntheticAstNode'
+  content: SyntheticAstNodeContent
+}
+
+export type SyntheticAstNodeContent = NamespaceNode<AstNode> | { $type: 'Unknown' }
+
+/**
+ * Wrap a given content as an AstNode.
+ * This is used to create synthetic nodes for the purpose of linking.
+ *
+ * @param content The content to wrap
+ * @returns The wrapped content as an AstNode.
+ */
+export function createSyntheticAstNode(content: SyntheticAstNodeContent): SyntheticAstNode {
+  return {
+    $type: 'SyntheticAstNode',
+    content,
+  }
+}
+
+/**
+ * Wrap a given content as an AstNodeDescription.
+ * This is used to create synthetic descriptions for the purpose of linking.
+ *
+ * @param name The name of the synthetic node
+ * @param content The content to wrap
+ * @returns The wrapped content as an AstNodeDescription.
+ */
+export function createSyntheticAstNodeDescription(name: string, content: SyntheticAstNodeContent): AstNodeDescription {
   return {
     name,
-    node: createSyntheticStringLiteral(),
-    type: 'SyntheticStringLiteral',
-    documentUri: URI.from({ scheme: 'unknown' }),
+    type: 'SyntheticAstNode',
+    node: createSyntheticAstNode(content),
+    documentUri: URI.from({ scheme: 'synthetic', path: name }),
     path: '',
   }
 }
 
-export function createUnknownAstDescription(name: string): AstNodeDescription {
-  return {
-    name,
-    node: createUnknownAst(),
-    type: 'SyntheticUnknown',
-    documentUri: URI.from({ scheme: 'unknown' }),
-    path: '',
-  }
-}
-
-export function createUnknownAst(): AstNode {
-  return {
-    $type: 'SyntheticUnknown',
-  }
-}
-
-export function createSyntheticStringLiteral(): AstNode {
-  return {
-    $type: 'SyntheticStringLiteral',
-  }
-}
-
-export function isSyntheticAstNode(node: AstNode): boolean {
-  return node?.$type?.startsWith('Synthetic')
+export function isSyntheticAstNode(node: AstNode): node is SyntheticAstNode {
+  return node.$type === 'SyntheticAstNode'
 }

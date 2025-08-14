@@ -1,9 +1,9 @@
 import type { ExpressionStatement, MemberAccess } from '../../../src/generated/ast'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { assertNoErrors, createTestServices, getDocument } from '../../utils'
+import { assertNoErrors, createTestServicesWithWorkspace, getDocument } from '../../utils'
 
-const services = await createTestServices(__dirname)
+const services = await createTestServicesWithWorkspace(__dirname)
 
 describe(`check dynamic member`, async () => {
   const document_member_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'member.zs'))
@@ -16,7 +16,7 @@ describe(`check dynamic member`, async () => {
   })
 
   it('check inferring dynamic member', () => {
-    const bar = expression_justAny_foo_bar.target.ref
+    const bar = expression_justAny_foo_bar.entity.ref
     const type_bar = services.typing.TypeComputer.inferType(bar)
     expect(bar).toBeDefined()
     expect(type_bar?.toString()).toBe('any')

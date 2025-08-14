@@ -9,7 +9,6 @@ import { ZenScriptCompletionProvider } from './lsp/completion-provider'
 import { ZenScriptInlayHintProvider } from './lsp/inlay-hint-provider'
 import { ZenScriptNodeKindProvider } from './lsp/node-kind-provider'
 import { ZenScriptSemanticTokenProvider } from './lsp/semantic-token-provider'
-import { ZenScriptDynamicProvider } from './reference/dynamic-provider'
 import { ZenScriptLinker } from './reference/linker'
 import { ZenScriptMemberProvider } from './reference/member-provider'
 import { ZenScriptNameProvider } from './reference/name-provider'
@@ -19,10 +18,9 @@ import { ZenScriptOverloadResolver } from './typing/overload-resolver'
 import { ZenScriptTypeComputer } from './typing/type-computer'
 import { ZenScriptTypeFeatures } from './typing/type-features'
 import { registerValidationChecks, ZenScriptValidator } from './validation/validator'
+import { ZenScriptAstNodeDescriptionProvider } from './workspace/ast-descriptions'
 import { ZenScriptBracketManager } from './workspace/bracket-manager'
 import { ZenScriptConfigurationManager } from './workspace/configuration-manager'
-import { ZenScriptDescriptionCache } from './workspace/description-cache'
-import { ZenScriptDescriptionCreator } from './workspace/description-creator'
 import { ZenScriptDocumentUpdateHandler } from './workspace/document-update-handler'
 import { ZenScriptPackageManager } from './workspace/package-manager'
 import { ZenScriptWorkspaceManager } from './workspace/workspace-manager'
@@ -36,7 +34,7 @@ export interface ZenScriptAddedServices {
   }
   references: {
     MemberProvider: ZenScriptMemberProvider
-    DynamicProvider: ZenScriptDynamicProvider
+    PackageManager: ZenScriptPackageManager
   }
   typing: {
     TypeComputer: ZenScriptTypeComputer
@@ -49,9 +47,7 @@ export interface ZenScriptAddedSharedServices {
   workspace: {
     WorkspaceManager: ZenScriptWorkspaceManager
     ConfigurationManager: ZenScriptConfigurationManager
-    PackageManager: ZenScriptPackageManager
     BracketManager: ZenScriptBracketManager
-    DescriptionCache: ZenScriptDescriptionCache
   }
 }
 
@@ -77,11 +73,11 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     ScopeComputation: services => new ZenScriptScopeComputation(services),
     ScopeProvider: services => new ZenScriptScopeProvider(services),
     MemberProvider: services => new ZenScriptMemberProvider(services),
-    DynamicProvider: services => new ZenScriptDynamicProvider(services),
+    PackageManager: services => new ZenScriptPackageManager(services),
     Linker: services => new ZenScriptLinker(services),
   },
   workspace: {
-    AstNodeDescriptionProvider: services => new ZenScriptDescriptionCreator(services),
+    AstNodeDescriptionProvider: services => new ZenScriptAstNodeDescriptionProvider(services),
   },
   parser: {
     TokenBuilder: () => new CustomTokenBuilder(),
@@ -103,9 +99,7 @@ export const ZenScriptSharedModule: Module<ZenScriptSharedServices, PartialLangi
   workspace: {
     WorkspaceManager: services => new ZenScriptWorkspaceManager(services),
     ConfigurationManager: services => new ZenScriptConfigurationManager(services),
-    PackageManager: services => new ZenScriptPackageManager(services),
     BracketManager: services => new ZenScriptBracketManager(services),
-    DescriptionCache: () => new ZenScriptDescriptionCache(),
   },
   lsp: {
     NodeKindProvider: () => new ZenScriptNodeKindProvider(),

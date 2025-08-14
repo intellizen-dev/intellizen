@@ -1,9 +1,9 @@
 import type { CallExpression, ExpressionStatement } from '../../../src/generated/ast'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { assertNoErrors, createTestServices, getDocument } from '../../utils'
+import { assertNoErrors, createTestServicesWithWorkspace, getDocument } from '../../utils'
 
-const services = await createTestServices(__dirname)
+const services = await createTestServicesWithWorkspace(__dirname)
 
 describe(`check dynamic arguments`, async () => {
   const document_argument_zs = await getDocument(services, path.resolve(__dirname, 'scripts', 'argument.zs'))
@@ -16,7 +16,7 @@ describe(`check dynamic arguments`, async () => {
   })
 
   it('check inferring dynamic argument', () => {
-    const up = expression_apply_up.arguments[0]
+    const up = expression_apply_up.args[0]
     const type_up = services.typing.TypeComputer.inferType(up)
     expect(up).toBeDefined()
     expect(type_up?.toString()).toBe('Facing')

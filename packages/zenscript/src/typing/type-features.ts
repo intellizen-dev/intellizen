@@ -26,8 +26,8 @@ export interface SubType {
 
 export type TypeFeatures = TypeAssignability & TypeEquality & TypeConversion & SubType
 
-type SourceMap = ZenScriptType
-type RuleMap = { [K in keyof SourceMap]?: (self: SourceMap[K], other: Type) => boolean }
+type RuleSpec = ZenScriptType
+type RuleMap = { [K in keyof RuleSpec]?: (self: RuleSpec[K], other: Type) => boolean }
 
 export class ZenScriptTypeFeatures implements TypeFeatures {
   private readonly typeComputer: TypeComputer
@@ -93,12 +93,12 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
         return false
       }
 
-      if (self.declaration.typeParameters.length !== other.declaration.typeParameters.length) {
+      if (self.declaration.typeParams.length !== other.declaration.typeParams.length) {
         return false
       }
 
-      const selfSubstitutions = self.declaration.typeParameters.map(it => self.substitutions.get(it)).filter(it => !!it)
-      const otherSubstitutions = other.declaration.typeParameters.map(it => other.substitutions.get(it)).filter(it => !!it)
+      const selfSubstitutions = self.declaration.typeParams.map(it => self.substitutions.get(it)).filter(it => !!it)
+      const otherSubstitutions = other.declaration.typeParams.map(it => other.substitutions.get(it)).filter(it => !!it)
       return selfSubstitutions.every((type, index) => this.areTypesEqual(type, otherSubstitutions[index]))
     },
 
@@ -146,8 +146,8 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
 
       return this.memberProvider.streamMembers(from)
         .filter(isOperatorFunctionDeclaration)
-        .filter(it => it.op === 'as')
-        .map(it => this.typeComputer.inferType(it.returnTypeRef))
+        .filter(it => it.operator === 'as')
+        .map(it => this.typeComputer.inferType(it.retType))
         .nonNullable()
         .some(it => this.isSubType(to, it))
     },
@@ -164,7 +164,7 @@ export class ZenScriptTypeFeatures implements TypeFeatures {
       else if (isClassType(to)) {
         const lambdaDecl = this.memberProvider.streamMembers(to)
           .filter(isFunctionDeclaration)
-          .filter(it => it.prefix === 'lambda')
+          .filter(it => it.variance === 'lambda')
           .head()
         toFuncType = this.typeComputer.inferType(lambdaDecl)
       }

@@ -1,77 +1,70 @@
-import type { ForStatement, IfStatement, VariableDeclaration } from '../../src/generated/ast'
+import type { LangiumDocument } from 'langium'
+import type { ForStatement, IfStatement, Script, VariableDeclaration } from '../../src/generated/ast'
 import { describe, expect, it } from 'vitest'
-import { isExpandFunctionDeclaration } from '../../src/generated/ast'
-import { assertClassTypeReference, assertNoErrors, assertVariableDeclaration, createParseHelper } from '../utils'
+import { FunctionDeclaration, isExpandFunctionDeclaration } from '../../src/generated/ast'
+import { assertClassTypeReference, assertNoErrors, assertVariableDeclaration, createTestParser } from '../utils'
 
-const parse = createParseHelper()
-
-async function parseModel(input: string) {
-  return parse(input, { validation: true })
-}
+const parse = createTestParser()
 
 describe('parse top-level of script with ZenScript', () => {
   it('import declaration', async () => {
-    const model = await parseModel('import foo.bar.baz;')
+    const model = await parse('import foo.bar.baz;') as LangiumDocument<Script>
     const refImport = model.parseResult.value.imports[0]
     await assertNoErrors(model)
     expect(refImport.path.map(p => p.$refText)).toStrictEqual(['foo', 'bar', 'baz'])
   })
 
   it('function declaration', async () => {
-    const model = await parseModel(`
-      function foo(a as int) as int {}
-      static function bar() as void {}
-      global function baz(c as OtherType) as any {}
-    `)
-    await assertNoErrors(model)
-    const [foo, bar, baz] = model.parseResult.value.functions
+    const foo = (await parse('function foo(a as int) as int {}', { ext: '.zs', rule: FunctionDeclaration.$type })).parseResult.value as FunctionDeclaration
+    const bar = (await parse('static function bar() as void', { ext: '.dzs', rule: FunctionDeclaration.$type })).parseResult.value as FunctionDeclaration
+    const baz = (await parse('global function baz(c as OtherType) as any', { ext: '.dzs', rule: FunctionDeclaration.$type })).parseResult.value as FunctionDeclaration
 
-    expect(foo.prefix).toBeUndefined()
+    expect(foo.variance).toBeUndefined()
     expect(foo.name).toBe('foo')
-    expect(foo.parameters.length).toBe(1)
-    expect(foo.parameters[0].name).toBe('a')
-    assertClassTypeReference(foo.parameters[0].typeRef, 'int')
-    assertClassTypeReference(foo.returnTypeRef, 'int')
+    expect(foo.params.length).toBe(1)
+    expect(foo.params[0].name).toBe('a')
+    assertClassTypeReference(foo.params[0].type, 'int')
+    assertClassTypeReference(foo.retType, 'int')
 
-    expect(bar.prefix).toBe('static')
+    expect(bar.variance).toBe('static')
     expect(bar.name).toBe('bar')
-    expect(bar.parameters.length).toBe(0)
-    assertClassTypeReference(bar.returnTypeRef, 'void')
+    expect(bar.params.length).toBe(0)
+    assertClassTypeReference(bar.retType, 'void')
 
-    expect(baz.prefix).toBe('global')
+    expect(baz.variance).toBe('global')
     expect(baz.name).toBe('baz')
-    expect(baz.parameters.length).toBe(1)
-    expect(baz.parameters[0].name).toBe('c')
-    assertClassTypeReference(baz.parameters[0].typeRef, 'OtherType')
-    assertClassTypeReference(baz.returnTypeRef, 'any')
+    expect(baz.params.length).toBe(1)
+    expect(baz.params[0].name).toBe('c')
+    assertClassTypeReference(baz.params[0].type, 'OtherType')
+    assertClassTypeReference(baz.retType, 'any')
   })
 
   it('expand function declaration', async () => {
-    const model = await parseModel(`
+    const model = await parse(`
       $expand string$reverse() as string {}
       $expand OtherType$foo(foo as OtherType.ChildType) as void {}
-    `)
+    `) as LangiumDocument<Script>
     await assertNoErrors(model)
     const [string$reverse, otherType$foo] = model.parseResult.value.expands.filter(isExpandFunctionDeclaration)
 
     expect(string$reverse.name).toBe('reverse')
-    assertClassTypeReference(string$reverse.typeRef, 'string')
-    expect(string$reverse.parameters.length).toBe(0)
-    assertClassTypeReference(string$reverse.returnTypeRef, 'string')
+    assertClassTypeReference(string$reverse.type, 'string')
+    expect(string$reverse.params.length).toBe(0)
+    assertClassTypeReference(string$reverse.retType, 'string')
 
     expect(otherType$foo.name).toBe('foo')
-    assertClassTypeReference(string$reverse.typeRef, 'string')
-    expect(otherType$foo.parameters.length).toBe(1)
-    expect(otherType$foo.parameters[0].name).toBe('foo')
-    assertClassTypeReference(otherType$foo.parameters[0].typeRef, 'OtherType.ChildType')
-    assertClassTypeReference(otherType$foo.returnTypeRef, 'void')
+    assertClassTypeReference(string$reverse.type, 'string')
+    expect(otherType$foo.params.length).toBe(1)
+    expect(otherType$foo.params[0].name).toBe('foo')
+    assertClassTypeReference(otherType$foo.params[0].type, 'OtherType.ChildType')
+    assertClassTypeReference(otherType$foo.retType, 'void')
   })
 
   it('class declaration', async () => {
-    const model = await parseModel(`
+    const model = await parse(`
       zenClass Foo {}
       zenClass Bar extends Foo, Baz, Other.Child {} // zenutils
-    `)
+    `, { ext: '.dzs' }) as LangiumDocument<Script>
     await assertNoErrors(model)
 
     const [foo, bar] = model.parseResult.value.classes
@@ -83,7 +76,7 @@ describe('parse top-level of script with ZenScript', () => {
   })
 
   it('class with members', async () => {
-    const model = await parseModel(`
+    const model = await parse(`
       zenClass Foo {
         static foo as string = 'foo';
         
@@ -93,7 +86,7 @@ describe('parse top-level of script with ZenScript', () => {
           return this;
         }
       }
-    `)
+    `, { ext: '.zs' }) as LangiumDocument<Script>
     await assertNoErrors(model)
 
     const classFoo = model.parseResult.value.classes[0]
@@ -107,7 +100,7 @@ describe('parse top-level of script with ZenScript', () => {
   })
 
   it('statements', async () => {
-    const model = await parseModel(`
+    const model = await parse(`
       if (true) {}
       else if (false) {}
       else {}
@@ -122,7 +115,7 @@ describe('parse top-level of script with ZenScript', () => {
       static b as string = '2';
       var c as bool = true;
       val d = false;
-    `)
+    `, { ext: '.zs' }) as LangiumDocument<Script>
     await assertNoErrors(model)
     const [
       ifStatement,
@@ -148,20 +141,20 @@ describe('parse top-level of script with ZenScript', () => {
     expect(whileStatement.$type).toBe('WhileStatement')
 
     expect(forStatementEachNumber.$type).toBe('ForStatement')
-    expect((forStatementEachNumber as ForStatement).parameters.map(item => item.name)).toStrictEqual(['i'])
+    expect((forStatementEachNumber as ForStatement).params.map(item => item.name)).toStrictEqual(['i'])
     expect(forStatementEachArray.$type).toBe('ForStatement')
-    expect((forStatementEachArray as ForStatement).parameters.map(item => item.name)).toStrictEqual(['item'])
+    expect((forStatementEachArray as ForStatement).params.map(item => item.name)).toStrictEqual(['item'])
 
-    assertVariableDeclaration(global$VariableDeclaration, { prefix: 'global', name: 'a' })
-    assertClassTypeReference((global$VariableDeclaration as VariableDeclaration).typeRef, 'int')
+    assertVariableDeclaration(global$VariableDeclaration, { variance: 'global', name: 'a' })
+    assertClassTypeReference((global$VariableDeclaration as VariableDeclaration).type, 'int')
 
-    assertVariableDeclaration(static$VariableDeclaration, { prefix: 'static', name: 'b' })
-    assertClassTypeReference((static$VariableDeclaration as VariableDeclaration).typeRef, 'string')
+    assertVariableDeclaration(static$VariableDeclaration, { variance: 'static', name: 'b' })
+    assertClassTypeReference((static$VariableDeclaration as VariableDeclaration).type, 'string')
 
-    assertVariableDeclaration(var$VariableDeclaration, { prefix: 'var', name: 'c' })
-    assertClassTypeReference((var$VariableDeclaration as VariableDeclaration).typeRef, 'bool')
+    assertVariableDeclaration(var$VariableDeclaration, { variance: 'var', name: 'c' })
+    assertClassTypeReference((var$VariableDeclaration as VariableDeclaration).type, 'bool')
 
-    assertVariableDeclaration(val$VariableDeclaration, { prefix: 'val', name: 'd' })
-    expect((val$VariableDeclaration as VariableDeclaration).typeRef).toBeUndefined()
+    assertVariableDeclaration(val$VariableDeclaration, { variance: 'val', name: 'd' })
+    expect((val$VariableDeclaration as VariableDeclaration).type).toBeUndefined()
   })
 })

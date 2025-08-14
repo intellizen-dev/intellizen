@@ -4,10 +4,9 @@ import type { CompletionItemLabelDetails } from 'vscode-languageserver'
 import type { BracketExpression, BracketProperty, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
-import type { BracketEntry } from '../resource'
 import type { TypeComputer } from '../typing/type-computer'
-import type { HierarchyNode } from '../utils/hierarchy-tree'
-import type { ZenScriptBracketManager } from '../workspace/bracket-manager'
+import type { NamespaceNode } from '../utils/namespace-tree'
+import type { BracketEntry, ZenScriptBracketManager } from '../workspace/bracket-manager'
 import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, CstUtils, GrammarAST, stream } from 'langium'
 import { DefaultCompletionProvider } from 'langium/lsp'
@@ -15,11 +14,10 @@ import { CompletionItemKind } from 'vscode-languageserver'
 import { isBracketExpression, isBracketLocation, isBracketProperty, isOperatorFunctionDeclaration, isUnquotedString } from '../generated/ast'
 import { isFunctionType } from '../typing/type-description'
 import { getPathAsString, toAstNode } from '../utils/ast'
-import { isZs } from '../utils/document'
 import { defineRules } from '../utils/rule'
 
-type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CompletionItemLabelDetails | undefined }
+type RuleSpec = ZenScriptAstType & ZenScriptSyntheticAstType
+type RuleMap = { [K in keyof RuleSpec]?: (element: RuleSpec[K]) => CompletionItemLabelDetails | undefined }
 
 export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private readonly typeComputer: TypeComputer
@@ -62,24 +60,24 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       subPath = ''
     }
 
-    const tree = this.bracketManager.entryTree.find(subPath)
-    if (!tree) {
+    const node = this.bracketManager.entries.findNode(subPath)
+    if (!node) {
       return
     }
 
-    this.completionForBracketLocation(tree, context, next, acceptor)
-    this.completionForBracketProperty(tree, context, next, acceptor)
+    this.completionForBracketLocation(node, context, next, acceptor)
+    this.completionForBracketProperty(node, context, next, acceptor)
   }
 
-  private completionForBracketLocation(tree: HierarchyNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+  private completionForBracketLocation(node: NamespaceNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     const requiredNextFeature
       = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
     if (!requiredNextFeature) {
       return
     }
 
-    const middles = stream(tree.children.values())
-      .filter(node => node.isInternalNode())
+    const middles = stream(node.children.values())
+      .filter(node => !node.hasData())
       .map(node => ({ node, label: node.name }))
 
     for (const middle of middles) {
@@ -101,8 +99,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       acceptor(context, item)
     }
 
-    const ends = stream(tree.children.values())
-      .filter(node => node.isDataNode())
+    const ends = stream(node.children.values())
+      .filter(node => node.hasData())
       .flatMap(node => node.data.values().map(entry => ({ label: node.name, description: entry.name })))
 
     for (const end of ends) {
@@ -122,8 +120,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
     }
   }
 
-  private completionForBracketProperty(tree: HierarchyNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
-    const entry = tree.data.values().next().value
+  private completionForBracketProperty(node: NamespaceNode<BracketEntry>, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
+    const entry = node.data.values().next().value
     if (!entry) {
       return
     }
@@ -141,7 +139,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
 
     const invalidContainerProperty
       = (context.node?.$containerProperty === 'properties')
-      || (context.node?.$containerProperty === 'value')
+        || (context.node?.$containerProperty === 'value')
     if (invalidContainerProperty) {
       return
     }
@@ -169,7 +167,7 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   private completionForBracketPropertyValue(entry: BracketEntry, context: CompletionContext, next: NextFeature, acceptor: CompletionAcceptor): void {
     const requiredNextFeature
       = (GrammarAST.isRuleCall(next.feature) && next.feature.rule.ref?.name === 'IDENTIFIER')
-      || (GrammarAST.isKeyword(next.feature) && next.feature.value === '=')
+        || (GrammarAST.isKeyword(next.feature) && next.feature.value === '=')
     if (!requiredNextFeature) {
       return
     }
@@ -216,9 +214,9 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   override createReferenceCompletionItem(nodeDescription: AstNodeDescription): CompletionValueItem {
-    const source = toAstNode(nodeDescription)
+    const element = toAstNode(nodeDescription)
     const kind = this.nodeKindProvider.getCompletionItemKind(nodeDescription)
-    const labelDetails = this.labelDetailRules(source?.$type)?.call(this, source)
+    const labelDetails = this.labelDetailRules(element?.$type)?.call(this, element)
 
     return {
       nodeDescription,
@@ -229,8 +227,8 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
   }
 
   private readonly labelDetailRules = defineRules<RuleMap>({
-    ClassDeclaration: (source) => {
-      const qualifiedName = this.nameProvider.getQualifiedName(source)
+    ClassDeclaration: (element) => {
+      const qualifiedName = this.nameProvider.getQualifiedName(element)
       if (qualifiedName) {
         return {
           description: substringBeforeLast(qualifiedName, '.'),
@@ -238,13 +236,13 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       }
     },
 
-    FunctionDeclaration: (source) => {
-      const funcType = this.typeComputer.inferType(source)
+    FunctionDeclaration: (element) => {
+      const funcType = this.typeComputer.inferType(element)
       if (!isFunctionType(funcType)) {
         return
       }
 
-      const params = source.parameters.map((param, index) => {
+      const params = element.params.map((param, index) => {
         return `${param.name}: ${funcType.paramTypes[index].toString()}`
       }).join(', ')
 
@@ -254,47 +252,30 @@ export class ZenScriptCompletionProvider extends DefaultCompletionProvider {
       }
     },
 
-    ImportDeclaration: (source) => {
+    ImportDeclaration: (element) => {
       return {
-        description: getPathAsString(source),
+        description: getPathAsString(element),
       }
     },
 
-    VariableDeclaration: (source) => {
+    VariableDeclaration: (element) => {
       return {
-        description: this.typeComputer.inferType(source)?.toString(),
+        description: this.typeComputer.inferType(element)?.toString(),
       }
     },
 
-    ValueParameter: (source) => {
+    ValueParameter: (element) => {
       return {
-        description: this.typeComputer.inferType(source)?.toString(),
+        description: this.typeComputer.inferType(element)?.toString(),
       }
     },
 
-    FieldDeclaration: (source) => {
+    FieldDeclaration: (element) => {
       return {
-        description: this.typeComputer.inferType(source)?.toString(),
+        description: this.typeComputer.inferType(element)?.toString(),
       }
     },
   })
-
-  override filterKeyword(context: CompletionContext, keyword: GrammarAST.Keyword): boolean {
-    if (isZs(context.document) && this.ZsKeywordBlackList.has(keyword.value)) {
-      return false
-    }
-    else {
-      return super.filterKeyword(context, keyword)
-    }
-  }
-
-  readonly ZsKeywordBlackList = new Set([
-    'default',
-    'expand',
-    'lambda',
-    'operator',
-    'package',
-  ])
 
   override getReferenceCandidates(refInfo: ReferenceInfo, context: CompletionContext): Stream<AstNodeDescription> {
     return this.scopeProvider.getScope(refInfo).getAllElements().filter(desc => this.filterReference(context, desc))

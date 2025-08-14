@@ -2,7 +2,7 @@ import type { AstNode, CstNode } from 'langium'
 import type { Script, ZenScriptAstType } from '../generated/ast'
 import { AstUtils, DefaultNameProvider, GrammarUtils } from 'langium'
 import { isClassDeclaration, isScript } from '../generated/ast'
-import { isImportable, isStatic, isToplevel } from '../utils/ast'
+import { isExposed, isStatic, isToplevel } from '../utils/ast'
 import { getName, getQualifiedName } from '../utils/document'
 import { defineRules } from '../utils/rule'
 
@@ -12,9 +12,8 @@ declare module 'langium' {
   }
 }
 
-type SourceMap = ZenScriptAstType
-type NameRuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => string | undefined }
-type NameNodeRuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => CstNode | undefined }
+type RuleSpec = ZenScriptAstType
+type RuleMap<R> = { [K in keyof RuleSpec]?: (element: RuleSpec[K]) => R | undefined }
 
 export class ZenScriptNameProvider extends DefaultNameProvider {
   getName(node: AstNode): string | undefined {
@@ -34,7 +33,7 @@ export class ZenScriptNameProvider extends DefaultNameProvider {
     if (isScript(node)) {
       return getQualifiedName(document)
     }
-    else if (isToplevel(node) && isImportable(node)) {
+    else if (isToplevel(node) && isExposed(node)) {
       return concat(getQualifiedName(document), this.getName(node))
     }
     else if (isClassDeclaration(node.$container) && isStatic(node)) {
@@ -42,18 +41,18 @@ export class ZenScriptNameProvider extends DefaultNameProvider {
     }
   }
 
-  private readonly nameRules = defineRules<NameRuleMap>({
-    Script: source => source.$document ? getName(source.$document) : undefined,
-    ImportDeclaration: source => source.alias || source.path.at(-1)?.$refText,
-    FunctionDeclaration: source => source.name || 'lambda function',
-    ConstructorDeclaration: source => source.$container.name,
-    OperatorFunctionDeclaration: source => source.op,
+  private readonly nameRules = defineRules<RuleMap<string>>({
+    Script: element => element.$document ? getName(element.$document) : undefined,
+    ImportDeclaration: element => element.alias || element.path.at(-1)?.$refText,
+    FunctionDeclaration: element => element.name || 'lambda function',
+    ConstructorDeclaration: element => element.$container.name,
+    OperatorFunctionDeclaration: element => element.operator,
   })
 
-  private readonly nameNodeRules = defineRules<NameNodeRuleMap>({
-    ImportDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'alias'),
-    ConstructorDeclaration: source => GrammarUtils.findNodeForKeyword(source.$cstNode, 'zenConstructor'),
-    OperatorFunctionDeclaration: source => GrammarUtils.findNodeForProperty(source.$cstNode, 'op'),
+  private readonly nameNodeRules = defineRules<RuleMap<CstNode>>({
+    ImportDeclaration: element => GrammarUtils.findNodeForProperty(element.$cstNode, 'alias'),
+    ConstructorDeclaration: element => GrammarUtils.findNodeForKeyword(element.$cstNode, 'zenConstructor'),
+    OperatorFunctionDeclaration: element => GrammarUtils.findNodeForProperty(element.$cstNode, 'operator'),
   })
 }
 

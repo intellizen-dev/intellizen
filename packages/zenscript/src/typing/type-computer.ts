@@ -1,3 +1,4 @@
+import type { AstNode } from 'langium'
 import type { ClassDeclaration, ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { MemberProvider } from '../reference/member-provider'
@@ -5,31 +6,31 @@ import type { ZenScriptSyntheticAstType } from '../reference/synthetic'
 import type { BracketManager } from '../workspace/bracket-manager'
 import type { PackageManager } from '../workspace/package-manager'
 import type { BuiltinTypes, Type, TypeParameterSubstitutions } from './type-description'
-import { type AstNode, stream } from 'langium'
-import { isAssignment, isCallExpression, isClassDeclaration, isConstructorDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isIndexingExpression, isMemberAccess, isOperatorFunctionDeclaration, isReferenceExpression, isTypeParameter, isVariableDeclaration } from '../generated/ast'
+import { AstUtils, stream } from 'langium'
+import { isAssignment, isCallExpression, isClassDeclaration, isConstructorDeclaration, isExpression, isFunctionDeclaration, isFunctionExpression, isIndexExpression, isMemberAccess, isOperatorFunctionDeclaration, isReferenceExpression, isTypeParameter, isVariableDeclaration } from '../generated/ast'
 import { defineRules } from '../utils/rule'
-import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isClassType, isFunctionType, TypeVariable, UnionType } from './type-description'
+import { ClassType, CompoundType, FunctionType, IntersectionType, isAnyType, isClassType, isFunctionType, TypeVariable } from './type-description'
 
 export interface TypeComputer {
   inferType: (node: AstNode | undefined) => Type | undefined
 }
 
-type SourceMap = ZenScriptAstType & ZenScriptSyntheticAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K]) => Type | undefined }
+type RuleSpec = ZenScriptAstType & ZenScriptSyntheticAstType
+type RuleMap = { [K in keyof RuleSpec]?: (element: RuleSpec[K]) => Type | undefined }
 
 export class ZenScriptTypeComputer implements TypeComputer {
-  private readonly packageManager: PackageManager
   private readonly bracketManager: BracketManager
+  private readonly packageManager: () => PackageManager
   private readonly memberProvider: () => MemberProvider
 
   constructor(services: ZenScriptServices) {
-    this.packageManager = services.shared.workspace.PackageManager
     this.bracketManager = services.shared.workspace.BracketManager
+    this.packageManager = () => services.references.PackageManager
     this.memberProvider = () => services.references.MemberProvider
   }
 
   public inferType(node: AstNode | undefined): Type | undefined {
-    return this.rules(node?.$type)?.call(this, node)
+    return this.inferRules(node?.$type)?.call(this, node)
   }
 
   private classTypeOf(className: BuiltinTypes | string, substitutions: TypeParameterSubstitutions = new Map()): ClassType {
@@ -41,61 +42,50 @@ export class ZenScriptTypeComputer implements TypeComputer {
   }
 
   private classDeclOf(className: BuiltinTypes | string): ClassDeclaration | undefined {
-    return stream(this.packageManager.retrieve(className)).find(isClassDeclaration)
+    return stream(this.packageManager().find(className)).find(isClassDeclaration)
   }
 
-  private readonly rules = defineRules<RuleMap>({
-    // region TypeReference
-    ArrayTypeReference: (source) => {
+  private readonly inferRules = defineRules<RuleMap>({
+    ArrayType: (element) => {
       const arrayType = this.classTypeOf('Array')
-      const T = arrayType.declaration.typeParameters[0]
-      arrayType.substitutions.set(T, this.inferType(source.value) ?? this.classTypeOf('any'))
+      const T = arrayType.declaration.typeParams[0]
+      arrayType.substitutions.set(T, this.inferType(element.value) ?? this.classTypeOf('any'))
       return arrayType
     },
 
-    ListTypeReference: (source) => {
+    ListType: (element) => {
       const listType = this.classTypeOf('List')
-      const T = listType.declaration.typeParameters[0]
-      listType.substitutions.set(T, this.inferType(source.value) ?? this.classTypeOf('any'))
+      const T = listType.declaration.typeParams[0]
+      listType.substitutions.set(T, this.inferType(element.value) ?? this.classTypeOf('any'))
       return listType
     },
 
-    MapTypeReference: (source) => {
+    MapType: (element) => {
       const mapType = this.classTypeOf('Map')
-      const K = mapType.declaration.typeParameters[0]
-      const V = mapType.declaration.typeParameters[1]
-      mapType.substitutions.set(K, this.inferType(source.key) ?? this.classTypeOf('any'))
-      mapType.substitutions.set(V, this.inferType(source.value) ?? this.classTypeOf('any'))
+      const K = mapType.declaration.typeParams[0]
+      const V = mapType.declaration.typeParams[1]
+      mapType.substitutions.set(K, this.inferType(element.key) ?? this.classTypeOf('any'))
+      mapType.substitutions.set(V, this.inferType(element.value) ?? this.classTypeOf('any'))
       return mapType
     },
 
-    UnionTypeReference: (source) => {
-      const types = source.values.map(it => this.inferType(it) ?? this.classTypeOf('any'))
-      return new UnionType(types)
-    },
-
-    IntersectionTypeReference: (source) => {
-      const types = source.values.map(it => this.inferType(it) ?? this.classTypeOf('any'))
-      return new IntersectionType(types)
-    },
-
-    CompoundTypeReference: (source) => {
-      const types = source.values.map(it => this.inferType(it) ?? this.classTypeOf('any'))
+    CompoundType: (element) => {
+      const types = element.values.map(it => this.inferType(it) ?? this.classTypeOf('any'))
       return new CompoundType(types)
     },
 
-    ParenthesizedTypeReference: (source) => {
-      return this.inferType(source.value)
+    ParenthesizedType: (element) => {
+      return this.inferType(element.value)
     },
 
-    FunctionTypeReference: (source) => {
-      const paramTypes = source.params.map(it => this.inferType(it) ?? this.classTypeOf('any'))
-      const returnType = this.inferType(source.returnType) ?? this.classTypeOf('any')
+    FunctionType: (element) => {
+      const paramTypes = element.params.map(it => this.inferType(it) ?? this.classTypeOf('any'))
+      const returnType = this.inferType(element.retType) ?? this.classTypeOf('any')
       return new FunctionType(paramTypes, returnType)
     },
 
-    NamedTypeReference: (source) => {
-      const ref = source.path.at(-1)?.ref
+    NamedType: (element) => {
+      const ref = element.path.at(-1)?.ref
       if (isTypeParameter(ref)) {
         return new TypeVariable(ref)
       }
@@ -103,108 +93,106 @@ export class ZenScriptTypeComputer implements TypeComputer {
         return new ClassType(ref, new Map())
       }
     },
-    // endregion
 
-    // region Declaration
-    VariableDeclaration: (source) => {
-      if (source.typeRef) {
-        return this.inferType(source.typeRef) ?? this.classTypeOf('any')
+    VariableDeclaration: (element) => {
+      if (element.type) {
+        return this.inferType(element.type) ?? this.classTypeOf('any')
       }
-      else if (source.initializer) {
-        return this.inferType(source.initializer) ?? this.classTypeOf('any')
+      else if (element.initializer) {
+        return this.inferType(element.initializer) ?? this.classTypeOf('any')
       }
       else {
         return this.classTypeOf('any')
       }
     },
 
-    FunctionDeclaration: (source) => {
-      const paramTypes = source.parameters.map(it => this.inferType(it) ?? this.classTypeOf('any'))
-      const returnType = this.inferType(source.returnTypeRef) ?? this.classTypeOf('any')
+    FunctionDeclaration: (element) => {
+      const paramTypes = element.params.map(it => this.inferType(it) ?? this.classTypeOf('any'))
+      const returnType = this.inferType(element.retType) ?? this.classTypeOf('any')
       return new FunctionType(paramTypes, returnType)
     },
 
-    FieldDeclaration: (source) => {
-      if (source.typeRef) {
-        return this.inferType(source.typeRef) ?? this.classTypeOf('any')
+    FieldDeclaration: (element) => {
+      if (element.type) {
+        return this.inferType(element.type) ?? this.classTypeOf('any')
       }
-      else if (source.initializer) {
-        return this.inferType(source.initializer) ?? this.classTypeOf('any')
+      else if (element.initializer) {
+        return this.inferType(element.initializer) ?? this.classTypeOf('any')
       }
       else {
         return this.classTypeOf('any')
       }
     },
 
-    LoopParameter: (source) => {
-      const length = source.$container.parameters.length
-      const index = source.$containerIndex
+    LoopParameter: (element) => {
+      const length = element.$container.params.length
+      const index = element.$containerIndex
       if (index === undefined) {
         return
       }
-      const rangeType = this.inferType(source.$container.range)
+      const rangeType = this.inferType(element.$container.range)
       if (!rangeType) {
         return
       }
 
-      const operator = this.memberProvider().streamOperators(rangeType)
-        .filter(it => it.op === 'for')
-        .filter(it => it.parameters.length === length)
+      const operator = this.memberProvider()
+        .streamMembers(rangeType).filter(isOperatorFunctionDeclaration)
+        .filter(it => it.operator === 'for')
+        .filter(it => it.params.length === length)
         .head()
 
-      let paramType = this.inferType(operator?.parameters.at(index))
+      let paramType = this.inferType(operator?.params.at(index))
       if (isClassType(rangeType)) {
         paramType = paramType?.substituteTypeParameters(rangeType.substitutions)
       }
       return paramType
     },
 
-    ValueParameter: (source) => {
-      if (source.typeRef) {
-        return this.inferType(source.typeRef)
+    ValueParameter: (element) => {
+      if (element.type) {
+        return this.inferType(element.type)
       }
 
-      if (source.defaultValue && isExpression(source.defaultValue)) {
-        return this.inferType(source.defaultValue)
+      if (element.defaultValue && isExpression(element.defaultValue)) {
+        return this.inferType(element.defaultValue)
       }
 
-      if (isFunctionExpression(source.$container)) {
-        const funcExpr = source.$container
-        const index = source.$containerIndex!
+      if (isFunctionExpression(element.$container)) {
+        const funcExpr = element.$container
+        const index = element.$containerIndex!
 
-        let expectingType: Type | undefined
-        if (isAssignment(funcExpr.$container) && funcExpr.$container.op === '=') {
-          expectingType = this.inferType(funcExpr.$container.left)
+        let expected: Type | undefined
+        if (isAssignment(funcExpr.$container) && funcExpr.$container.operator === '=') {
+          expected = this.inferType(funcExpr.$container.left)
         }
         else if (isVariableDeclaration(funcExpr.$container)) {
-          expectingType = this.inferType(funcExpr.$container.typeRef)
+          expected = this.inferType(funcExpr.$container.type)
         }
         else if (isCallExpression(funcExpr.$container)) {
           const callArgIndex = funcExpr.$containerIndex!
           const receiverType = this.inferType(funcExpr.$container.receiver)
-          expectingType = isFunctionType(receiverType) ? receiverType.paramTypes.at(callArgIndex) : receiverType
+          expected = isFunctionType(receiverType) ? receiverType.paramTypes.at(callArgIndex) : receiverType
         }
 
-        if (isAnyType(expectingType)) {
-          return expectingType
+        if (isAnyType(expected)) {
+          return expected
         }
-        else if (isFunctionType(expectingType)) {
-          return expectingType.paramTypes.at(index)
+        else if (isFunctionType(expected)) {
+          return expected.paramTypes.at(index)
         }
-        else if (isClassType(expectingType)) {
-          const lambdaDecl = this.memberProvider().streamMembers(expectingType)
-            .filter(it => isFunctionDeclaration(it))
-            .filter(it => it.prefix === 'lambda')
+        else if (isClassType(expected)) {
+          const lambdaDecl = this.memberProvider()
+            .streamMembers(expected)
+            .filter(isFunctionDeclaration)
+            .filter(it => it.variance === 'lambda')
             .head()
-          return this.inferType(lambdaDecl?.parameters.at(index))
+          return this.inferType(lambdaDecl?.params.at(index))
         }
       }
     },
-    // endregion
 
-    // region Expression
-    Assignment: (source) => {
-      switch (source.op) {
+    Assignment: (element) => {
+      switch (element.operator) {
         case '&=':
         case '|=':
         case '^=':
@@ -214,12 +202,14 @@ export class ZenScriptTypeComputer implements TypeComputer {
         case '/=':
         case '%=':
         case '~=':{
-          const leftType = this.inferType(source.left)
-          const operator = this.memberProvider().streamOperators(leftType)
-            .filter(it => it.op === source.op)
-            .filter(it => it.parameters.length === 1)
+          const leftType = this.inferType(element.left)
+          const operator = this.memberProvider()
+            .streamMembers(leftType)
+            .filter(isOperatorFunctionDeclaration)
+            .filter(it => it.operator === element.operator)
+            .filter(it => it.params.length === 1)
             .head()
-          let returnType = this.inferType(operator?.returnTypeRef)
+          let returnType = this.inferType(operator?.retType)
           if (isClassType(leftType)) {
             returnType = returnType?.substituteTypeParameters(leftType.substitutions)
           }
@@ -227,41 +217,45 @@ export class ZenScriptTypeComputer implements TypeComputer {
         }
 
         case '=': {
-          if (isIndexingExpression(source.left)) {
-            const operator = this.memberProvider().streamOperators(source.left)
-              .filter(it => it.op === '[]=')
-              .filter(it => it.parameters.length === 2)
+          if (isIndexExpression(element.left)) {
+            const operator = this.memberProvider()
+              .streamMembers(element.left)
+              .filter(isOperatorFunctionDeclaration)
+              .filter(it => it.operator === '[]=')
+              .filter(it => it.params.length === 2)
               .head()
-            return this.inferType(operator?.returnTypeRef)
+            return this.inferType(operator?.retType)
           }
           else {
-            return this.inferType(source.right)
+            return this.inferType(element.right)
           }
         }
       }
     },
 
-    ConditionalExpression: (source) => {
-      return this.inferType(source.second) ?? this.inferType(source.third)
+    ConditionalExpression: (element) => {
+      return this.inferType(element.thenBody) ?? this.inferType(element.elseBody)
     },
 
-    PrefixExpression: (source) => {
-      const exprType = this.inferType(source.expr)
-      switch (source.op) {
+    PrefixExpression: (element) => {
+      const exprType = this.inferType(element.expr)
+      switch (element.operator) {
         case '-':
         case '!': {
-          const operator = this.memberProvider().streamOperators(exprType)
-            .filter(it => it.op === source.op)
-            .filter(it => it.parameters.length === 0)
+          const operator = this.memberProvider()
+            .streamMembers(exprType)
+            .filter(isOperatorFunctionDeclaration)
+            .filter(it => it.operator === element.operator)
+            .filter(it => it.params.length === 0)
             .head()
-          return this.inferType(operator?.returnTypeRef)
+          return this.inferType(operator?.retType)
         }
       }
     },
 
-    InfixExpression: (source) => {
-      const leftType = this.inferType(source.left)
-      switch (source.op) {
+    InfixExpression: (element) => {
+      const leftType = this.inferType(element.left)
+      switch (element.operator) {
         case '&': // Bitwise
         case '|':
         case '^':
@@ -276,27 +270,23 @@ export class ZenScriptTypeComputer implements TypeComputer {
         case '>=':
         case '==':
         case '!=': {
-          const operator = this.memberProvider().streamOperators(leftType)
-            .filter(it => it.op === source.op)
-            .filter(it => it.parameters.length === 1)
+          const operator = this.memberProvider()
+            .streamMembers(leftType)
+            .filter(isOperatorFunctionDeclaration)
+            .filter(it => it.operator === element.operator)
+            .filter(it => it.params.length === 1)
             .head()
-          return this.inferType(operator?.returnTypeRef)
+          return this.inferType(operator?.retType)
         }
         case 'has': // Containment
         case 'in': {
-          const operator = this.memberProvider().streamOperators(leftType)
-            .filter(it => it.op === 'has')
-            .filter(it => it.parameters.length === 1)
+          const operator = this.memberProvider()
+            .streamMembers(leftType)
+            .filter(isOperatorFunctionDeclaration)
+            .filter(it => it.operator === 'has')
+            .filter(it => it.params.length === 1)
             .head()
-          return this.inferType(operator?.returnTypeRef)
-        }
-        case '..': // Range
-        case 'to': {
-          const operator = this.memberProvider().streamOperators(leftType)
-            .filter(it => it.op === '..')
-            .filter(it => it.parameters.length === 1)
-            .head()
-          return this.inferType(operator?.returnTypeRef)
+          return this.inferType(operator?.retType)
         }
 
         case '&&': // Logical
@@ -308,21 +298,32 @@ export class ZenScriptTypeComputer implements TypeComputer {
       }
     },
 
-    TypeCastExpression: (source) => {
-      return this.inferType(source.typeRef)
+    IntRangeExpression: (element) => {
+      const leftType = this.inferType(element.from)
+      const operator = this.memberProvider()
+        .streamMembers(leftType)
+        .filter(isOperatorFunctionDeclaration)
+        .filter(it => it.operator === '..')
+        .filter(it => it.params.length === 1)
+        .head()
+      return this.inferType(operator?.retType)
+    },
+
+    TypeCastExpression: (element) => {
+      return this.inferType(element.type)
     },
 
     InstanceofExpression: () => {
       return this.classTypeOf('bool')
     },
 
-    ParenthesizedExpression: (source) => {
-      return this.inferType(source.expr)
+    ParenthesizedExpression: (element) => {
+      return this.inferType(element.expr)
     },
 
-    BracketExpression: (source) => {
-      const id = source.path.map(it => it.$cstNode?.text).join(':')
-      const type = this.bracketManager.type(id)
+    BracketExpression: (element) => {
+      const id = element.path.map(it => it.$cstNode?.text).join(':')
+      const type = this.bracketManager.findType(id)
       if (!type) {
         return this.classTypeOf('any')
       }
@@ -337,79 +338,85 @@ export class ZenScriptTypeComputer implements TypeComputer {
       }
     },
 
-    FunctionExpression: (source) => {
-      const paramTypes = source.parameters.map(param => this.inferType(param) ?? this.classTypeOf('any'))
-      const returnType = this.inferType(source.returnTypeRef) ?? this.classTypeOf('any')
+    FunctionExpression: (element) => {
+      const paramTypes = element.params.map(param => this.inferType(param) ?? this.classTypeOf('any'))
+      const returnType = this.inferType(element.retType) ?? this.classTypeOf('any')
       return new FunctionType(paramTypes, returnType)
     },
 
-    ReferenceExpression: (source) => {
+    ReferenceExpression: (element) => {
       // dynamic this
-      if (source.target.$refText === 'this' && isClassDeclaration(source.target.ref)) {
-        return new ClassType(source.target.ref, new Map())
+      if (element.entity.$refText === 'this' && isClassDeclaration(element.entity.ref)) {
+        return new ClassType(element.entity.ref, new Map())
       }
 
       // dynamic arguments
-      if (isCallExpression(source.$container) && source.$containerProperty === 'arguments' && isFunctionDeclaration(source.target.ref)) {
-        return this.inferType(source.target.ref.returnTypeRef)
+      if (isCallExpression(element.$container) && element.$containerProperty === 'arguments' && isFunctionDeclaration(element.entity.ref)) {
+        return this.inferType(element.entity.ref.retType)
       }
 
-      return this.inferType(source.target.ref) ?? this.classTypeOf('any')
+      return this.inferType(element.entity.ref) ?? this.classTypeOf('any')
     },
 
-    MemberAccess: (source) => {
-      const receiverType = this.inferType(source.receiver)
+    MemberAccess: (element) => {
+      const receiverType = this.inferType(element.receiver)
 
       // Recursive Guard
-      const _ref = (source.target as any)._ref
+      const _ref = (element.entity as any)._ref
       if (typeof _ref === 'symbol' && _ref.description === 'ref_resolving') {
         return this.classTypeOf('any')
       }
 
-      const targetContainer = source.target.ref?.$container
-      if (isOperatorFunctionDeclaration(targetContainer) && targetContainer.op === '.') {
-        let dynamicTargetType = this.inferType(targetContainer.returnTypeRef)
+      const targetContainer = element.entity.ref?.$container
+      if (isOperatorFunctionDeclaration(targetContainer) && targetContainer.operator === '.') {
+        let dynamicTargetType = this.inferType(targetContainer.retType)
         if (dynamicTargetType && isClassType(receiverType)) {
           dynamicTargetType = dynamicTargetType.substituteTypeParameters(receiverType.substitutions)
         }
         return dynamicTargetType
       }
 
-      let targetType = this.inferType(source.target.ref)
+      let targetType = this.inferType(element.entity.ref)
       if (targetType && isClassType(receiverType)) {
         targetType = targetType.substituteTypeParameters(receiverType.substitutions)
       }
       return targetType
     },
 
-    IndexingExpression: (source) => {
-      const receiverType = this.inferType(source.receiver)
+    IndexExpression: (element) => {
+      const receiverType = this.inferType(element.receiver)
       if (isAnyType(receiverType)) {
         return receiverType
       }
 
-      const operator = this.memberProvider().streamOperators(source.receiver)
-        .filter(it => it.op === '[]')
-        .filter(it => it.parameters.length === 1)
+      const operator = this.memberProvider()
+        .streamMembers(element.receiver)
+        .filter(isOperatorFunctionDeclaration)
+        .filter(it => it.operator === '[]')
+        .filter(it => it.params.length === 1)
         .head()
-      let returnType = this.inferType(operator?.returnTypeRef)
+      let returnType = this.inferType(operator?.retType)
       if (isClassType(receiverType)) {
         returnType = returnType?.substituteTypeParameters(receiverType.substitutions)
       }
       return returnType
     },
 
-    CallExpression: (source) => {
-      if (isReferenceExpression(source.receiver) || isMemberAccess(source.receiver)) {
-        const receiverRef = source.receiver.target.ref
-        if (!receiverRef) {
+    CallExpression: (element) => {
+      if (isReferenceExpression(element.receiver) || isMemberAccess(element.receiver)) {
+        const receiver = element.receiver.entity.ref
+        if (!receiver) {
           return
         }
-        if (isConstructorDeclaration(receiverRef)) {
-          return new ClassType(receiverRef.$container, new Map())
+        if (isConstructorDeclaration(receiver)) {
+          const classDecl = AstUtils.getContainerOfType(receiver, isClassDeclaration)
+          if (!classDecl) {
+            return
+          }
+          return new ClassType(classDecl, new Map())
         }
       }
-      const receiverType = this.inferType(source.receiver)
+      const receiverType = this.inferType(element.receiver)
       if (isFunctionType(receiverType)) {
         return receiverType.returnType
       }
@@ -427,8 +434,8 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return this.classTypeOf('bool')
     },
 
-    IntegerLiteral: (source) => {
-      switch (source.value.at(-1)) {
+    IntegerLiteral: (element) => {
+      switch (element.value.at(-1)) {
         case 'l':
         case 'L':
           return this.classTypeOf('long')
@@ -438,8 +445,8 @@ export class ZenScriptTypeComputer implements TypeComputer {
       }
     },
 
-    FloatingLiteral: (source) => {
-      switch (source.value.at(-1)) {
+    FloatLiteral: (element) => {
+      switch (element.value.at(-1)) {
         case 'f':
         case 'F':
           return this.classTypeOf('float')
@@ -465,25 +472,20 @@ export class ZenScriptTypeComputer implements TypeComputer {
       return this.classTypeOf('string')
     },
 
-    ArrayLiteral: (source) => {
+    ArrayLiteral: (element) => {
       const arrayType = this.classTypeOf('Array')
-      const T = arrayType.declaration.typeParameters[0]
-      arrayType.substitutions.set(T, this.inferType(source.values[0]) ?? this.classTypeOf('any'))
+      const T = arrayType.declaration.typeParams[0]
+      arrayType.substitutions.set(T, this.inferType(element.values[0]) ?? this.classTypeOf('any'))
       return arrayType
     },
 
-    MapLiteral: (source) => {
+    MapLiteral: (element) => {
       const mapType = this.classTypeOf('Map')
-      const K = mapType.declaration.typeParameters[0]
-      const V = mapType.declaration.typeParameters[1]
-      mapType.substitutions.set(K, this.inferType(source.entries[0]?.key) ?? this.classTypeOf('any'))
-      mapType.substitutions.set(V, this.inferType(source.entries[0]?.value) ?? this.classTypeOf('any'))
+      const K = mapType.declaration.typeParams[0]
+      const V = mapType.declaration.typeParams[1]
+      mapType.substitutions.set(K, this.inferType(element.entries[0]?.key) ?? this.classTypeOf('any'))
+      mapType.substitutions.set(V, this.inferType(element.entries[0]?.value) ?? this.classTypeOf('any'))
       return mapType
     },
-
-    SyntheticStringLiteral: () => {
-      return this.classTypeOf('string')
-    },
-    // endregion
   })
 }

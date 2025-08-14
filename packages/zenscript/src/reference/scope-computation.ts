@@ -1,42 +1,30 @@
-import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes } from 'langium'
+import type { AstNode, AstNodeDescription, LangiumDocument, MultiMap } from 'langium'
 import type { Script } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
-import type { DescriptionCache } from '../workspace/description-cache'
-import type { DescriptionCreator } from '../workspace/description-creator'
 import { DefaultScopeComputation } from 'langium'
 import { isGlobal } from '../utils/ast'
 
 export class ZenScriptScopeComputation extends DefaultScopeComputation {
-  private readonly creator: DescriptionCreator
-  private readonly cache: DescriptionCache
-
   constructor(services: ZenScriptServices) {
     super(services)
-    this.creator = services.workspace.AstNodeDescriptionProvider
-    this.cache = services.shared.workspace.DescriptionCache
   }
 
-  protected override exportNode(node: AstNode, exports: AstNodeDescription[], document: LangiumDocument<Script>): void {
+  override addExportedSymbol(node: AstNode, exports: AstNodeDescription[], document: LangiumDocument<Script>): void {
     if (isGlobal(node)) {
-      const description = this.creator.createDescriptionWithUri(node, document.uri)
-      this.cache.astDescriptions.set(node, description)
-      exports.push(description)
+      const name = this.nameProvider.getName(node)
+      if (name) {
+        exports.push(this.descriptions.getOrCreateDescription(node, document.uri, name))
+      }
     }
   }
 
-  protected override processNode(node: AstNode, document: LangiumDocument, scopes: PrecomputedScopes): void {
+  override addLocalSymbol(node: AstNode, document: LangiumDocument, symbols: MultiMap<AstNode, AstNodeDescription>): void {
     const container = node.$container
-    if (!container) {
-      return
+    if (container) {
+      const name = this.nameProvider.getName(node)
+      if (name) {
+        symbols.add(container, this.descriptions.getOrCreateDescription(node, document.uri, name))
+      }
     }
-
-    const name = this.nameProvider.getName(node)
-    if (!name) {
-      return
-    }
-
-    const description = this.creator.createDescriptionWithUri(node, document.uri, name)
-    this.cache.astDescriptions.set(node, description)
-    scopes.add(container, description)
   }
 }

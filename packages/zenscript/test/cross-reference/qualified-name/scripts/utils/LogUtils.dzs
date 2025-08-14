@@ -1,0 +1,6 @@
+function createLogHelper() as LogHelper
+
+zenClass LogHelper {
+    static default as LogHelper;
+    static function create() as LogHelper;
+}

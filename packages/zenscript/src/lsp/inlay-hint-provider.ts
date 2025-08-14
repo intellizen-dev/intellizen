@@ -1,18 +1,19 @@
+import type { AstNode, NameProvider } from 'langium'
 import type { InlayHintAcceptor } from 'langium/lsp'
 import type { InlayHint, InlayHintLabelPart, Location, MarkupContent } from 'vscode-languageserver'
 import type { ZenScriptAstType } from '../generated/ast'
 import type { ZenScriptServices } from '../module'
 import type { TypeComputer } from '../typing/type-computer'
 import type { BracketManager } from '../workspace/bracket-manager'
-import { type AstNode, AstUtils, type NameProvider } from 'langium'
+import { AstUtils } from 'langium'
 import { AbstractInlayHintProvider } from 'langium/lsp'
 import { InlayHintKind } from 'vscode-languageserver'
 import { isClassType } from '../typing/type-description'
 import { getPathAsString } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 
-type SourceMap = ZenScriptAstType
-type RuleMap = { [K in keyof SourceMap]?: (source: SourceMap[K], acceptor: InlayHintAcceptor) => void }
+type RuleSpec = ZenScriptAstType
+type RuleMap = { [K in keyof RuleSpec]?: (element: RuleSpec[K], acceptor: InlayHintAcceptor) => void }
 
 export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
   private readonly typeComputer: TypeComputer
@@ -27,16 +28,44 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
   }
 
   computeInlayHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
-    this.rules(astNode.$type)?.call(this, astNode, acceptor)
+    this.inlayHintRules(astNode.$type)?.call(this, astNode, acceptor)
   }
 
-  private acceptTypeHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
-    if ('typeRef' in astNode) {
-      return
-    }
+  private readonly inlayHintRules = defineRules<RuleMap>({
+    VariableDeclaration: (element, acceptor) => {
+      if (!element.type && element.name) {
+        this.acceptTypeHint(element, acceptor)
+      }
+    },
 
-    const nameNode = this.nameProvider.getNameNode(astNode)
-    if (!nameNode) {
+    LoopParameter: (element, acceptor) => {
+      if (element.name) {
+        this.acceptTypeHint(element, acceptor)
+      }
+    },
+
+    ValueParameter: (element, acceptor) => {
+      if (!element.type && element.name) {
+        this.acceptTypeHint(element, acceptor)
+      }
+    },
+
+    BracketExpression: (element, acceptor) => {
+      const id = getPathAsString(element)
+      const name = this.bracketManager.findEntry(id)?.name
+      if (name) {
+        acceptor({
+          position: element.$cstNode!.range.end,
+          label: name,
+          paddingLeft: true,
+        })
+      }
+    },
+  })
+
+  private acceptTypeHint(astNode: AstNode, acceptor: InlayHintAcceptor): void {
+    const name = this.nameProvider.getNameNode(astNode)
+    if (!name) {
       return
     }
 
@@ -64,37 +93,11 @@ export class ZenScriptInlayHintProvider extends AbstractInlayHintProvider {
     ]
 
     const typeHint: InlayHint = {
-      position: nameNode.range.end,
+      position: name.range.end,
       label: parts,
       kind: InlayHintKind.Type,
     }
 
     acceptor(typeHint)
   }
-
-  private readonly rules = defineRules<RuleMap>({
-    VariableDeclaration: (source, acceptor) => {
-      this.acceptTypeHint(source, acceptor)
-    },
-
-    LoopParameter: (source, acceptor) => {
-      this.acceptTypeHint(source, acceptor)
-    },
-
-    ValueParameter: (source, acceptor) => {
-      this.acceptTypeHint(source, acceptor)
-    },
-
-    BracketExpression: (source, acceptor) => {
-      const id = getPathAsString(source)
-      const name = this.bracketManager.resolve(id)?.name
-      if (name) {
-        acceptor({
-          position: source.$cstNode!.range.end,
-          label: name,
-          paddingLeft: true,
-        })
-      }
-    },
-  })
 }
