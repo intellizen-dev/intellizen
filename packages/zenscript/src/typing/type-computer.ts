@@ -487,11 +487,5 @@ export class ZenScriptTypeComputer implements TypeComputer {
       mapType.substitutions.set(V, this.inferType(element.entries[0]?.value) ?? this.classTypeOf('any'))
       return mapType
     },
-
-    SyntheticAstNode: ({ content }) => {
-      if ('$type' in content && content.$type === 'StringLiteral') {
-        return this.classTypeOf('string')
-      }
-    },
   })
 }

@@ -36,9 +36,6 @@ export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
       else if (content.$type === 'Unknown') {
         return SymbolKind.Variable
       }
-      else if (content.$type === 'StringLiteral') {
-        return SymbolKind.String
-      }
       else {
         return SymbolKind.Variable
       }
@@ -69,9 +66,6 @@ export class ZenScriptNodeKindProvider extends DefaultNodeKindProvider {
       }
       else if (content.$type === 'Unknown') {
         return CompletionItemKind.Variable
-      }
-      else if (content.$type === 'StringLiteral') {
-        return CompletionItemKind.Value
       }
       else {
         return CompletionItemKind.Variable

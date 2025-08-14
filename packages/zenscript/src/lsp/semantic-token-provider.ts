@@ -257,9 +257,6 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
       if (isNamespaceNode(content)) {
         return { type: SemanticTokenTypes.namespace }
       }
-      else if (content.$type === 'StringLiteral') {
-        return { type: SemanticTokenTypes.string }
-      }
       else {
         return { type: SemanticTokenTypes.variable }
       }

@@ -11,7 +11,7 @@ export interface SyntheticAstNode extends AstNode {
   content: SyntheticAstNodeContent
 }
 
-export type SyntheticAstNodeContent = NamespaceNode<AstNode> | { $type: 'Unknown' } | { $type: 'StringLiteral' }
+export type SyntheticAstNodeContent = NamespaceNode<AstNode> | { $type: 'Unknown' }
 
 /**
  * Wrap a given content as an AstNode.
