@@ -6,6 +6,7 @@ import { ZenScriptDeclarationGeneratedModule, ZenScriptGeneratedModule, ZenScrip
 import { CustomTokenBuilder } from './lexer/token-builder'
 import { CustomValueConverter } from './lexer/value-converter'
 import { ZenScriptCompletionProvider } from './lsp/completion-provider'
+import { ZenScriptFormatter } from './lsp/formatter'
 import { ZenScriptInlayHintProvider } from './lsp/inlay-hint-provider'
 import { ZenScriptNodeKindProvider } from './lsp/node-kind-provider'
 import { ZenScriptSemanticTokenProvider } from './lsp/semantic-token-provider'
@@ -96,6 +97,7 @@ export const ZenScriptModule: Module<ZenScriptServices, PartialLangiumServices &
     CompletionProvider: services => new ZenScriptCompletionProvider(services),
     InlayHintProvider: services => new ZenScriptInlayHintProvider(services),
     SemanticTokenProvider: services => new ZenScriptSemanticTokenProvider(services),
+    Formatter: () => new ZenScriptFormatter(),
   },
 }
 
