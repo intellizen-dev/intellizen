@@ -45,6 +45,6 @@ export function createSyntheticAstNodeDescription(name: string, content: Synthet
   }
 }
 
-export function isSyntheticAstNode(node: AstNode): node is SyntheticAstNode {
-  return node.$type === 'SyntheticAstNode'
+export function isSyntheticAstNode(node: unknown): node is SyntheticAstNode {
+  return typeof node === 'object' && node !== null && '$type' in node && node.$type === 'SyntheticAstNode'
 }
