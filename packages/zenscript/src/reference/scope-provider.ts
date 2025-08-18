@@ -8,7 +8,7 @@ import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, EMPTY_STREAM, stream, StreamScope } from 'langium'
 import * as ast from '../generated/ast'
 import { isClassType, isFunctionType } from '../typing/type-description'
-import { binarySearchLeftEdge, getIndexOfContainer, getPathAsString, isStatic } from '../utils/ast'
+import { findMaximumLowerBound, getIndexOfContainer, getPathAsString, isStatic } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 import { generateStream, toStream } from '../utils/stream'
 import { createSyntheticAstNodeDescription } from './synthetic'
@@ -93,15 +93,11 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         }
         scope = this.streamLexicalSymbols(seed)
           .map((node) => {
-            const refIndex = getIndexOfContainer(seed, node.container)!
+            const refIndex = getIndexOfContainer(seed, node.container)
             // Ensure ref's index is greater than symbol's index (declaration before usage)
-            const leftEdge = binarySearchLeftEdge(node.symbols, refIndex)
-            return toStream(function* () {
-              // Reverse order (nearest first)
-              for (let i = leftEdge - 1; i >= 0; i--) {
-                yield node.symbols[i]
-              }
-            })
+            const lowerBound = refIndex ? findMaximumLowerBound(node.symbols, refIndex) : node.symbols.length
+            // Reverse order (nearest first)
+            return stream(node.symbols.slice(0, lowerBound).reverse())
           })
           .reduceRight((outer, symbols) => new StreamScope(symbols, outer), scope)
       }

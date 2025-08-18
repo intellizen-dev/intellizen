@@ -86,38 +86,43 @@ export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDecla
     }
   })
 }
-
 /**
- * Binary search for the left edge of the specified target.
+ * Binary search for the maximum lower bound of the specified target value.
  *
  * @param symbols The array to search, **MUST** be sorted by `$containerIndex`
- * @param target The target index
- * @returns The index of the left edge of the target in range `[0, symbols.length]`
+ * @param target The target value
+ * @returns The maximum lower bound of the target value in range `[0, symbols.length]`
  *
  * @example
- * binarySearchLeftEdge([1, 3, 5, 7], 5)
- * // returns 1
- * // [1, 3, 5, 6, 10]
- * //     ^ leftEdge
- *
- * @example
- * binarySearchLeftEdge([1, 3, 5, 7], 6)
+ * findMaximumLowerBound([1, 3, 5, 7], 6)
  * // returns 2
- * // [1, 3, 5, 6, 10]
- * //        ^ leftEdge
+ * // [1, 3, 5, 7]
+ * //        ^ bound === 2
+ *
+ * @example
+ * findMaximumLowerBound([1, 3, 5, 7], 10)
+ * // returns 4
+ * // [1, 3, 5, 7]
+ * //             ^ bound === symbols.length (Not inside the array)
+ *
+ * @example
+ * findMaximumLowerBound([1, 3, 5, 7], 0)
+ * // returns 0
+ * // [1, 3, 5, 7]
+ * //  ^ bound === 0
  */
-export function binarySearchLeftEdge(symbols: AstNodeDescription[], target: number): number {
-  let i = 0
-  let j = symbols.length - 1
-  while (i <= j) {
-    const m = Math.floor(i + (j - i) / 2)
-    const mci = symbols[m].node!.$containerIndex!
-    if (mci < target)
-      i = m + 1
+export function findMaximumLowerBound(symbols: AstNodeDescription[], target: number): number {
+  let low = 0
+  let high = symbols.length - 1
+  while (low <= high) {
+    const mid = Math.floor(low + (high - low) / 2)
+    const midVal = symbols[mid].node!.$containerIndex!
+    if (midVal < target)
+      low = mid + 1
     else
-      j = m - 1
+      high = mid - 1
   }
-  return i
+  return low
 }
 
 /**
