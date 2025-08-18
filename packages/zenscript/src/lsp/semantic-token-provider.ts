@@ -133,7 +133,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
     },
 
     ReferenceExpression: (element, acceptor) => {
-      const entity = element.entity.ref
+      const entity = element.entity?.ref
       const { type, modifier } = this.semanticReferenceRules(entity?.$type)?.call(this, entity) ?? {}
       if (type) {
         acceptor({
@@ -146,7 +146,7 @@ export class ZenScriptSemanticTokenProvider extends AbstractSemanticTokenProvide
     },
 
     MemberAccess: (element, acceptor) => {
-      const entity = element.entity.ref
+      const entity = element.entity?.ref
       const { type, modifier } = this.semanticReferenceRules(entity?.$type)?.call(this, entity) ?? {}
       if (type) {
         acceptor({
