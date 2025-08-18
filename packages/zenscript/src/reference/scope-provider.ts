@@ -8,13 +8,24 @@ import { substringBeforeLast } from '@intellizen/shared'
 import { AstUtils, DefaultScopeProvider, EMPTY_SCOPE, EMPTY_STREAM, stream, StreamScope } from 'langium'
 import * as ast from '../generated/ast'
 import { isClassType, isFunctionType } from '../typing/type-description'
-import { getPathAsString, isStatic } from '../utils/ast'
+import { binarySearchLeftEdge, getIndexOfContainer, getPathAsString, isStatic } from '../utils/ast'
 import { defineRules } from '../utils/rule'
 import { generateStream, toStream } from '../utils/stream'
 import { createSyntheticAstNodeDescription } from './synthetic'
 
 type RuleSpec = ZenScriptAstType
 type RuleMap = { [K in keyof RuleSpec]?: (element: Omit<ReferenceInfo, 'container'> & { container: RuleSpec[K] }) => Scope }
+
+declare module 'langium' {
+  interface LocalSymbols {
+    get: (key: AstNode) => AstNodeDescription[]
+  }
+}
+
+interface LexicalNode {
+  container: AstNode
+  symbols: AstNodeDescription[]
+}
 
 export class ZenScriptScopeProvider extends DefaultScopeProvider {
   private readonly packageManager: PackageManager
@@ -80,7 +91,18 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
           // Skip CallableDeclaration
           seed = seed.$container.$container
         }
-        scope = this.streamLexicalScope(seed)
+        scope = this.streamLexicalSymbols(seed)
+          .map((node) => {
+            const refIndex = getIndexOfContainer(seed, node.container)!
+            // Ensure ref's index is greater than symbol's index (declaration before usage)
+            const leftEdge = binarySearchLeftEdge(node.symbols, refIndex)
+            return toStream(function* () {
+              // Reverse order (nearest first)
+              for (let i = leftEdge - 1; i >= 0; i--) {
+                yield node.symbols[i]
+              }
+            })
+          })
           .reduceRight((outer, symbols) => new StreamScope(symbols, outer), scope)
       }
 
@@ -98,8 +120,12 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
         let scope: Scope
         scope = this.createPackageNameScope()
         scope = this.createClassNameScope(scope)
-        scope = this.streamLexicalScope(container)
-          .filter(it => ast.isClassDeclaration(it) || ast.isTypeParameter(it) || ast.isImportDeclaration(it))
+        scope = this.streamLexicalSymbols(container)
+          .map(node => stream(node.symbols)
+            .filter(symbol =>
+              ast.isClassDeclaration(symbol.node)
+              || ast.isTypeParameter(symbol.node)
+              || ast.isImportDeclaration(symbol.node)))
           .reduceRight((outer, symbols) => new StreamScope(symbols, outer), scope)
         return scope
       }
@@ -111,12 +137,16 @@ export class ZenScriptScopeProvider extends DefaultScopeProvider {
     },
   })
 
-  private streamLexicalScope(seed: AstNode): Stream<Stream<AstNodeDescription>> {
+  private streamLexicalSymbols(seed: AstNode): Stream<LexicalNode> {
     const localSymbols = AstUtils.getDocument(seed).localSymbols
-    if (localSymbols)
-      return generateStream(seed, it => it.$container).map(it => localSymbols.getStream(it))
-    else
+    if (localSymbols) {
+      return generateStream(seed, it => it.$container)
+        .filter(it => localSymbols.has(it))
+        .map(it => ({ container: it, symbols: localSymbols.get(it) }))
+    }
+    else {
       return EMPTY_STREAM
+    }
   }
 
   private createDynamicScope(node: AstNode, outer?: Scope): Scope {

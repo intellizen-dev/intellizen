@@ -86,3 +86,53 @@ export function streamClassChain(classDecl: ClassDeclaration): Stream<ClassDecla
     }
   })
 }
+
+/**
+ * Binary search for the left edge of the specified target.
+ *
+ * @param symbols The array to search, **MUST** be sorted by `$containerIndex`
+ * @param target The target index
+ * @returns The index of the left edge of the target in range `[0, symbols.length]`
+ *
+ * @example
+ * binarySearchLeftEdge([1, 3, 5, 7], 5)
+ * // returns 1
+ * // [1, 3, 5, 6, 10]
+ * //     ^ leftEdge
+ *
+ * @example
+ * binarySearchLeftEdge([1, 3, 5, 7], 6)
+ * // returns 2
+ * // [1, 3, 5, 6, 10]
+ * //        ^ leftEdge
+ */
+export function binarySearchLeftEdge(symbols: AstNodeDescription[], target: number): number {
+  let i = 0
+  let j = symbols.length - 1
+  while (i <= j) {
+    const m = Math.floor(i + (j - i) / 2)
+    const mci = symbols[m].node!.$containerIndex!
+    if (mci < target)
+      i = m + 1
+    else
+      j = m - 1
+  }
+  return i
+}
+
+/**
+ * Get the index of the specified node within its container.
+ *
+ * @param content The starting node to search for
+ * @param container The target container node
+ * @returns The index of the content node within the container, `undefined` if not found
+ */
+export function getIndexOfContainer(content: AstNode, container: AstNode): number | undefined {
+  let node: AstNode | undefined = content
+  while (node) {
+    if (node.$container === container) {
+      return node.$containerIndex
+    }
+    node = node.$container
+  }
+}
