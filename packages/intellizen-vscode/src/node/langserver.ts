@@ -1,4 +1,5 @@
 import { createZenScriptServices } from 'intellizen-zenscript'
+import { DocumentState } from 'langium'
 import { startLanguageServer } from 'langium/lsp'
 import { NodeFileSystem } from 'langium/node'
 import { createConnection, ProposedFeatures } from 'vscode-languageserver/node'
@@ -10,4 +11,6 @@ const connection = createConnection(ProposedFeatures.all)
 const { shared } = createZenScriptServices({ connection, ...NodeFileSystem })
 
 // Start the language server with the shared services
-startLanguageServer(shared)
+startLanguageServer(shared, {
+  CompletionProvider: DocumentState.Changed,
+})
